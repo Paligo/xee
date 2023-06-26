@@ -24,14 +24,19 @@ use rust_decimal::prelude::*;
 use crate::atomic;
 use crate::error;
 
+// TODO:
 // type check to see whether it conforms to signature, get out atomized,
 // like in the function signature. This takes care of subtype
 // relations as that's just a check
 
+// TODO:
 // if untypedAtomic, passed through typecheck and cast to double happens
 // now do type promotion, conforming the arguments to each other
 
-fn numeric_arithmetic_op<O>(a: atomic::Atomic, b: atomic::Atomic) -> error::Result<atomic::Atomic>
+pub(crate) fn numeric_arithmetic_op<O>(
+    a: atomic::Atomic,
+    b: atomic::Atomic,
+) -> error::Result<atomic::Atomic>
 where
     O: ArithmeticOp,
 {
@@ -74,7 +79,7 @@ where
     }
 }
 
-trait ArithmeticOp {
+pub(crate) trait ArithmeticOp {
     fn integer<I>(a: I, b: I) -> error::Result<I>
     where
         I: PrimInt;
@@ -105,7 +110,7 @@ trait ArithmeticOp {
     }
 }
 
-struct AddOp;
+pub(crate) struct AddOp;
 
 impl ArithmeticOp for AddOp {
     fn integer<I>(a: I, b: I) -> error::Result<I>
@@ -127,7 +132,7 @@ impl ArithmeticOp for AddOp {
     }
 }
 
-struct SubtractOp;
+pub(crate) struct SubtractOp;
 
 impl ArithmeticOp for SubtractOp {
     fn integer<I>(a: I, b: I) -> error::Result<I>
@@ -149,7 +154,7 @@ impl ArithmeticOp for SubtractOp {
     }
 }
 
-struct MultiplyOp;
+pub(crate) struct MultiplyOp;
 
 impl ArithmeticOp for MultiplyOp {
     fn integer<I>(a: I, b: I) -> error::Result<I>
@@ -171,7 +176,7 @@ impl ArithmeticOp for MultiplyOp {
     }
 }
 
-struct DivideOp;
+pub(crate) struct DivideOp;
 
 impl ArithmeticOp for DivideOp {
     fn integer_atomic<I>(a: I, b: I) -> error::Result<atomic::Atomic>
@@ -211,9 +216,9 @@ impl ArithmeticOp for DivideOp {
     }
 }
 
-struct NumericIntegerDivideOp;
+pub(crate) struct IntegerDivideOp;
 
-impl ArithmeticOp for NumericIntegerDivideOp {
+impl ArithmeticOp for IntegerDivideOp {
     fn integer<I>(a: I, b: I) -> error::Result<I>
     where
         I: PrimInt,
@@ -250,7 +255,7 @@ impl ArithmeticOp for NumericIntegerDivideOp {
     }
 }
 
-struct ModOp;
+pub(crate) struct ModOp;
 
 impl ArithmeticOp for ModOp {
     fn integer<I>(a: I, b: I) -> error::Result<I>
@@ -278,7 +283,7 @@ impl ArithmeticOp for ModOp {
     }
 }
 
-fn numeric_unary_plus(atomic: atomic::Atomic) -> error::Result<atomic::Atomic> {
+pub(crate) fn numeric_unary_plus(atomic: atomic::Atomic) -> error::Result<atomic::Atomic> {
     if atomic.is_numeric() {
         Ok(atomic)
     } else {
@@ -286,7 +291,7 @@ fn numeric_unary_plus(atomic: atomic::Atomic) -> error::Result<atomic::Atomic> {
     }
 }
 
-fn numeric_unary_minus(atomic: atomic::Atomic) -> error::Result<atomic::Atomic> {
+pub(crate) fn numeric_unary_minus(atomic: atomic::Atomic) -> error::Result<atomic::Atomic> {
     if atomic.is_numeric() {
         match atomic {
             atomic::Atomic::Decimal(v) => Ok(atomic::Atomic::Decimal(-v)),
@@ -336,7 +341,7 @@ mod tests {
     fn test_numeric_integer_divide() {
         let a = 5i64.into();
         let b = 2i64.into();
-        let result = numeric_arithmetic_op::<NumericIntegerDivideOp>(a, b).unwrap();
+        let result = numeric_arithmetic_op::<IntegerDivideOp>(a, b).unwrap();
         assert_eq!(result, 2i64.into());
     }
 
@@ -344,7 +349,7 @@ mod tests {
     fn test_numeric_integer_divide_float() {
         let a = 5f64.into();
         let b = 2f64.into();
-        let result = numeric_arithmetic_op::<NumericIntegerDivideOp>(a, b).unwrap();
+        let result = numeric_arithmetic_op::<IntegerDivideOp>(a, b).unwrap();
         assert_eq!(result, 2i64.into());
     }
 }

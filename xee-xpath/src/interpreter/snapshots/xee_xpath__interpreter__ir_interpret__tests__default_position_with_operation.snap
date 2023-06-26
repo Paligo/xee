@@ -3,7 +3,7 @@ source: xee-xpath/src/interpreter/ir_interpret.rs
 expression: "run(\"fn:position() + 1\")"
 ---
 Err(
-    SpannedType {
+    SpannedComponentAbsentInDynamicContext {
         src: "fn:position() + 1",
         span: SourceSpan {
             offset: SourceOffset(

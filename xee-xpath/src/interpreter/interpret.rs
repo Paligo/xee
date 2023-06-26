@@ -8,7 +8,6 @@ use crate::context::DynamicContext;
 use crate::error;
 use crate::error::Error;
 use crate::occurrence::ResultOccurrence;
-use crate::op;
 use crate::stack;
 use crate::xml;
 
@@ -100,35 +99,42 @@ impl<'a> Interpreter<'a> {
             match instruction {
                 EncodedInstruction::Add => {
                     let (a, b) = self.pop_atomic2()?;
-                    self.stack.push(op::numeric_add(&a, &b)?.into());
+                    self.stack
+                        .push(atomic::numeric_arithmetic_op::<atomic::AddOp>(a, b)?.into());
                 }
                 EncodedInstruction::Sub => {
                     let (a, b) = self.pop_atomic2()?;
-                    self.stack.push(op::numeric_substract(&a, &b)?.into());
+                    self.stack
+                        .push(atomic::numeric_arithmetic_op::<atomic::SubtractOp>(a, b)?.into());
                 }
                 EncodedInstruction::Mul => {
                     let (a, b) = self.pop_atomic2()?;
-                    self.stack.push(op::numeric_multiply(&a, &b)?.into());
+                    self.stack
+                        .push(atomic::numeric_arithmetic_op::<atomic::MultiplyOp>(a, b)?.into());
                 }
                 EncodedInstruction::Div => {
                     let (a, b) = self.pop_atomic2()?;
-                    self.stack.push(op::numeric_divide(&a, &b)?.into());
+                    self.stack
+                        .push(atomic::numeric_arithmetic_op::<atomic::DivideOp>(a, b)?.into());
                 }
                 EncodedInstruction::IntDiv => {
                     let (a, b) = self.pop_atomic2()?;
-                    self.stack.push(op::numeric_integer_divide(&a, &b)?.into());
+                    self.stack.push(
+                        atomic::numeric_arithmetic_op::<atomic::IntegerDivideOp>(a, b)?.into(),
+                    );
                 }
                 EncodedInstruction::Mod => {
                     let (a, b) = self.pop_atomic2()?;
-                    self.stack.push(op::numeric_mod(&a, &b)?.into());
+                    self.stack
+                        .push(atomic::numeric_arithmetic_op::<atomic::ModOp>(a, b)?.into());
                 }
                 EncodedInstruction::Plus => {
                     let a = self.pop_atomic()?;
-                    self.stack.push(op::numeric_unary_plus(&a)?.into());
+                    self.stack.push(atomic::numeric_unary_plus(a)?.into());
                 }
                 EncodedInstruction::Minus => {
                     let a = self.pop_atomic()?;
-                    self.stack.push(op::numeric_unary_minus(&a)?.into());
+                    self.stack.push(atomic::numeric_unary_minus(a)?.into());
                 }
                 EncodedInstruction::Concat => {
                     let (a, b) = self.pop_atomic2()?;
@@ -488,7 +494,13 @@ impl<'a> Interpreter<'a> {
     fn pop_atomic(&mut self) -> error::Result<atomic::Atomic> {
         let value = self.stack.pop().unwrap();
         let mut atomized = value.atomized(self.dynamic_context.xot);
-        atomized.one()
+        let atom = atomized.one()?;
+        // TODO: absent shouldn't really be atomic...
+        if matches!(atom, atomic::Atomic::Absent) {
+            Err(error::Error::ComponentAbsentInDynamicContext)
+        } else {
+            Ok(atom)
+        }
     }
 
     fn pop_atomic2(&mut self) -> error::Result<(atomic::Atomic, atomic::Atomic)> {
