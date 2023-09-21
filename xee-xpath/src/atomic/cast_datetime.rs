@@ -506,8 +506,13 @@ impl atomic::Atomic {
 
     fn parse_duration(s: &str) -> error::Result<atomic::Atomic> {
         let s = whitespace_collapse(s);
-        let parser = duration_parser();
-        Self::parse(parser, &s)
+
+        // TODO: this needs to move into the static context, otherwise
+        // caching is of no use
+        let parser = chumsky::cache::Cache::new(DurationParserCache);
+
+        // let parser = duration_parser();
+        Self::parse(parser.get(), &s)
     }
 
     fn parse_year_month_duration(s: &str) -> error::Result<atomic::Atomic> {
@@ -761,6 +766,16 @@ fn duration_parser<'a>() -> impl Parser<'a, &'a str, Duration, MyExtra> {
                 Ok(Duration::new(months, duration))
             }
         })
+}
+
+struct DurationParserCache;
+
+impl chumsky::cache::Cached for DurationParserCache {
+    type Parser<'src> = Boxed<'src, 'src, &'src str, Duration, MyExtra>;
+
+    fn make_parser<'src>(self) -> Self::Parser<'src> {
+        Parser::boxed(duration_parser())
+    }
 }
 
 fn year_parser<'a>() -> impl Parser<'a, &'a str, i32, MyExtra> {

@@ -7,7 +7,7 @@ mod signature;
 mod types;
 mod xpath_type;
 
-use chumsky::input::Stream;
+use chumsky::input::{SpannedInput, Stream};
 use chumsky::{input::ValueInput, prelude::*};
 use std::borrow::Cow;
 
@@ -22,15 +22,29 @@ use super::parser::parser_core::parser;
 use super::parser::types::{BoxedParser, State};
 
 fn create_token_iter(src: &str) -> impl Iterator<Item = (Token, SimpleSpan)> + '_ {
-    lexer(src).map(|(tok, span)| match tok {
+    let r = lexer(src).map(|(tok, span)| match tok {
         Ok(tok) => (tok, span.into()),
         Err(()) => (Token::Error, span.into()),
-    })
+    });
+    r
 }
 
 fn tokens(src: &str) -> impl ValueInput<'_, Token = Token<'_>, Span = Span> {
-    Stream::from_iter(create_token_iter(src)).spanned((src.len()..src.len()).into())
+    let r = Stream::from_iter(create_token_iter(src)).spanned((src.len()..src.len()).into());
+    r
 }
+
+// fn tokens2<'src>(
+//     src: &'src str,
+// ) -> chumsky::input::SpannedInput<
+//     Token<'src>,
+//     SimpleSpan,
+//     chumsky::input::BoxedStream<'src, (Token<'src>, SimpleSpan)>,
+// > {
+//     let r =
+//         Box::new(Stream::from_iter(create_token_iter(src))).spanned((src.len()..src.len()).into());
+//     Box::new(r
+// }
 
 fn parse<'a, I, T>(
     parser: BoxedParser<'a, I, T>,
@@ -103,6 +117,95 @@ impl ast::Name {
         parse(parser().name, tokens(src), Cow::Borrowed(namespaces))
             .map_err(|errors| Error { src, errors })
     }
+}
+
+struct XPathParserCache;
+
+impl chumsky::cache::Cached for XPathParserCache {
+    type Parser<'src> = BoxedParser<
+        'src,
+        SpannedInput<
+            Token<'src>,
+            SimpleSpan,
+            chumsky::input::BoxedStream<'src, (Token<'src>, SimpleSpan)>,
+        >,
+        ast::XPath,
+    >;
+
+    fn make_parser<'src>(self) -> Self::Parser<'src> {
+        Parser::boxed(parser().xpath)
+    }
+}
+
+struct ExprSingleParserCache;
+struct KindTestParserCache;
+struct SignatureParserCache;
+struct SequenceTypeParserCache;
+struct NameParserCache;
+
+pub struct Parsers {
+    xpath_parser_cache: chumsky::cache::Cache<XPathParserCache>,
+}
+
+impl std::fmt::Debug for Parsers {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Parsers").finish()
+    }
+}
+
+impl Parsers {
+    pub fn new() -> Self {
+        Self {
+            xpath_parser_cache: chumsky::cache::Cache::new(XPathParserCache),
+        }
+    }
+
+    pub fn parse_xpath<'src>(
+        &self,
+        input: &'src str,
+        namespaces: &'src Namespaces,
+        variables: &'src [ast::Name],
+    ) -> Result<'src, ast::XPath> {
+        let mut state = State {
+            namespaces: Cow::Borrowed(namespaces),
+        };
+        let tokens = Stream::from_iter(create_token_iter(input))
+            .boxed()
+            .spanned((input.len()..input.len()).into());
+
+        let result = self
+            .xpath_parser_cache
+            .get()
+            .parse_with_state(tokens, &mut state)
+            .into_result();
+
+        match result {
+            Ok(mut xpath) => {
+                // rename all variables to unique names
+                unique_names(&mut xpath, variables);
+                Ok(xpath)
+            }
+            Err(errors) => Err(Error { src: input, errors }),
+        }
+    }
+
+    // pub fn parse_expr_single<'a>(input: &'a str) -> Result<'a, ast::ExprSingleS> {}
+
+    // pub fn parse_kind_test<'a>(input: &'a str) -> Result<'a, ast::KindTest> {}
+
+    // pub fn parse_signature<'a>(
+    //     input: &'a str,
+    //     namespaces: &'a Namespaces,
+    // ) -> Result<'a, ast::Signature> {
+    // }
+
+    // pub fn parse_sequence_type<'a>(
+    //     input: &'a str,
+    //     namespaces: &'a Namespaces,
+    // ) -> Result<'a, ast::SequenceType> {
+    // }
+
+    // pub fn parse_name<'a>(input: &'a str, namespaces: &'a Namespaces) -> Result<'a, ast::NameS> {}
 }
 
 #[cfg(test)]

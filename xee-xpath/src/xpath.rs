@@ -19,7 +19,11 @@ pub struct XPath {
 
 impl XPath {
     pub fn new(static_context: &StaticContext, xpath: &str) -> Result<Self> {
-        let ast = ast::XPath::parse(xpath, static_context.namespaces, &static_context.variables)?;
+        let ast = static_context.parsers.parse_xpath(
+            xpath,
+            static_context.namespaces,
+            &static_context.variables,
+        )?;
         let mut ir_converter = IrConverter::new(xpath, static_context);
         let expr = ir_converter.convert_xpath(&ast)?;
         // this expression contains a function definition, we're getting it

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use icu_provider_blob::BlobDataProvider;
 use xee_xpath_ast::ast;
-use xee_xpath_ast::Namespaces;
+use xee_xpath_ast::{Namespaces, Parsers};
 
 use crate::error;
 use crate::function::StaticFunctions;
@@ -19,6 +19,7 @@ pub struct StaticContext<'a> {
     pub(crate) functions: StaticFunctions,
     provider: BlobDataProvider,
     pub(crate) collations: RefCell<Collations>,
+    pub(crate) parsers: Parsers,
 }
 
 impl<'a> StaticContext<'a> {
@@ -29,6 +30,7 @@ impl<'a> StaticContext<'a> {
             functions: StaticFunctions::new(),
             collations: RefCell::new(Collations::new()),
             provider: provider(),
+            parsers: Parsers::new(),
         }
     }
 
@@ -39,6 +41,7 @@ impl<'a> StaticContext<'a> {
             functions: StaticFunctions::new(),
             collations: RefCell::new(Collations::new()),
             provider: provider(),
+            parsers: Parsers::new(),
         }
     }
 
