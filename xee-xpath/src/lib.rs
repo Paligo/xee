@@ -23,6 +23,7 @@ mod xpath;
 
 pub use xee_xpath_ast::ast::Name;
 pub use xee_xpath_ast::Namespaces;
+pub use xee_xpath_ast::Parsers;
 
 pub use crate::atomic::Atomic;
 pub use crate::atomic::{

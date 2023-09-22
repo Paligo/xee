@@ -905,6 +905,13 @@ mod tests {
         assert_ron_snapshot!(parse_xpath_simple("[]"))
     }
 
+    #[test]
+    fn test_cached_parsers() {
+        let namespaces = Namespaces::new(None, Some(FN_NAMESPACE));
+        let parsers = Parsers::new();
+        parsers.parse_xpath("1 + 2", &namespaces, &[]).unwrap();
+    }
+
     // #[test]
     // fn test_function_that_takes_function_parameter() {
     //     assert_ron_snapshot!(parse_xpath_simple("filter(1, function($item) { true() })"))

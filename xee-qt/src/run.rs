@@ -1,6 +1,8 @@
-use derive_builder::Builder;
 use std::path::Path;
-use xee_xpath::{Documents, DynamicContext, Item, Name, Namespaces, StaticContext, XPath};
+use std::rc::Rc;
+
+use derive_builder::Builder;
+use xee_xpath::{Documents, DynamicContext, Item, Name, Namespaces, Parsers, StaticContext, XPath};
 use xot::Xot;
 
 use crate::assert::{AssertContext, Assertable};
@@ -67,6 +69,7 @@ impl Default for KnownDependencies {
 pub(crate) struct RunContext {
     pub(crate) xot: Xot,
     pub(crate) catalog: qt::Catalog,
+    pub(crate) parsers: Rc<Parsers>,
     #[builder(default)]
     pub(crate) documents: Documents,
     #[builder(default)]
@@ -80,6 +83,7 @@ impl RunContext {
         Self {
             xot,
             catalog,
+            parsers: Rc::new(Parsers::new()),
             documents: Documents::new(),
             known_dependencies: KnownDependencies::default(),
             verbose: false,
@@ -209,7 +213,11 @@ impl qt::TestCase {
             .iter()
             .map(|(name, _)| name.clone())
             .collect::<Vec<_>>();
-        let static_context = StaticContext::with_variable_names(&namespaces, &variable_names);
+        let static_context = StaticContext::with_parsers_and_variable_names(
+            &namespaces,
+            run_context.parsers.clone(),
+            &variable_names,
+        );
         let xpath = XPath::new(&static_context, &self.test);
         let xpath = match xpath {
             Ok(xpath) => xpath,

@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
@@ -19,7 +20,7 @@ pub struct StaticContext<'a> {
     pub(crate) functions: StaticFunctions,
     provider: BlobDataProvider,
     pub(crate) collations: RefCell<Collations>,
-    pub(crate) parsers: Parsers,
+    pub(crate) parsers: Rc<Parsers>,
 }
 
 impl<'a> StaticContext<'a> {
@@ -30,7 +31,7 @@ impl<'a> StaticContext<'a> {
             functions: StaticFunctions::new(),
             collations: RefCell::new(Collations::new()),
             provider: provider(),
-            parsers: Parsers::new(),
+            parsers: Rc::new(Parsers::new()),
         }
     }
 
@@ -41,7 +42,22 @@ impl<'a> StaticContext<'a> {
             functions: StaticFunctions::new(),
             collations: RefCell::new(Collations::new()),
             provider: provider(),
-            parsers: Parsers::new(),
+            parsers: Rc::new(Parsers::new()),
+        }
+    }
+
+    pub fn with_parsers_and_variable_names(
+        namespaces: &'a Namespaces<'a>,
+        parsers: Rc<Parsers>,
+        variables: &[ast::Name],
+    ) -> Self {
+        Self {
+            namespaces,
+            variables: variables.to_vec(),
+            functions: StaticFunctions::new(),
+            collations: RefCell::new(Collations::new()),
+            provider: provider(),
+            parsers,
         }
     }
 

@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use xot::Xot;
 
 use crate::error::Result;
@@ -97,6 +98,7 @@ fn check(path: &Path, verbose: bool) -> Result<()> {
     let mut run_context = RunContextBuilder::default()
         .xot(xot)
         .catalog(catalog)
+        .parsers(Rc::new(xee_xpath::Parsers::new()))
         .verbose(verbose)
         .build()
         .unwrap();
