@@ -398,6 +398,33 @@ fn contra_combine_typed_function_tests(
 
 fn combine_kind_tests(a: &ast::KindTest, b: &ast::KindTest) -> ast::KindTest {
     todo!()
+    // match (a, b) {
+    //     (ast::KindTest::Document(a), ast::KindTest::Document(b)) => {
+    //         ast::KindTest::Document(combine_document_tests(a, b))
+    //     }
+    //     (ast::KindTest::Element(a), ast::KindTest::Element(b)) => {
+    //         ast::KindTest::Element(combine_element_or_attribute_tests(a, b))
+    //     }
+    //     (ast::KindTest::Attribute(a), ast::KindTest::Attribute(b)) => {
+    //         ast::KindTest::Attribute(combine_element_or_attribute_tests(a, b))
+    //     }
+    //     (ast::KindTest::SchemaElement(a), ast::KindTest::SchemaElement(b)) => {
+    //         ast::KindTest::SchemaElement(combine_schema_element_tests(a, b))
+    //     }
+    //     (ast::KindTest::SchemaAttribute(a), ast::KindTest::SchemaAttribute(b)) => {
+    //         ast::KindTest::SchemaAttribute(combine_schema_attribute_tests(a, b))
+    //     }
+    //     (ast::KindTest::ProcessingInstruction(a), ast::KindTest::ProcessingInstruction(b)) => {
+    //         ast::KindTest::ProcessingInstruction(combine_processing_instruction_tests(a, b))
+    //     }
+    //     (ast::KindTest::Comment, ast::KindTest::Comment) => ast::KindTest::Comment,
+    //     (ast::KindTest::Text, ast::KindTest::Text) => ast::KindTest::Text,
+    //     (ast::KindTest::NamespaceNode, ast::KindTest::NamespaceNode) => {
+    //         ast::KindTest::NamespaceNode
+    //     }
+    //     (ast::KindTest::Any, ast::KindTest::Any) => ast::KindTest::Any,
+    //     _ => ast::KindTest::Any,
+    // }
 }
 
 fn contra_combine_kind_tests(a: &ast::KindTest, b: &ast::KindTest) -> Option<ast::KindTest> {
@@ -418,4 +445,162 @@ fn combine_array_tests(a: &ast::ArrayTest, b: &ast::ArrayTest) -> ast::ArrayTest
 
 fn contra_combine_array_tests(a: &ast::ArrayTest, b: &ast::ArrayTest) -> Option<ast::ArrayTest> {
     todo!()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use ibig::ibig;
+    use rust_decimal_macros::dec;
+    use xee_xpath_ast::Namespaces;
+    use xot::Xot;
+
+    use crate::{atomic, context};
+
+    fn with_runnable<F>(f: F)
+    where
+        F: FnOnce(&interpreter::Runnable),
+    {
+        let program = function::Program::new("dummy src".to_string());
+        let namespaces = Namespaces::default();
+        let static_context = context::StaticContext::new(&namespaces);
+        let xot = Xot::new();
+        let dynamic_context = context::DynamicContext::new(&xot, &static_context);
+        let runnable = interpreter::Runnable::new(&program, &dynamic_context);
+
+        f(&runnable);
+    }
+
+    #[test]
+    fn test_integer() {
+        let a: atomic::Atomic = ibig!(1).into();
+        let value: stack::Value = a.into();
+
+        with_runnable(|runnable| {
+            let sequence_type = type_for_value(&value, runnable).unwrap();
+            assert_eq!(
+                sequence_type,
+                ast::SequenceType::Item(ast::Item {
+                    item_type: ast::ItemType::AtomicOrUnionType(
+                        ast::Name::new(
+                            "integer".to_string(),
+                            Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                            Some("xs".to_string()),
+                        )
+                        .with_span((0..0).into())
+                    ),
+                    occurrence: ast::Occurrence::One,
+                })
+            );
+        });
+    }
+
+    #[test]
+    fn test_two_integers() {
+        let a: sequence::Item = ibig!(1).into();
+        let b: sequence::Item = ibig!(2).into();
+        let value: stack::Value = vec![a, b].into();
+
+        with_runnable(|runnable| {
+            let sequence_type = type_for_value(&value, runnable).unwrap();
+
+            assert_eq!(
+                sequence_type,
+                ast::SequenceType::Item(ast::Item {
+                    item_type: ast::ItemType::AtomicOrUnionType(
+                        ast::Name::new(
+                            "integer".to_string(),
+                            Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                            Some("xs".to_string()),
+                        )
+                        .with_span((0..0).into())
+                    ),
+                    occurrence: ast::Occurrence::Many,
+                })
+            );
+        });
+    }
+
+    #[test]
+    fn test_integer_and_string() {
+        let a: sequence::Item = ibig!(1).into();
+        let b: sequence::Item = "foo".to_string().into();
+        let value: stack::Value = vec![a, b].into();
+
+        with_runnable(|runnable| {
+            let sequence_type = type_for_value(&value, runnable).unwrap();
+            assert_eq!(
+                sequence_type,
+                ast::SequenceType::Item(ast::Item {
+                    item_type: ast::ItemType::AtomicOrUnionType(
+                        ast::Name::new(
+                            "anyAtomicType".to_string(),
+                            Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                            Some("xs".to_string()),
+                        )
+                        .with_span((0..0).into())
+                    ),
+                    occurrence: ast::Occurrence::Many,
+                })
+            );
+        });
+    }
+
+    #[test]
+    fn test_integer_and_decimal() {
+        let a: sequence::Item = ibig!(1).into();
+        let b: sequence::Item = dec!(2.3).into();
+        let value: stack::Value = vec![a, b].into();
+
+        with_runnable(|runnable| {
+            let sequence_type = type_for_value(&value, runnable).unwrap();
+            assert_eq!(
+                sequence_type,
+                ast::SequenceType::Item(ast::Item {
+                    item_type: ast::ItemType::AtomicOrUnionType(
+                        ast::Name::new(
+                            "decimal".to_string(),
+                            Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                            Some("xs".to_string()),
+                        )
+                        .with_span((0..0).into())
+                    ),
+                    occurrence: ast::Occurrence::Many,
+                })
+            );
+        });
+    }
+
+    // #[test]
+    // fn test_function() {
+    //     with_runnable(|runnable| {
+    //         let dynamic_context = runnable.dynamic_context();
+    //         // let static_context = dynamic_context.static_context.functions.get_by_name(
+    //         //     ast::Name("")
+    //         // );
+
+    //         let value: stack::Value = function::Function::Static {
+    //             static_function_id: function::StaticFunctionId(1),
+    //             closure_vars: vec![],
+    //         }
+    //         .into();
+
+    //         let sequence_type = type_for_value(&value, runnable).unwrap();
+    //         assert_eq!(
+    //             sequence_type,
+    //             ast::SequenceType::Item(ast::Item {
+    //                 item_type: ast::ItemType::AtomicOrUnionType(
+    //                     ast::Name::new(
+    //                         "decimal".to_string(),
+    //                         Some("http://www.w3.org/2001/XMLSchema".to_string()),
+    //                         Some("xs".to_string()),
+    //                     )
+    //                     .with_span((0..0).into())
+    //                 ),
+    //                 occurrence: ast::Occurrence::Many,
+    //             })
+    //         );
+    //     })
+    // }
 }
