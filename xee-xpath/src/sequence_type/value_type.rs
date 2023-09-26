@@ -9,25 +9,28 @@ use crate::sequence;
 use crate::stack;
 use crate::xml;
 
-fn type_for_value(
-    value: &stack::Value,
-    runnable: &interpreter::Runnable,
-) -> error::Result<ast::SequenceType> {
+fn type_for_value<F>(value: &stack::Value, get_signature: F) -> error::Result<ast::SequenceType>
+where
+    F: Fn(&function::Function) -> &function::Signature,
+{
     match value {
         stack::Value::Empty => Ok(ast::SequenceType::Empty),
         stack::Value::One(item) => Ok(ast::SequenceType::Item(ast::Item {
-            item_type: item_type_for_item(item, runnable),
+            item_type: item_type_for_item(item, get_signature),
             occurrence: ast::Occurrence::One,
         })),
         stack::Value::Many(items) => Ok(ast::SequenceType::Item(ast::Item {
-            item_type: item_type_for_items(items.as_ref(), runnable),
+            item_type: item_type_for_items(items.as_ref(), get_signature),
             occurrence: ast::Occurrence::Many,
         })),
         stack::Value::Absent => Err(error::Error::ComponentAbsentInDynamicContext),
     }
 }
 
-fn item_type_for_item(item: &sequence::Item, runnable: &interpreter::Runnable) -> ast::ItemType {
+fn item_type_for_item<F>(item: &sequence::Item, get_signature: F) -> ast::ItemType
+where
+    F: Fn(&function::Function) -> &function::Signature,
+{
     match item {
         sequence::Item::Atomic(atomic) => {
             // TODO: it's annoying that this is not an Xs type already, as we're
@@ -37,18 +40,16 @@ fn item_type_for_item(item: &sequence::Item, runnable: &interpreter::Runnable) -
             ast::ItemType::AtomicOrUnionType(atomic.type_name().with_span((0..0).into()))
         }
         sequence::Item::Function(function) => match function.as_ref() {
-            function::Function::Inline {
+            f @ function::Function::Inline {
                 inline_function_id, ..
-            } => ast::ItemType::FunctionTest(Box::new(function_test_for_inline_function(
-                *inline_function_id,
-                runnable,
-            ))),
-            function::Function::Static {
+            } => {
+                ast::ItemType::FunctionTest(Box::new(function_test_for_function(f, get_signature)))
+            }
+            f @ function::Function::Static {
                 static_function_id, ..
-            } => ast::ItemType::FunctionTest(Box::new(function_test_for_static_function(
-                *static_function_id,
-                runnable,
-            ))),
+            } => {
+                ast::ItemType::FunctionTest(Box::new(function_test_for_function(f, get_signature)))
+            }
             function::Function::Map(..) => {
                 todo!();
             }
@@ -60,19 +61,14 @@ fn item_type_for_item(item: &sequence::Item, runnable: &interpreter::Runnable) -
     }
 }
 
-fn function_test_for_inline_function(
-    inline_function_id: function::InlineFunctionId,
-    runnable: &interpreter::Runnable,
-) -> ast::FunctionTest {
-    let signature = runnable.inline_function(inline_function_id).signature();
-    function_test_for_signature(signature)
-}
-
-fn function_test_for_static_function(
-    static_function_id: function::StaticFunctionId,
-    runnable: &interpreter::Runnable,
-) -> ast::FunctionTest {
-    let signature = runnable.static_function(static_function_id).signature();
+fn function_test_for_function<F>(
+    function: &function::Function,
+    get_signature: F,
+) -> ast::FunctionTest
+where
+    F: Fn(&function::Function) -> &function::Signature,
+{
+    let signature = get_signature(function);
     function_test_for_signature(signature)
 }
 
@@ -109,13 +105,13 @@ fn kind_test_for_node(node: &xml::Node) -> ast::KindTest {
     todo!()
 }
 
-fn item_type_for_items(
-    items: &[sequence::Item],
-    runnable: &interpreter::Runnable,
-) -> ast::ItemType {
-    let mut combined_item_type = item_type_for_item(&items[0], runnable);
+fn item_type_for_items<F>(items: &[sequence::Item], get_signature: F) -> ast::ItemType
+where
+    F: Fn(&function::Function) -> &function::Signature,
+{
+    let mut combined_item_type = item_type_for_item(&items[0], &get_signature);
     for item in items[1..].iter() {
-        let item_type = item_type_for_item(item, runnable);
+        let item_type = item_type_for_item(item, &get_signature);
         combined_item_type = combine_item_types(&combined_item_type, &item_type);
         // if we're the most general item type, we're done
         if matches!(combined_item_type, ast::ItemType::Item) {
@@ -458,42 +454,40 @@ mod tests {
 
     use crate::{atomic, context};
 
-    fn with_runnable<F>(f: F)
-    where
-        F: FnOnce(&interpreter::Runnable),
-    {
-        let program = function::Program::new("dummy src".to_string());
-        let namespaces = Namespaces::default();
-        let static_context = context::StaticContext::new(&namespaces);
-        let xot = Xot::new();
-        let dynamic_context = context::DynamicContext::new(&xot, &static_context);
-        let runnable = interpreter::Runnable::new(&program, &dynamic_context);
+    // fn with_runnable<F>(f: F)
+    // where
+    //     F: FnOnce(&interpreter::Runnable),
+    // {
+    //     let program = function::Program::new("dummy src".to_string());
+    //     let namespaces = Namespaces::default();
+    //     let static_context = context::StaticContext::new(&namespaces);
+    //     let xot = Xot::new();
+    //     let dynamic_context = context::DynamicContext::new(&xot, &static_context);
+    //     let runnable = interpreter::Runnable::new(&program, &dynamic_context);
 
-        f(&runnable);
-    }
+    //     f(&runnable);
+    // }
 
     #[test]
     fn test_integer() {
         let a: atomic::Atomic = ibig!(1).into();
         let value: stack::Value = a.into();
 
-        with_runnable(|runnable| {
-            let sequence_type = type_for_value(&value, runnable).unwrap();
-            assert_eq!(
-                sequence_type,
-                ast::SequenceType::Item(ast::Item {
-                    item_type: ast::ItemType::AtomicOrUnionType(
-                        ast::Name::new(
-                            "integer".to_string(),
-                            Some("http://www.w3.org/2001/XMLSchema".to_string()),
-                            Some("xs".to_string()),
-                        )
-                        .with_span((0..0).into())
-                    ),
-                    occurrence: ast::Occurrence::One,
-                })
-            );
-        });
+        let sequence_type = type_for_value(&value, |_| unreachable!()).unwrap();
+        assert_eq!(
+            sequence_type,
+            ast::SequenceType::Item(ast::Item {
+                item_type: ast::ItemType::AtomicOrUnionType(
+                    ast::Name::new(
+                        "integer".to_string(),
+                        Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                        Some("xs".to_string()),
+                    )
+                    .with_span((0..0).into())
+                ),
+                occurrence: ast::Occurrence::One,
+            })
+        );
     }
 
     #[test]
@@ -502,24 +496,22 @@ mod tests {
         let b: sequence::Item = ibig!(2).into();
         let value: stack::Value = vec![a, b].into();
 
-        with_runnable(|runnable| {
-            let sequence_type = type_for_value(&value, runnable).unwrap();
+        let sequence_type = type_for_value(&value, |_| unreachable!()).unwrap();
 
-            assert_eq!(
-                sequence_type,
-                ast::SequenceType::Item(ast::Item {
-                    item_type: ast::ItemType::AtomicOrUnionType(
-                        ast::Name::new(
-                            "integer".to_string(),
-                            Some("http://www.w3.org/2001/XMLSchema".to_string()),
-                            Some("xs".to_string()),
-                        )
-                        .with_span((0..0).into())
-                    ),
-                    occurrence: ast::Occurrence::Many,
-                })
-            );
-        });
+        assert_eq!(
+            sequence_type,
+            ast::SequenceType::Item(ast::Item {
+                item_type: ast::ItemType::AtomicOrUnionType(
+                    ast::Name::new(
+                        "integer".to_string(),
+                        Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                        Some("xs".to_string()),
+                    )
+                    .with_span((0..0).into())
+                ),
+                occurrence: ast::Occurrence::Many,
+            })
+        );
     }
 
     #[test]
@@ -528,23 +520,21 @@ mod tests {
         let b: sequence::Item = "foo".to_string().into();
         let value: stack::Value = vec![a, b].into();
 
-        with_runnable(|runnable| {
-            let sequence_type = type_for_value(&value, runnable).unwrap();
-            assert_eq!(
-                sequence_type,
-                ast::SequenceType::Item(ast::Item {
-                    item_type: ast::ItemType::AtomicOrUnionType(
-                        ast::Name::new(
-                            "anyAtomicType".to_string(),
-                            Some("http://www.w3.org/2001/XMLSchema".to_string()),
-                            Some("xs".to_string()),
-                        )
-                        .with_span((0..0).into())
-                    ),
-                    occurrence: ast::Occurrence::Many,
-                })
-            );
-        });
+        let sequence_type = type_for_value(&value, |_| unreachable!()).unwrap();
+        assert_eq!(
+            sequence_type,
+            ast::SequenceType::Item(ast::Item {
+                item_type: ast::ItemType::AtomicOrUnionType(
+                    ast::Name::new(
+                        "anyAtomicType".to_string(),
+                        Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                        Some("xs".to_string()),
+                    )
+                    .with_span((0..0).into())
+                ),
+                occurrence: ast::Occurrence::Many,
+            })
+        );
     }
 
     #[test]
@@ -553,23 +543,21 @@ mod tests {
         let b: sequence::Item = dec!(2.3).into();
         let value: stack::Value = vec![a, b].into();
 
-        with_runnable(|runnable| {
-            let sequence_type = type_for_value(&value, runnable).unwrap();
-            assert_eq!(
-                sequence_type,
-                ast::SequenceType::Item(ast::Item {
-                    item_type: ast::ItemType::AtomicOrUnionType(
-                        ast::Name::new(
-                            "decimal".to_string(),
-                            Some("http://www.w3.org/2001/XMLSchema".to_string()),
-                            Some("xs".to_string()),
-                        )
-                        .with_span((0..0).into())
-                    ),
-                    occurrence: ast::Occurrence::Many,
-                })
-            );
-        });
+        let sequence_type = type_for_value(&value, |_| unreachable!()).unwrap();
+        assert_eq!(
+            sequence_type,
+            ast::SequenceType::Item(ast::Item {
+                item_type: ast::ItemType::AtomicOrUnionType(
+                    ast::Name::new(
+                        "decimal".to_string(),
+                        Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                        Some("xs".to_string()),
+                    )
+                    .with_span((0..0).into())
+                ),
+                occurrence: ast::Occurrence::Many,
+            })
+        );
     }
 
     // #[test]
