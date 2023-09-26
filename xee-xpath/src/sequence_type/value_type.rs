@@ -4,7 +4,6 @@ use xee_xpath_ast::WithSpan;
 
 use crate::error;
 use crate::function;
-use crate::interpreter;
 use crate::sequence;
 use crate::stack;
 use crate::xml;
