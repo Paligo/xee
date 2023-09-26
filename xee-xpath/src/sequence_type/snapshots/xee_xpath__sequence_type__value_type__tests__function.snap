@@ -1,0 +1,55 @@
+---
+source: xee-xpath/src/sequence_type/value_type.rs
+expression: "type_for_value(&value, |_| &signature).unwrap()"
+---
+Item(
+    Item {
+        item_type: FunctionTest(
+            TypedFunctionTest(
+                TypedFunctionTest {
+                    parameter_types: [
+                        Item(
+                            Item {
+                                item_type: AtomicOrUnionType(
+                                    Spanned {
+                                        value: Name {
+                                            name: "integer",
+                                            prefix: Some(
+                                                "xs",
+                                            ),
+                                            namespace: Some(
+                                                "http://www.w3.org/2001/XMLSchema",
+                                            ),
+                                        },
+                                        span: 0..0,
+                                    },
+                                ),
+                                occurrence: One,
+                            },
+                        ),
+                    ],
+                    return_type: Item(
+                        Item {
+                            item_type: AtomicOrUnionType(
+                                Spanned {
+                                    value: Name {
+                                        name: "integer",
+                                        prefix: Some(
+                                            "xs",
+                                        ),
+                                        namespace: Some(
+                                            "http://www.w3.org/2001/XMLSchema",
+                                        ),
+                                    },
+                                    span: 0..0,
+                                },
+                            ),
+                            occurrence: One,
+                        },
+                    ),
+                },
+            ),
+        ),
+        occurrence: One,
+    },
+)

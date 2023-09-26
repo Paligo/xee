@@ -9,9 +9,9 @@ use crate::sequence;
 use crate::stack;
 use crate::xml;
 
-fn type_for_value<F>(value: &stack::Value, get_signature: F) -> error::Result<ast::SequenceType>
+fn type_for_value<'a, F>(value: &stack::Value, get_signature: F) -> error::Result<ast::SequenceType>
 where
-    F: Fn(&function::Function) -> &function::Signature,
+    F: Fn(&function::Function) -> &'a function::Signature,
 {
     match value {
         stack::Value::Empty => Ok(ast::SequenceType::Empty),
@@ -27,9 +27,9 @@ where
     }
 }
 
-fn item_type_for_item<F>(item: &sequence::Item, get_signature: F) -> ast::ItemType
+fn item_type_for_item<'a, F>(item: &sequence::Item, get_signature: F) -> ast::ItemType
 where
-    F: Fn(&function::Function) -> &function::Signature,
+    F: Fn(&function::Function) -> &'a function::Signature,
 {
     match item {
         sequence::Item::Atomic(atomic) => {
@@ -61,12 +61,12 @@ where
     }
 }
 
-fn function_test_for_function<F>(
+fn function_test_for_function<'a, F>(
     function: &function::Function,
     get_signature: F,
 ) -> ast::FunctionTest
 where
-    F: Fn(&function::Function) -> &function::Signature,
+    F: Fn(&function::Function) -> &'a function::Signature,
 {
     let signature = get_signature(function);
     function_test_for_signature(signature)
@@ -105,9 +105,9 @@ fn kind_test_for_node(node: &xml::Node) -> ast::KindTest {
     todo!()
 }
 
-fn item_type_for_items<F>(items: &[sequence::Item], get_signature: F) -> ast::ItemType
+fn item_type_for_items<'a, F>(items: &[sequence::Item], get_signature: F) -> ast::ItemType
 where
-    F: Fn(&function::Function) -> &function::Signature,
+    F: Fn(&function::Function) -> &'a function::Signature,
 {
     let mut combined_item_type = item_type_for_item(&items[0], &get_signature);
     for item in items[1..].iter() {
@@ -448,6 +448,7 @@ mod tests {
     use super::*;
 
     use ibig::ibig;
+    use insta::assert_debug_snapshot;
     use rust_decimal_macros::dec;
     use xee_xpath_ast::Namespaces;
     use xot::Xot;
@@ -560,35 +561,33 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_function() {
-    //     with_runnable(|runnable| {
-    //         let dynamic_context = runnable.dynamic_context();
-    //         // let static_context = dynamic_context.static_context.functions.get_by_name(
-    //         //     ast::Name("")
-    //         // );
+    #[test]
+    fn test_function() {
+        let value: stack::Value = function::Function::Static {
+            // the id is irrelevant, as get_signature is hardcoded to return
+            // the same signature
+            static_function_id: function::StaticFunctionId(1),
+            closure_vars: vec![],
+        }
+        .into();
 
-    //         let value: stack::Value = function::Function::Static {
-    //             static_function_id: function::StaticFunctionId(1),
-    //             closure_vars: vec![],
-    //         }
-    //         .into();
+        let integer_type = ast::SequenceType::Item(ast::Item {
+            item_type: ast::ItemType::AtomicOrUnionType(
+                ast::Name::new(
+                    "integer".to_string(),
+                    Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                    Some("xs".to_string()),
+                )
+                .with_span((0..0).into()),
+            ),
+            occurrence: ast::Occurrence::One,
+        });
 
-    //         let sequence_type = type_for_value(&value, runnable).unwrap();
-    //         assert_eq!(
-    //             sequence_type,
-    //             ast::SequenceType::Item(ast::Item {
-    //                 item_type: ast::ItemType::AtomicOrUnionType(
-    //                     ast::Name::new(
-    //                         "decimal".to_string(),
-    //                         Some("http://www.w3.org/2001/XMLSchema".to_string()),
-    //                         Some("xs".to_string()),
-    //                     )
-    //                     .with_span((0..0).into())
-    //                 ),
-    //                 occurrence: ast::Occurrence::Many,
-    //             })
-    //         );
-    //     })
-    // }
+        let signature = function::Signature {
+            parameter_types: vec![Some(integer_type.clone())],
+            return_type: Some(integer_type.clone()),
+        };
+
+        assert_debug_snapshot!(type_for_value(&value, |_| &signature).unwrap());
+    }
 }
