@@ -5,7 +5,7 @@ use rust_decimal::prelude::*;
 use std::cmp::Ordering;
 use std::fmt;
 use std::rc::Rc;
-use xee_xpath_ast::ast::Name;
+use xee_xpath_ast::ast;
 
 use xee_schema_type::Xs;
 
@@ -46,7 +46,7 @@ pub enum Atomic {
     GMonth(Rc<GMonth>),
     Boolean(bool),
     Binary(BinaryType, Rc<Vec<u8>>),
-    QName(Rc<Name>),
+    QName(Rc<ast::Name>),
 }
 
 impl Atomic {
@@ -185,6 +185,15 @@ impl Atomic {
             Atomic::GMonth(_) => Xs::GMonth,
             Atomic::GDay(_) => Xs::GDay,
         }
+    }
+
+    pub(crate) fn type_name(&self) -> ast::Name {
+        let schema_type = self.schema_type();
+        ast::Name::new(
+            schema_type.local_name().to_string(),
+            Some(Xs::namespace().to_string()),
+            Some("xs".to_string()),
+        )
     }
 
     pub(crate) fn ensure_base_schema_type(&self, xs: Xs) -> error::Result<()> {
@@ -620,13 +629,13 @@ impl TryFrom<Atomic> for f64 {
     }
 }
 
-impl From<Name> for Atomic {
-    fn from(n: Name) -> Self {
+impl From<ast::Name> for Atomic {
+    fn from(n: ast::Name) -> Self {
         Atomic::QName(Rc::new(n))
     }
 }
 
-impl TryFrom<Atomic> for Name {
+impl TryFrom<Atomic> for ast::Name {
     type Error = error::Error;
 
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {

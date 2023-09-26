@@ -15,6 +15,7 @@ mod occurrence;
 mod query;
 mod run;
 mod sequence;
+mod sequence_type;
 mod span;
 mod stack;
 mod string;
