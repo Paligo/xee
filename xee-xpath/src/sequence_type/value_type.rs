@@ -39,14 +39,7 @@ where
             ast::ItemType::AtomicOrUnionType(atomic.type_name().with_span((0..0).into()))
         }
         sequence::Item::Function(function) => match function.as_ref() {
-            f @ function::Function::Inline {
-                inline_function_id, ..
-            } => {
-                ast::ItemType::FunctionTest(Box::new(function_test_for_function(f, get_signature)))
-            }
-            f @ function::Function::Static {
-                static_function_id, ..
-            } => {
+            f @ function::Function::Inline { .. } | f @ function::Function::Static { .. } => {
                 ast::ItemType::FunctionTest(Box::new(function_test_for_function(f, get_signature)))
             }
             function::Function::Map(..) => {
