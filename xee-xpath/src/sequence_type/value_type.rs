@@ -590,4 +590,136 @@ mod tests {
 
         assert_debug_snapshot!(type_for_value(&value, |_| &signature).unwrap());
     }
+
+    #[test]
+    fn test_function_multiple() {
+        let a: sequence::Item = function::Function::Static {
+            static_function_id: function::StaticFunctionId(1),
+            closure_vars: vec![],
+        }
+        .into();
+        let b: sequence::Item = function::Function::Static {
+            static_function_id: function::StaticFunctionId(2),
+            closure_vars: vec![],
+        }
+        .into();
+        let value = vec![a, b].into();
+
+        let integer_type = ast::SequenceType::Item(ast::Item {
+            item_type: ast::ItemType::AtomicOrUnionType(
+                ast::Name::new(
+                    "integer".to_string(),
+                    Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                    Some("xs".to_string()),
+                )
+                .with_span((0..0).into()),
+            ),
+            occurrence: ast::Occurrence::One,
+        });
+
+        let decimal_type = ast::SequenceType::Item(ast::Item {
+            item_type: ast::ItemType::AtomicOrUnionType(
+                ast::Name::new(
+                    "decimal".to_string(),
+                    Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                    Some("xs".to_string()),
+                )
+                .with_span((0..0).into()),
+            ),
+            occurrence: ast::Occurrence::One,
+        });
+
+        let signature1 = function::Signature {
+            parameter_types: vec![Some(integer_type.clone())],
+            return_type: Some(integer_type.clone()),
+        };
+        let signature2 = function::Signature {
+            parameter_types: vec![Some(decimal_type.clone())],
+            return_type: Some(integer_type.clone()),
+        };
+
+        // the expected merged function type is more general, meaning it
+        // takes the more specific argument type (due to contravariance), thus
+        // it takes an integer
+        assert_debug_snapshot!(type_for_value(&value, |function| {
+            match function {
+                function::Function::Static {
+                    static_function_id: function::StaticFunctionId(1),
+                    ..
+                } => &signature1,
+                function::Function::Static {
+                    static_function_id: function::StaticFunctionId(2),
+                    ..
+                } => &signature2,
+                _ => unreachable!(),
+            }
+        })
+        .unwrap());
+    }
+
+    #[test]
+    fn test_function_multiple_return_value() {
+        let a: sequence::Item = function::Function::Static {
+            static_function_id: function::StaticFunctionId(1),
+            closure_vars: vec![],
+        }
+        .into();
+        let b: sequence::Item = function::Function::Static {
+            static_function_id: function::StaticFunctionId(2),
+            closure_vars: vec![],
+        }
+        .into();
+        let value = vec![a, b].into();
+
+        let integer_type = ast::SequenceType::Item(ast::Item {
+            item_type: ast::ItemType::AtomicOrUnionType(
+                ast::Name::new(
+                    "integer".to_string(),
+                    Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                    Some("xs".to_string()),
+                )
+                .with_span((0..0).into()),
+            ),
+            occurrence: ast::Occurrence::One,
+        });
+
+        let decimal_type = ast::SequenceType::Item(ast::Item {
+            item_type: ast::ItemType::AtomicOrUnionType(
+                ast::Name::new(
+                    "decimal".to_string(),
+                    Some("http://www.w3.org/2001/XMLSchema".to_string()),
+                    Some("xs".to_string()),
+                )
+                .with_span((0..0).into()),
+            ),
+            occurrence: ast::Occurrence::One,
+        });
+
+        let signature1 = function::Signature {
+            parameter_types: vec![Some(integer_type.clone())],
+            return_type: Some(integer_type.clone()),
+        };
+        let signature2 = function::Signature {
+            parameter_types: vec![Some(integer_type.clone())],
+            return_type: Some(decimal_type.clone()),
+        };
+
+        // the expected merged function type is more general, meaning it
+        // returns a decimal (as that's the more general type, and the return
+        // value is covariant)
+        assert_debug_snapshot!(type_for_value(&value, |function| {
+            match function {
+                function::Function::Static {
+                    static_function_id: function::StaticFunctionId(1),
+                    ..
+                } => &signature1,
+                function::Function::Static {
+                    static_function_id: function::StaticFunctionId(2),
+                    ..
+                } => &signature2,
+                _ => unreachable!(),
+            }
+        })
+        .unwrap());
+    }
 }

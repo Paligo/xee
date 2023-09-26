@@ -1,0 +1,55 @@
+---
+source: xee-xpath/src/sequence_type/value_type.rs
+expression: "type_for_value(&value,\n        |function|\n            {\n                match function {\n                    function::Function::Static {\n                        static_function_id: function::StaticFunctionId(1), .. } =>\n                        &signature1,\n                    function::Function::Static {\n                        static_function_id: function::StaticFunctionId(2), .. } =>\n                        &signature2,\n                    _ => unreachable!(),\n                }\n            }).unwrap()"
+---
+Item(
+    Item {
+        item_type: FunctionTest(
+            TypedFunctionTest(
+                TypedFunctionTest {
+                    parameter_types: [
+                        Item(
+                            Item {
+                                item_type: AtomicOrUnionType(
+                                    Spanned {
+                                        value: Name {
+                                            name: "integer",
+                                            prefix: Some(
+                                                "xs",
+                                            ),
+                                            namespace: Some(
+                                                "http://www.w3.org/2001/XMLSchema",
+                                            ),
+                                        },
+                                        span: 0..0,
+                                    },
+                                ),
+                                occurrence: One,
+                            },
+                        ),
+                    ],
+                    return_type: Item(
+                        Item {
+                            item_type: AtomicOrUnionType(
+                                Spanned {
+                                    value: Name {
+                                        name: "decimal",
+                                        prefix: Some(
+                                            "xs",
+                                        ),
+                                        namespace: Some(
+                                            "http://www.w3.org/2001/XMLSchema",
+                                        ),
+                                    },
+                                    span: 0..0,
+                                },
+                            ),
+                            occurrence: One,
+                        },
+                    ),
+                },
+            ),
+        ),
+        occurrence: Many,
+    },
+)
