@@ -18,6 +18,7 @@ mod sequence;
 mod span;
 mod stack;
 mod string;
+mod web;
 mod xml;
 
 pub use xee_xpath_ast::ast::Name;

@@ -27,3 +27,7 @@ chrono = "0.4.30"
 
 [profile.test.package.xot]
 opt-level = 3
+
+[profile.release]
+lto = true
+opt-level = 'z'

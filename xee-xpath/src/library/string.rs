@@ -509,73 +509,73 @@ fn substring_after(
     }
 }
 
-#[xpath_fn(
-    "fn:matches($input as xs:string?, $pattern as xs:string, $flags as xs:string) as xs:boolean"
-)]
-fn matches3(input: Option<&str>, pattern: &str, flags: &str) -> error::Result<bool> {
-    matches(input, pattern, flags)
-}
+// #[xpath_fn(
+//     "fn:matches($input as xs:string?, $pattern as xs:string, $flags as xs:string) as xs:boolean"
+// )]
+// fn matches3(input: Option<&str>, pattern: &str, flags: &str) -> error::Result<bool> {
+//     matches(input, pattern, flags)
+// }
 
-#[xpath_fn("fn:matches($input as xs:string?, $pattern as xs:string) as xs:boolean")]
-fn matches2(input: Option<&str>, pattern: &str) -> error::Result<bool> {
-    matches(input, pattern, "")
-}
+// #[xpath_fn("fn:matches($input as xs:string?, $pattern as xs:string) as xs:boolean")]
+// fn matches2(input: Option<&str>, pattern: &str) -> error::Result<bool> {
+//     matches(input, pattern, "")
+// }
 
-fn matches(input: Option<&str>, pattern: &str, flags: &str) -> error::Result<bool> {
-    let input = input.unwrap_or("");
-    let pattern = add_flags(pattern, flags)?;
-    let regex = fancy_regex::Regex::new(&pattern).map_err(|_| error::Error::FORX0002)?;
-    regex.is_match(input).map_err(|_| error::Error::FORX0002)
-}
+// fn matches(input: Option<&str>, pattern: &str, flags: &str) -> error::Result<bool> {
+//     let input = input.unwrap_or("");
+//     let pattern = add_flags(pattern, flags)?;
+//     let regex = fancy_regex::Regex::new(&pattern).map_err(|_| error::Error::FORX0002)?;
+//     regex.is_match(input).map_err(|_| error::Error::FORX0002)
+// }
 
-#[xpath_fn("fn:replace($input as xs:string?, $pattern as xs:string, $replacement as xs:string, $flags as xs:string) as xs:string")]
-fn replace4(
-    input: Option<&str>,
-    pattern: &str,
-    replacement: &str,
-    flags: &str,
-) -> error::Result<String> {
-    replace(input, pattern, replacement, flags)
-}
+// #[xpath_fn("fn:replace($input as xs:string?, $pattern as xs:string, $replacement as xs:string, $flags as xs:string) as xs:string")]
+// fn replace4(
+//     input: Option<&str>,
+//     pattern: &str,
+//     replacement: &str,
+//     flags: &str,
+// ) -> error::Result<String> {
+//     replace(input, pattern, replacement, flags)
+// }
 
-#[xpath_fn("fn:replace($input as xs:string?, $pattern as xs:string, $replacement as xs:string) as xs:string")]
-fn replace3(input: Option<&str>, pattern: &str, replacement: &str) -> error::Result<String> {
-    replace(input, pattern, replacement, "")
-}
+// #[xpath_fn("fn:replace($input as xs:string?, $pattern as xs:string, $replacement as xs:string) as xs:string")]
+// fn replace3(input: Option<&str>, pattern: &str, replacement: &str) -> error::Result<String> {
+//     replace(input, pattern, replacement, "")
+// }
 
-fn replace(
-    input: Option<&str>,
-    pattern: &str,
-    replacement: &str,
-    flags: &str,
-) -> error::Result<String> {
-    let input = input.unwrap_or("");
-    let pattern = add_flags(pattern, flags)?;
-    let regex = fancy_regex::Regex::new(&pattern).map_err(|_| error::Error::FORX0002)?;
-    let output = regex.replace_all(input, replacement);
-    Ok(output.into_owned())
-}
+// fn replace(
+//     input: Option<&str>,
+//     pattern: &str,
+//     replacement: &str,
+//     flags: &str,
+// ) -> error::Result<String> {
+//     let input = input.unwrap_or("");
+//     let pattern = add_flags(pattern, flags)?;
+//     let regex = fancy_regex::Regex::new(&pattern).map_err(|_| error::Error::FORX0002)?;
+//     let output = regex.replace_all(input, replacement);
+//     Ok(output.into_owned())
+// }
 
-#[xpath_fn(
-    "fn:tokenize($input as xs:string?, $pattern as xs:string, $flags as xs:string) as xs:string*"
-)]
-fn tokenize3(input: Option<&str>, pattern: &str, flags: &str) -> error::Result<Vec<String>> {
-    tokenize(input, pattern, flags)
-}
+// #[xpath_fn(
+//     "fn:tokenize($input as xs:string?, $pattern as xs:string, $flags as xs:string) as xs:string*"
+// )]
+// fn tokenize3(input: Option<&str>, pattern: &str, flags: &str) -> error::Result<Vec<String>> {
+//     tokenize(input, pattern, flags)
+// }
 
-#[xpath_fn("fn:tokenize($input as xs:string?, $pattern as xs:string) as xs:string*")]
-fn tokenize2(input: Option<&str>, pattern: &str) -> error::Result<Vec<String>> {
-    tokenize(input, pattern, "")
-}
+// #[xpath_fn("fn:tokenize($input as xs:string?, $pattern as xs:string) as xs:string*")]
+// fn tokenize2(input: Option<&str>, pattern: &str) -> error::Result<Vec<String>> {
+//     tokenize(input, pattern, "")
+// }
 
-fn tokenize(input: Option<&str>, pattern: &str, flags: &str) -> error::Result<Vec<String>> {
-    let input = input.unwrap_or("");
-    let pattern = add_flags(pattern, flags)?;
-    // we are not using fancy_regex here as it doesn't have a split...
-    let regex = regex::Regex::new(&pattern).map_err(|_| error::Error::FORX0002)?;
-    let output = regex.split(input);
-    Ok(output.map(|s| s.to_string()).collect())
-}
+// fn tokenize(input: Option<&str>, pattern: &str, flags: &str) -> error::Result<Vec<String>> {
+//     let input = input.unwrap_or("");
+//     let pattern = add_flags(pattern, flags)?;
+//     // we are not using fancy_regex here as it doesn't have a split...
+//     let regex = regex::Regex::new(&pattern).map_err(|_| error::Error::FORX0002)?;
+//     let output = regex.split(input);
+//     Ok(output.map(|s| s.to_string()).collect())
+// }
 
 const ALLOWED_FLAGS: [char; 5] = ['s', 'm', 'i', 'x', 'q'];
 
@@ -620,13 +620,13 @@ pub(crate) fn static_function_descriptions() -> Vec<StaticFunctionDescription> {
         wrap_xpath_fn!(ends_with),
         wrap_xpath_fn!(substring_before),
         wrap_xpath_fn!(substring_after),
-        wrap_xpath_fn!(tokenize1),
-        wrap_xpath_fn!(matches2),
-        wrap_xpath_fn!(matches3),
-        wrap_xpath_fn!(replace3),
-        wrap_xpath_fn!(replace4),
-        wrap_xpath_fn!(tokenize3),
-        wrap_xpath_fn!(tokenize2),
+        // wrap_xpath_fn!(tokenize1),
+        // wrap_xpath_fn!(matches2),
+        // wrap_xpath_fn!(matches3),
+        // wrap_xpath_fn!(replace3),
+        // wrap_xpath_fn!(replace4),
+        // wrap_xpath_fn!(tokenize3),
+        // wrap_xpath_fn!(tokenize2),
     ];
     // register concat for a variety of arities
     // the spec leaves the amount of arguments indefinite

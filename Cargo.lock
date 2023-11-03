@@ -655,16 +655,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fancy-regex"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b95f7c0680e4142284cf8b22c14a476e87d61b004a3a0861872b32ef7ead40a2"
-dependencies = [
- "bit-set",
- "regex",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -835,8 +825,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be4136b2a15dd319360be1c07d9933517ccf0be8f16bf62a3bee4f0d618df427"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "wasi",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -3616,7 +3608,7 @@ dependencies = [
  "base64 0.21.4",
  "chrono",
  "chumsky",
- "fancy-regex",
+ "getrandom",
  "hex",
  "ibig",
  "icu",
@@ -3640,6 +3632,7 @@ dependencies = [
  "test-generator",
  "thiserror",
  "url",
+ "wasm-bindgen",
  "xee-schema-type",
  "xee-xpath-ast",
  "xee-xpath-macros",
