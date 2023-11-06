@@ -522,10 +522,11 @@ fn matches2(input: Option<&str>, pattern: &str) -> error::Result<bool> {
 }
 
 fn matches(input: Option<&str>, pattern: &str, flags: &str) -> error::Result<bool> {
+    let regex = regexml::Regex::xpath(pattern, flags).map_err(|_| error::Error::FORX0002)?;
     let input = input.unwrap_or("");
-    let pattern = add_flags(pattern, flags)?;
-    let regex = fancy_regex::Regex::new(&pattern).map_err(|_| error::Error::FORX0002)?;
-    regex.is_match(input).map_err(|_| error::Error::FORX0002)
+    // let pattern = add_flags(pattern, flags)?;
+    // let regex = fancy_regex::Regex::new(&pattern).map_err(|_| error::Error::FORX0002)?;
+    Ok(regex.is_match(input))
 }
 
 #[xpath_fn("fn:replace($input as xs:string?, $pattern as xs:string, $replacement as xs:string, $flags as xs:string) as xs:string")]
