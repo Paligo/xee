@@ -8,4 +8,4 @@ mod state;
 
 pub use interpret::Interpreter;
 pub use program::Program;
-pub use runnable::{Runnable, SequenceOutput};
+pub use runnable::{Runnable, SequenceOutput, Variables};

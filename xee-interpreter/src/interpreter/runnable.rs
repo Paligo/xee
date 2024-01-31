@@ -1,8 +1,10 @@
 use std::fmt::Formatter;
 use std::rc::Rc;
 
+use ahash::AHashMap;
 use ibig::IBig;
 use xee_name::Name;
+use xee_xpath_ast::ast;
 use xot::Xot;
 
 use crate::atomic::Atomic;
@@ -18,6 +20,8 @@ use crate::{error, string};
 
 use super::Interpreter;
 use super::Program;
+
+pub type Variables = AHashMap<ast::Name, sequence::Sequence>;
 
 #[derive(Debug, Clone)]
 pub struct Runnable<'a> {
@@ -66,13 +70,31 @@ impl<'a> Runnable<'a> {
         }
     }
 
-    fn run_value(&self, context_item: Option<&sequence::Item>) -> error::SpannedResult<RunValue> {
+    pub fn arguments(&self, variables: Variables) -> error::Result<Vec<sequence::Sequence>> {
+        let mut arguments = Vec::new();
+        for variable_name in &self
+            .dynamic_context
+            .static_context
+            .parser_context
+            .variable_names
+        {
+            let items = variables.get(variable_name).ok_or(error::Error::XPDY0002)?;
+            arguments.push(items.clone());
+        }
+        Ok(arguments)
+    }
+
+    fn run_value(
+        &self,
+        context_item: Option<&sequence::Item>,
+        variables: Variables,
+    ) -> error::SpannedResult<RunValue> {
         let mut interpreter = Interpreter::new(self);
         // TODO: the arguments aren't supplied to the function that are expected.
         // This should result in an error, preferrably the variable that is missing
         // underlined in the xpath expression. But that requires some more work to
         // accomplish, so for now we panic.
-        let arguments = self.dynamic_context.arguments().unwrap();
+        let arguments = self.arguments(variables).unwrap();
         interpreter.start(context_item.map(|item| item.clone().into()), arguments);
         interpreter.run(0)?;
 
@@ -99,8 +121,12 @@ impl<'a> Runnable<'a> {
     }
 
     /// Run the program against a sequence item.
-    pub fn many(&self, item: Option<&sequence::Item>) -> error::SpannedResult<sequence::Sequence> {
-        let value = self.run_value(item)?;
+    pub fn many(
+        &self,
+        item: Option<&sequence::Item>,
+        variables: Variables,
+    ) -> error::SpannedResult<sequence::Sequence> {
+        let value = self.run_value(item, variables)?;
         Ok(value.value.into())
     }
 
@@ -110,8 +136,9 @@ impl<'a> Runnable<'a> {
     pub fn many_output(
         &self,
         item: Option<&sequence::Item>,
+        variables: Variables,
     ) -> error::SpannedResult<SequenceOutput> {
-        let value = self.run_value(item)?;
+        let value = self.run_value(item, variables)?;
         Ok(SequenceOutput {
             output: value.output,
             sequence: value.value.into(),
@@ -119,15 +146,23 @@ impl<'a> Runnable<'a> {
     }
 
     /// Run the program against a xot Node.
-    pub fn many_xot_node(&self, node: xot::Node) -> error::SpannedResult<sequence::Sequence> {
+    pub fn many_xot_node(
+        &self,
+        node: xot::Node,
+        variables: Variables,
+    ) -> error::SpannedResult<sequence::Sequence> {
         let node = xml::Node::Xot(node);
         let item = sequence::Item::Node(node);
-        self.many(Some(&item))
+        self.many(Some(&item), variables)
     }
 
     /// Run the program, expect a single item as the result.
-    pub fn one(&self, item: Option<&sequence::Item>) -> error::SpannedResult<sequence::Item> {
-        let sequence = self.many(item)?;
+    pub fn one(
+        &self,
+        item: Option<&sequence::Item>,
+        variables: Variables,
+    ) -> error::SpannedResult<sequence::Item> {
+        let sequence = self.many(item, variables)?;
         sequence.items().one().map_err(|error| SpannedError {
             error,
             span: self.program.span().into(),
@@ -138,8 +173,9 @@ impl<'a> Runnable<'a> {
     pub fn option(
         &self,
         item: Option<&sequence::Item>,
+        variables: Variables,
     ) -> error::SpannedResult<Option<sequence::Item>> {
-        let sequence = self.many(item)?;
+        let sequence = self.many(item, variables)?;
         sequence.items().option().map_err(|error| SpannedError {
             error,
             span: self.program.span().into(),

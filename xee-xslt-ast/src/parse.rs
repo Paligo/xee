@@ -1,4 +1,4 @@
-use xee_xpath::context::Variables;
+use xee_xpath::Variables;
 use xot::Xot;
 
 use crate::ast_core as ast;

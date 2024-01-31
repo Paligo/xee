@@ -3,8 +3,8 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use xee_xpath::{
-    context::DynamicContext, context::StaticContext, context::Variables, parse, sequence::Item,
-    xml::Documents, xml::Node, xml::Uri, Name,
+    context::DynamicContext, parse, sequence::Item, xml::Documents, xml::Node, xml::Uri, Name,
+    Variables,
 };
 use xot::Xot;
 
@@ -29,27 +29,31 @@ impl EnvironmentSpec {
         Ok(None)
     }
 
-    pub(crate) fn variables(&self, mut xot: Xot, documents: &mut Documents) -> Result<Variables> {
+    pub(crate) fn variables(
+        &self,
+        dynamic_context: &mut DynamicContext,
+        documents: &mut Documents,
+    ) -> Result<Variables> {
         let mut variables = Variables::new();
         for source in &self.sources {
             if let qt::SourceRole::Var(name) = &source.role {
                 let name = &name[1..]; // without $
-                let node = source.node(&mut xot, &self.base_dir, documents)?;
+                let node = source.node(dynamic_context.xot_mut(), &self.base_dir, documents)?;
                 variables.insert(Name::unprefixed(name), Item::from(node).into());
             }
         }
         for param in &self.params {
-            let static_context = StaticContext::default();
             let select = (param.select.as_ref()).expect("param: missing select not supported");
-            let program = parse(&static_context, select);
+            let program = parse(dynamic_context.static_context, select);
             if program.is_err() {
                 println!("param: select xpath parse failed: {}", select);
                 continue;
             }
             let program = program.unwrap();
-            let dynamic_context = DynamicContext::empty(xot, &static_context);
             let runnable = program.runnable(&dynamic_context);
-            let result = runnable.many(None).map_err(|e| e.error)?;
+            let result = runnable
+                .many(None, Variables::default())
+                .map_err(|e| e.error)?;
             variables.insert(param.name.clone(), result);
         }
         Ok(variables)

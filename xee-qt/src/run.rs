@@ -2,8 +2,8 @@ use derive_builder::Builder;
 use std::borrow::Cow;
 use std::path::Path;
 use xee_xpath::{
-    context::DynamicContext, context::StaticContext, context::Variables, parse, sequence::Item,
-    xml::Documents, Namespaces,
+    context::DynamicContext, context::StaticContext, parse, sequence::Item, xml::Documents,
+    Namespaces, Variables,
 };
 use xot::Xot;
 
@@ -67,8 +67,8 @@ impl Default for KnownDependencies {
 
 #[derive(Builder)]
 #[builder(pattern = "owned")]
-pub(crate) struct RunContext {
-    pub(crate) xot: Xot,
+pub(crate) struct RunContext<'a> {
+    pub(crate) dynamic_context: DynamicContext<'a>,
     pub(crate) catalog: qt::Catalog,
     #[builder(default)]
     pub(crate) documents: Documents,
@@ -78,10 +78,10 @@ pub(crate) struct RunContext {
     pub(crate) verbose: bool,
 }
 
-impl RunContext {
-    pub(crate) fn new(xot: Xot, catalog: qt::Catalog) -> Self {
+impl<'a> RunContext<'a> {
+    pub(crate) fn new(dynamic_context: DynamicContext<'a>, catalog: qt::Catalog) -> Self {
         Self {
-            xot,
+            dynamic_context,
             catalog,
             documents: Documents::new(),
             known_dependencies: KnownDependencies::default(),
@@ -90,10 +90,13 @@ impl RunContext {
     }
 
     pub(crate) fn from_path(path: &Path) -> Result<Self> {
+        let catalog = qt::Catalog::load_from_file(path)?;
+
         let mut xot = Xot::new();
-        let catalog = qt::Catalog::load_from_file(xot, path)?;
+        let static_context = StaticContext::default();
+        let dynamic_context = DynamicContext::empty(xot, &static_context);
         Ok(RunContextBuilder::default()
-            .xot(xot)
+            .dynamic_context(dynamic_context)
             .catalog(catalog)
             .verbose(false)
             .build()
@@ -101,9 +104,9 @@ impl RunContext {
     }
 }
 
-impl Drop for RunContext {
+impl<'a> Drop for RunContext<'a> {
     fn drop(&mut self) {
-        self.documents.cleanup(&mut self.xot);
+        self.documents.cleanup(self.dynamic_context.xot_mut());
     }
 }
 
@@ -224,10 +227,9 @@ impl qt::TestCase {
             run_context.xot,
             &static_context,
             Cow::Borrowed(&run_context.documents),
-            Cow::Borrowed(&variables),
         );
         let runnable = program.runnable(&dynamic_context);
-        let result = runnable.many(context_item.as_ref());
+        let result = runnable.many(context_item.as_ref(), variables);
         self.result
             .assert_result(&runnable, &result.map_err(|error| error.error))
     }
@@ -309,10 +311,11 @@ mod tests {
     use super::*;
     const CATALOG_FIXTURE: &str = include_str!("fixtures/catalog.xml");
 
-    fn run(mut xot: Xot, test_set: &qt::TestSet) -> TestOutcome {
+    fn run(test_set: &qt::TestSet) -> TestOutcome {
         let catalog =
-            qt::Catalog::load_from_xml(xot, &PathBuf::from("my/catalog.xml"), CATALOG_FIXTURE)
-                .unwrap();
+            qt::Catalog::load_from_xml(&PathBuf::from("my/catalog.xml"), CATALOG_FIXTURE).unwrap();
+
+        let mut xot = Xot::new();
         let mut run_context = RunContext::new(xot, catalog);
         assert_eq!(test_set.test_cases.len(), 1);
         let test_case = &test_set.test_cases[0];

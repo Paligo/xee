@@ -11,13 +11,13 @@ use crate::xml;
 
 use super::static_context::StaticContext;
 
-pub type Variables = AHashMap<ast::Name, sequence::Sequence>;
+// pub type Variables = AHashMap<ast::Name, sequence::Sequence>;
 
 pub struct DynamicContext<'a> {
     xot: Xot,
     pub static_context: &'a StaticContext<'a>,
     pub documents: Cow<'a, xml::Documents>,
-    pub(crate) variables: Cow<'a, Variables>,
+    // pub(crate) variables: Cow<'a, Variables>,
     current_datetime: chrono::DateTime<chrono::offset::FixedOffset>,
 }
 
@@ -35,13 +35,13 @@ impl<'a> DynamicContext<'a> {
         xot: Xot,
         static_context: &'a StaticContext<'a>,
         documents: Cow<'a, xml::Documents>,
-        variables: Cow<'a, Variables>,
+        // variables: Cow<'a, Variables>,
     ) -> Self {
         Self {
             xot,
             static_context,
             documents,
-            variables,
+            // variables,
             current_datetime: Self::create_current_datetime(),
         }
     }
@@ -52,12 +52,18 @@ impl<'a> DynamicContext<'a> {
             xot,
             static_context,
             Cow::Owned(documents),
-            Cow::Owned(Variables::default()),
+            // Cow::Owned(Variables::default()),
         )
     }
 
+    #[inline]
     pub fn xot(&self) -> &Xot {
         &self.xot
+    }
+
+    #[inline]
+    pub fn xot_mut(&mut self) -> &mut Xot {
+        &mut self.xot
     }
 
     pub fn from_documents(
@@ -69,35 +75,35 @@ impl<'a> DynamicContext<'a> {
             xot,
             static_context,
             Cow::Borrowed(documents),
-            Cow::Owned(Variables::default()),
+            // Cow::Owned(Variables::default()),
         )
     }
 
-    pub fn from_variables(
-        xot: Xot,
-        static_context: &'a StaticContext<'a>,
-        variables: &'a Variables,
-    ) -> Self {
-        Self::new(
-            xot,
-            static_context,
-            Cow::Owned(xml::Documents::new()),
-            Cow::Borrowed(variables),
-        )
-    }
+    // pub fn from_variables(
+    //     xot: Xot,
+    //     static_context: &'a StaticContext<'a>,
+    //     variables: &'a Variables,
+    // ) -> Self {
+    //     Self::new(
+    //         xot,
+    //         static_context,
+    //         Cow::Owned(xml::Documents::new()),
+    //         Cow::Borrowed(variables),
+    //     )
+    // }
 
     fn create_current_datetime() -> chrono::DateTime<chrono::offset::FixedOffset> {
         chrono::offset::Local::now().into()
     }
 
-    pub fn arguments(&self) -> Result<Vec<sequence::Sequence>, Error> {
-        let mut arguments = Vec::new();
-        for variable_name in &self.static_context.parser_context.variable_names {
-            let items = self.variables.get(variable_name).ok_or(Error::XPDY0002)?;
-            arguments.push(items.clone());
-        }
-        Ok(arguments)
-    }
+    // pub fn arguments(&self) -> Result<Vec<sequence::Sequence>, Error> {
+    //     let mut arguments = Vec::new();
+    //     for variable_name in &self.static_context.parser_context.variable_names {
+    //         let items = self.variables.get(variable_name).ok_or(Error::XPDY0002)?;
+    //         arguments.push(items.clone());
+    //     }
+    //     Ok(arguments)
+    // }
 
     pub(crate) fn current_datetime(&self) -> chrono::DateTime<chrono::offset::FixedOffset> {
         self.current_datetime

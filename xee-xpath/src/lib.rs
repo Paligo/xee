@@ -8,7 +8,9 @@ pub use xee_xpath_ast::ast::Name;
 pub use xee_xpath_ast::{Namespaces, VariableNames};
 
 pub use xee_interpreter::interpreter::Runnable;
-pub use xee_interpreter::{atomic, context, error, occurrence, sequence, string, xml};
+pub use xee_interpreter::{
+    atomic, context, error, interpreter::Variables, occurrence, sequence, string, xml,
+};
 
 pub use crate::ast_ir::IrConverter;
 pub use crate::compile::{compile, parse};

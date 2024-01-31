@@ -18,7 +18,7 @@
 
 use xot::{NameId, Node};
 
-use xee_xpath::{compile, context::DynamicContext, context::Variables, sequence::Sequence};
+use xee_xpath::{compile, context::DynamicContext, sequence::Sequence, Variables};
 use xee_xpath_ast::ast as xpath_ast;
 
 use crate::attributes::Attributes;
@@ -202,13 +202,9 @@ impl StaticEvaluator {
         let parser_context = content.parser_context();
         let static_context = parser_context.into();
         let program = compile(&static_context, xpath)?;
-        let dynamic_context = DynamicContext::from_variables(
-            &content.state.xot,
-            &static_context,
-            &self.static_global_variables,
-        );
+        let dynamic_context = DynamicContext::empty(&content.state.xot, &static_context);
         let runnable = program.runnable(&dynamic_context);
-        runnable.many(None)
+        runnable.many(None, self.static_global_variables.clone())
     }
 }
 

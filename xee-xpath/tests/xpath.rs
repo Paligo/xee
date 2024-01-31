@@ -3,8 +3,8 @@ use xee_xpath_ast::{ast, Namespaces};
 use xot::Xot;
 
 use xee_interpreter::{
-    atomic::Atomic, context::DynamicContext, context::StaticContext, context::Variables,
-    error::SpannedResult, sequence::Item, sequence::Sequence, xml::Document, xml::Documents,
+    atomic::Atomic, context::DynamicContext, context::StaticContext, error::SpannedResult,
+    interpreter::Variables, sequence::Item, sequence::Sequence, xml::Document, xml::Documents,
     xml::Node, xml::Uri,
 };
 use xee_xpath::{evaluate, evaluate_without_focus, evaluate_without_focus_with_variables, parse};
@@ -58,7 +58,9 @@ where
     let nodes = get_nodes(context.xot(), document);
 
     let xpath = parse(context.static_context, xpath)?;
-    let result = xpath.runnable(&context).many_xot_node(document.root)?;
+    let result = xpath
+        .runnable(&context)
+        .many_xot_node(document.root, Variables::new())?;
     assert_eq!(result, xot_nodes_to_items(&nodes));
     Ok(())
 }

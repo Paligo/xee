@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::fs;
 use std::path::{Path, PathBuf};
+use xee_xpath::context::{DynamicContext, StaticContext};
 use xot::Xot;
 
 use crate::error::Result;
@@ -91,11 +92,14 @@ pub fn cli() -> Result<()> {
 
 fn check(path: &Path, verbose: bool) -> Result<()> {
     let path_info = paths(path)?;
+    let catalog = qt::Catalog::load_from_file(&path_info.catalog_path)?;
+
     let mut xot = Xot::new();
-    let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
+    let static_context = StaticContext::default();
+    let dynamic_context = DynamicContext::empty(xot, &static_context);
 
     let mut run_context = RunContextBuilder::default()
-        .xot(xot)
+        .dynamic_context(dynamic_context)
         .catalog(catalog)
         .verbose(verbose)
         .build()
@@ -120,11 +124,14 @@ fn check(path: &Path, verbose: bool) -> Result<()> {
 
 fn all(path: &Path, verbose: bool, name_filter: Option<String>) -> Result<()> {
     let path_info = paths(path)?;
+    let catalog = qt::Catalog::load_from_file(&path_info.catalog_path)?;
+
     let mut xot = Xot::new();
-    let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
+    let static_context = StaticContext::default();
+    let dynamic_context = DynamicContext::empty(xot, &static_context);
 
     let mut run_context = RunContextBuilder::default()
-        .xot(xot)
+        .dynamic_context(dynamic_context)
         .catalog(catalog)
         .verbose(verbose)
         .build()
@@ -144,11 +151,14 @@ fn all(path: &Path, verbose: bool, name_filter: Option<String>) -> Result<()> {
 
 fn update(path: &Path, verbose: bool) -> Result<()> {
     let path_info = paths(path)?;
+    let catalog = qt::Catalog::load_from_file(&path_info.catalog_path)?;
+
     let mut xot = Xot::new();
-    let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
+    let static_context = StaticContext::default();
+    let dynamic_context = DynamicContext::empty(xot, &static_context);
 
     let mut run_context = RunContextBuilder::default()
-        .xot(xot)
+        .dynamic_context(dynamic_context)
         .catalog(catalog)
         .verbose(verbose)
         .build()
@@ -184,11 +194,14 @@ fn initialize(path: &Path, verbose: bool) -> Result<()> {
         return Ok(());
     }
 
+    let catalog = qt::Catalog::load_from_file(&path_info.catalog_path)?;
+
     let mut xot = Xot::new();
-    let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
+    let static_context = StaticContext::default();
+    let dynamic_context = DynamicContext::empty(xot, &static_context);
 
     let mut run_context = RunContextBuilder::default()
-        .xot(xot)
+        .dynamic_context(dynamic_context)
         .catalog(catalog)
         .verbose(verbose)
         .build()

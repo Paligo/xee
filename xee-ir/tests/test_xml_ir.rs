@@ -1,6 +1,7 @@
 use insta::assert_debug_snapshot;
 
 use xee_interpreter::context::{DynamicContext, StaticContext};
+use xee_interpreter::interpreter::Variables;
 use xee_interpreter::interpreter::{instruction::decode_instructions, Program};
 use xee_interpreter::occurrence::Occurrence;
 use xee_ir::{ir, FunctionBuilder, InterpreterCompiler, Scopes};
@@ -99,7 +100,7 @@ fn test_generate_element() {
     let context = DynamicContext::empty(xot, &static_context);
 
     let runnable = program.runnable(&context);
-    let o = runnable.many_output(None).unwrap();
+    let o = runnable.many_output(None, Variables::default()).unwrap();
     let output = o.output;
     let sequence = o.sequence;
     // we should have the newly created element on top of the stack

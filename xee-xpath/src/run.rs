@@ -1,7 +1,7 @@
 use xot::Xot;
 
 use xee_interpreter::{
-    context::DynamicContext, context::StaticContext, context::Variables, error::SpannedResult,
+    context::DynamicContext, context::StaticContext, error::SpannedResult, interpreter::Variables,
     sequence::Sequence, xml::Documents, xml::Uri,
 };
 use xee_xpath_ast::{Namespaces, FN_NAMESPACE};
@@ -40,7 +40,7 @@ pub fn evaluate_root(
 
     let program = parse(context.static_context, xpath)?;
     let runnable = program.runnable(&context);
-    runnable.many_xot_node(document.root)
+    runnable.many_xot_node(document.root, Variables::default())
 }
 
 pub fn evaluate_without_focus(s: &str) -> SpannedResult<Sequence> {
@@ -50,7 +50,7 @@ pub fn evaluate_without_focus(s: &str) -> SpannedResult<Sequence> {
 
     let program = parse(context.static_context, s)?;
     let runnable = program.runnable(&context);
-    runnable.many(None)
+    runnable.many(None, Variables::default())
 }
 
 pub fn evaluate_without_focus_with_variables(
@@ -61,8 +61,8 @@ pub fn evaluate_without_focus_with_variables(
     let namespaces = Namespaces::default();
     let variable_names = variables.keys().cloned().collect();
     let static_context = StaticContext::new(namespaces, variable_names);
-    let context = DynamicContext::from_variables(xot, &static_context, &variables);
+    let context = DynamicContext::empty(xot, &static_context);
     let program = parse(context.static_context, s)?;
     let runnable = program.runnable(&context);
-    runnable.many(None)
+    runnable.many(None, variables)
 }
