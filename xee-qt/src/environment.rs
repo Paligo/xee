@@ -29,12 +29,12 @@ impl EnvironmentSpec {
         Ok(None)
     }
 
-    pub(crate) fn variables(&self, xot: &mut Xot, documents: &mut Documents) -> Result<Variables> {
+    pub(crate) fn variables(&self, mut xot: Xot, documents: &mut Documents) -> Result<Variables> {
         let mut variables = Variables::new();
         for source in &self.sources {
             if let qt::SourceRole::Var(name) = &source.role {
                 let name = &name[1..]; // without $
-                let node = source.node(xot, &self.base_dir, documents)?;
+                let node = source.node(&mut xot, &self.base_dir, documents)?;
                 variables.insert(Name::unprefixed(name), Item::from(node).into());
             }
         }

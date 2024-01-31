@@ -101,8 +101,8 @@ impl Value {
         O: AtomicCompare,
     {
         comparison::general_comparison(
-            self.atomized(context.xot),
-            other.atomized(context.xot),
+            self.atomized(context.xot()),
+            other.atomized(context.xot()),
             context,
             op,
         )

@@ -53,9 +53,9 @@ where
     documents.add(&mut xot, &uri, xml).unwrap();
     let namespaces = Namespaces::new(Namespaces::default_namespaces(), None, None);
     let static_context = StaticContext::from_namespaces(namespaces);
-    let context = DynamicContext::from_documents(&xot, &static_context, &documents);
+    let context = DynamicContext::from_documents(xot, &static_context, &documents);
     let document = documents.get(&uri).unwrap();
-    let nodes = get_nodes(&xot, document);
+    let nodes = get_nodes(context.xot(), document);
 
     let xpath = parse(context.static_context, xpath)?;
     let result = xpath.runnable(&context).many_xot_node(document.root)?;

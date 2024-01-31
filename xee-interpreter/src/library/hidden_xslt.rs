@@ -20,11 +20,11 @@ fn simple_content(
     arg: &sequence::Sequence,
     separator: &str,
 ) -> error::Result<String> {
-    let arg = simple_content_text_nodes(arg, context.xot)?;
+    let arg = simple_content_text_nodes(arg, context.xot())?;
     // now atomize the sequence, putting in separators, except at the end
     let mut s = String::new();
     let mut first = true;
-    for atom in arg.atomized(context.xot) {
+    for atom in arg.atomized(context.xot()) {
         let atom = atom?;
         if !first {
             s.push_str(separator);

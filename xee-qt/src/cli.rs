@@ -92,7 +92,7 @@ pub fn cli() -> Result<()> {
 fn check(path: &Path, verbose: bool) -> Result<()> {
     let path_info = paths(path)?;
     let mut xot = Xot::new();
-    let catalog = qt::Catalog::load_from_file(&mut xot, &path_info.catalog_path)?;
+    let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
 
     let mut run_context = RunContextBuilder::default()
         .xot(xot)
@@ -109,7 +109,7 @@ fn check(path: &Path, verbose: bool) -> Result<()> {
 
     let test_filter = ExcludedNamesFilter::load_from_file(&path_info.filter_path)?;
     if path_info.whole_catalog() {
-        let outcomes = run(&mut run_context, &test_filter)?;
+        let outcomes = run(run_context, &test_filter)?;
         println!("{}", outcomes.display());
     } else {
         let outcomes = run_path(run_context, &test_filter, &path_info.relative_path)?;
@@ -121,7 +121,7 @@ fn check(path: &Path, verbose: bool) -> Result<()> {
 fn all(path: &Path, verbose: bool, name_filter: Option<String>) -> Result<()> {
     let path_info = paths(path)?;
     let mut xot = Xot::new();
-    let catalog = qt::Catalog::load_from_file(&mut xot, &path_info.catalog_path)?;
+    let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
 
     let mut run_context = RunContextBuilder::default()
         .xot(xot)
@@ -133,7 +133,7 @@ fn all(path: &Path, verbose: bool, name_filter: Option<String>) -> Result<()> {
     let test_filter = NameFilter::new(name_filter);
 
     if path_info.whole_catalog() {
-        let outcomes = run(&mut run_context, &test_filter)?;
+        let outcomes = run(run_context, &test_filter)?;
         println!("{}", outcomes.display());
     } else {
         let outcomes = run_path(run_context, &test_filter, &path_info.relative_path)?;
@@ -145,7 +145,7 @@ fn all(path: &Path, verbose: bool, name_filter: Option<String>) -> Result<()> {
 fn update(path: &Path, verbose: bool) -> Result<()> {
     let path_info = paths(path)?;
     let mut xot = Xot::new();
-    let catalog = qt::Catalog::load_from_file(&mut xot, &path_info.catalog_path)?;
+    let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
 
     let mut run_context = RunContextBuilder::default()
         .xot(xot)
@@ -162,7 +162,7 @@ fn update(path: &Path, verbose: bool) -> Result<()> {
     let test_filter = IncludeAllFilter::new();
     let mut update_filter = ExcludedNamesFilter::load_from_file(&path_info.filter_path)?;
     if path_info.whole_catalog() {
-        let catalog_outcomes = run(&mut run_context, &test_filter)?;
+        let catalog_outcomes = run(run_context, &test_filter)?;
 
         update_filter.update_with_catalog_outcomes(&catalog_outcomes);
         println!("{}", catalog_outcomes.display());
@@ -185,7 +185,7 @@ fn initialize(path: &Path, verbose: bool) -> Result<()> {
     }
 
     let mut xot = Xot::new();
-    let catalog = qt::Catalog::load_from_file(&mut xot, &path_info.catalog_path)?;
+    let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
 
     let mut run_context = RunContextBuilder::default()
         .xot(xot)
@@ -196,7 +196,7 @@ fn initialize(path: &Path, verbose: bool) -> Result<()> {
 
     let test_filter = IncludeAllFilter::new();
 
-    let catalog_outcomes = run(&mut run_context, &test_filter)?;
+    let catalog_outcomes = run(run_context, &test_filter)?;
 
     let test_filter = ExcludedNamesFilter::from_outcomes(&catalog_outcomes);
     let filter_data = test_filter.to_string();

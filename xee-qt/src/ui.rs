@@ -14,7 +14,7 @@ use crate::{
 };
 
 pub(crate) fn run(
-    run_context: &mut RunContext,
+    run_context: RunContext,
     test_filter: &impl TestFilter,
 ) -> Result<CatalogOutcomes> {
     let mut stdout = stdout();
@@ -35,11 +35,11 @@ pub(crate) fn run_path(
     path: &Path,
 ) -> Result<TestSetOutcomes> {
     let mut stdout = stdout();
-    run_path_helper(&mut run_context, test_filter, path, &mut stdout)
+    run_path_helper(run_context, test_filter, path, &mut stdout)
 }
 
 fn run_path_helper(
-    run_context: &mut RunContext,
+    mut run_context: RunContext,
     test_filter: &impl TestFilter,
     path: &Path,
     stdout: &mut Stdout,
@@ -49,7 +49,7 @@ fn run_path_helper(
     }
     let verbose = run_context.verbose;
     let full_path = run_context.catalog.base_dir().join(path);
-    let test_set = qt::TestSet::load_from_file(&mut run_context.xot, &full_path)?;
+    let test_set = qt::TestSet::load_from_file(run_context.xot, &full_path)?;
     if verbose {
         run_test_set(
             run_context,
@@ -94,7 +94,7 @@ trait Renderer {
 }
 
 fn run_test_set<R: Renderer>(
-    run_context: &mut RunContext,
+    run_context: RunContext,
     test_filter: &impl TestFilter,
     test_set: &qt::TestSet,
     stdout: &mut Stdout,

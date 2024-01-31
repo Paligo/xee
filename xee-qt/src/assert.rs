@@ -766,14 +766,14 @@ impl fmt::Display for Failure {
 }
 
 fn run_xpath(expr: &qt::XPathExpr, runnable: &Runnable<'_>) -> Result<Sequence> {
-    let static_context = StaticContext::default();
-    let program = parse(&static_context, &expr.0).map_err(|e| e.error)?;
-    let dynamic_context = DynamicContext::from_documents(
-        runnable.xot(),
-        &static_context,
-        runnable.dynamic_context().documents(),
-    );
-    let runnable = program.runnable(&dynamic_context);
+    // let static_context = StaticContext::default();
+    let program = parse(runnable.static_context(), &expr.0).map_err(|e| e.error)?;
+    // let dynamic_context = DynamicContext::from_documents(
+    //     runnable.xot(),
+    //     &static_context,
+    //     runnable.dynamic_context().documents(),
+    // );
+    let runnable = program.runnable(runnable.dynamic_context());
     runnable.many(None).map_err(|e| e.error)
 }
 

@@ -216,7 +216,7 @@ fn deep_equal(
 ) -> error::Result<bool> {
     let collation = context.static_context.collation(collation)?;
     let default_offset = context.implicit_timezone();
-    parameter1.deep_equal(parameter2, &collation, default_offset, context.xot)
+    parameter1.deep_equal(parameter2, &collation, default_offset, context.xot())
 }
 
 #[xpath_fn("fn:zero-or-one($arg as item()*) as item()?")]

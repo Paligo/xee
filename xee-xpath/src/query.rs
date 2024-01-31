@@ -318,7 +318,7 @@ mod tests {
             .unwrap();
 
         let xot = Xot::new();
-        let dynamic_context = DynamicContext::empty(&xot, &static_context);
+        let dynamic_context = DynamicContext::empty(xot, &static_context);
         let session = queries.session(&dynamic_context);
         let r = q.execute(&session, &1i64.into()).unwrap();
         assert_eq!(r, ibig!(3));
@@ -360,7 +360,7 @@ mod tests {
         let xml2 = "<doc><result><value>A</value></result></doc>";
         let root2 = xot.parse(xml2).unwrap();
 
-        let dynamic_context = DynamicContext::empty(&xot, &static_context);
+        let dynamic_context = DynamicContext::empty(xot, &static_context);
         let session = queries.session(&dynamic_context);
         let r = result_query.execute(&session, &Item::from(Node::Xot(root)))?;
         assert_eq!(r, Expr::AnyOf(Box::new(Expr::Value("A".to_string()))));

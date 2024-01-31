@@ -25,7 +25,7 @@ fn resolve_qname(
         // TODO: we could make this more efficient if we could have a parser state
         // that used NamespaceLookup instead of Namespaces, but that requires a lot
         // of generics we're not ready for at this point.
-        let namespaces = element_namespaces(node, context.xot);
+        let namespaces = element_namespaces(node, context.xot());
         let name = parse_name(qname, &namespaces)?.value;
         Ok(Some(name.into()))
     } else {
@@ -137,7 +137,7 @@ fn namespace_uri_for_prefix(
         // TODO: efficiency could be made faster if we used NameSpaceLookup, see
         // resolve-QName
 
-        let namespaces = element_namespaces(node, context.xot);
+        let namespaces = element_namespaces(node, context.xot());
         Ok(namespaces
             .by_prefix(prefix)
             .map(|s| atomic::Atomic::String(atomic::StringType::AnyURI, Rc::new(s.to_string()))))

@@ -64,7 +64,7 @@ impl Tests {
         let path = path.with_extension("xml");
         let path_info = paths(&path)?;
         let mut xot = Xot::new();
-        let catalog = qt::Catalog::load_from_file(&mut xot, &path_info.catalog_path)?;
+        let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
         let run_context = RunContextBuilder::default()
             .xot(xot)
             .catalog(catalog)
@@ -103,7 +103,7 @@ impl Tests {
         let include_glob_set = self.include_glob_set()?;
         let exclude_glob_set = self.exclude_glob_set()?;
         let (path, mut run_context) = self.prepare()?;
-        let test_set = qt::TestSet::load_from_file(&mut run_context.xot, &path)?;
+        let test_set = qt::TestSet::load_from_file(run_context.xot, &path)?;
         let mut test_set_outcomes = TestSetOutcomes::new(&test_set.name);
         for test_case in &test_set.test_cases {
             if !test_case
@@ -117,7 +117,7 @@ impl Tests {
             {
                 continue;
             }
-            let outcome = test_case.run(&mut run_context, &test_set);
+            let outcome = test_case.run(run_context, &test_set);
             test_set_outcomes.add_outcome(&test_case.name, outcome);
         }
         if test_set_outcomes.has_failures() {
@@ -145,7 +145,7 @@ fn try_test_all(path: &str) -> Result<()> {
     let path = path.with_extension("xml");
     let path_info = paths(&path)?;
     let mut xot = Xot::new();
-    let catalog = qt::Catalog::load_from_file(&mut xot, &path_info.catalog_path)?;
+    let catalog = qt::Catalog::load_from_file(xot, &path_info.catalog_path)?;
     let mut run_context = RunContextBuilder::default()
         .xot(xot)
         .catalog(catalog)
@@ -156,7 +156,7 @@ fn try_test_all(path: &str) -> Result<()> {
         .catalog
         .base_dir()
         .join(&path_info.relative_path);
-    let test_set = qt::TestSet::load_from_file(&mut run_context.xot, &full_path)?;
+    let test_set = qt::TestSet::load_from_file(run_context.xot, &full_path)?;
     let mut test_set_outcomes = TestSetOutcomes::new(&test_set.name);
 
     for test_case in &test_set.test_cases {
@@ -166,7 +166,7 @@ fn try_test_all(path: &str) -> Result<()> {
         {
             continue;
         }
-        let outcome = test_case.run(&mut run_context, &test_set);
+        let outcome = test_case.run(run_context, &test_set);
         test_set_outcomes.add_outcome(&test_case.name, outcome);
     }
     if test_set_outcomes.has_failures() {

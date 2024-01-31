@@ -248,7 +248,7 @@ fn sort_without_key(
     sort_by_sequence(context, input, collation, |sequence| {
         // the sequivalent of fn:data()
         let atoms = sequence
-            .atomized(context.xot)
+            .atomized(context.xot())
             .collect::<error::Result<Vec<_>>>()?;
         Ok(atoms.into())
     })

@@ -39,7 +39,7 @@ fn main() -> xee_xpath::error::Result<()> {
             let mut xml = String::new();
             buf_reader.read_to_string(&mut xml).unwrap();
             let root = xot.parse(&xml).unwrap();
-            let result = evaluate_root(&xot, root, &xpath, namespace_default.as_deref());
+            let result = evaluate_root(xot, root, &xpath, namespace_default.as_deref());
             match result {
                 Ok(sequence) => {
                     for item in sequence.items() {

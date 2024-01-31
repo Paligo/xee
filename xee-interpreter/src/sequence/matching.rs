@@ -69,7 +69,7 @@ impl Sequence {
             sequence_type,
             &|sequence, xs| Self::convert_atomic(sequence, xs, context),
             &|function_test, item| item.function_arity_matching(function_test, &get_signature),
-            context.xot,
+            context.xot(),
         )
     }
 
@@ -78,7 +78,7 @@ impl Sequence {
         xs: Xs,
         context: &context::DynamicContext,
     ) -> error::Result<Sequence> {
-        let atomized = sequence.atomized(context.xot);
+        let atomized = sequence.atomized(context.xot());
         let mut items = Vec::new();
         for atom in atomized {
             let atom = atom?;
@@ -622,7 +622,7 @@ mod tests {
 
         let xot = Xot::new();
         let static_context = context::StaticContext::default();
-        let dynamic_context = context::DynamicContext::empty(&xot, &static_context);
+        let dynamic_context = context::DynamicContext::empty(xot, &static_context);
 
         let right_result = right_sequence.sequence_type_matching_function_conversion(
             &sequence_type,
@@ -656,7 +656,7 @@ mod tests {
         let right_sequence = Sequence::from(vec![Item::from(a), Item::from(b)]);
 
         let static_context = context::StaticContext::default();
-        let dynamic_context = context::DynamicContext::empty(&xot, &static_context);
+        let dynamic_context = context::DynamicContext::empty(xot, &static_context);
 
         let right_result = right_sequence.sequence_type_matching_function_conversion(
             &sequence_type,

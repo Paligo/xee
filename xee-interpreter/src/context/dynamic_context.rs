@@ -14,7 +14,7 @@ use super::static_context::StaticContext;
 pub type Variables = AHashMap<ast::Name, sequence::Sequence>;
 
 pub struct DynamicContext<'a> {
-    pub(crate) xot: &'a Xot,
+    xot: Xot,
     pub static_context: &'a StaticContext<'a>,
     pub documents: Cow<'a, xml::Documents>,
     pub(crate) variables: Cow<'a, Variables>,
@@ -32,7 +32,7 @@ impl<'a> Debug for DynamicContext<'a> {
 
 impl<'a> DynamicContext<'a> {
     pub fn new(
-        xot: &'a Xot,
+        xot: Xot,
         static_context: &'a StaticContext<'a>,
         documents: Cow<'a, xml::Documents>,
         variables: Cow<'a, Variables>,
@@ -46,7 +46,7 @@ impl<'a> DynamicContext<'a> {
         }
     }
 
-    pub fn empty(xot: &'a Xot, static_context: &'a StaticContext<'a>) -> Self {
+    pub fn empty(xot: Xot, static_context: &'a StaticContext<'a>) -> Self {
         let documents = xml::Documents::new();
         Self::new(
             xot,
@@ -56,8 +56,12 @@ impl<'a> DynamicContext<'a> {
         )
     }
 
+    pub fn xot(&self) -> &Xot {
+        &self.xot
+    }
+
     pub fn from_documents(
-        xot: &'a Xot,
+        xot: Xot,
         static_context: &'a StaticContext<'a>,
         documents: &'a xml::Documents,
     ) -> Self {
@@ -70,7 +74,7 @@ impl<'a> DynamicContext<'a> {
     }
 
     pub fn from_variables(
-        xot: &'a Xot,
+        xot: Xot,
         static_context: &'a StaticContext<'a>,
         variables: &'a Variables,
     ) -> Self {

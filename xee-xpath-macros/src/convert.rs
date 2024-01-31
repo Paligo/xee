@@ -101,7 +101,7 @@ fn convert_item_type(item: &ast::ItemType, arg: TokenStream) -> syn::Result<(Tok
 
 fn convert_atomic_or_union_type(xs: Xs, arg: TokenStream) -> syn::Result<(TokenStream, bool)> {
     if xs == Xs::AnyAtomicType || xs == Xs::Numeric {
-        return Ok((quote!(#arg.atomized(context.xot)), false));
+        return Ok((quote!(#arg.atomized(context.xot())), false));
     }
 
     // TODO: another unwrap that should really be "we cannot create a rust wrapper
@@ -115,7 +115,7 @@ fn convert_atomic_or_union_type(xs: Xs, arg: TokenStream) -> syn::Result<(TokenS
 
     let borrow = rust_info.is_reference();
     Ok((
-        quote!(#arg.unboxed_atomized(context.xot, |atomic| #convert)),
+        quote!(#arg.unboxed_atomized(context.xot(), |atomic| #convert)),
         borrow,
     ))
 }
@@ -127,7 +127,7 @@ fn convert_kind_test(kind_test: &ast::KindTest, arg: TokenStream) -> syn::Result
             if element_test.is_some() {
                 unreachable!("Unsupported element test")
             }
-            Ok(quote!(#arg.elements(context.xot)))
+            Ok(quote!(#arg.elements(context.xot())))
         }
         _ => {
             todo!("Unsupported kind test")

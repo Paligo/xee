@@ -133,7 +133,7 @@ fn concat(
     let strings = arguments
         .iter()
         .map(|argument| {
-            let atomic = argument.atomized(context.xot).option()?;
+            let atomic = argument.atomized(context.xot()).option()?;
             if let Some(atomic) = atomic {
                 atomic.string_value()
             } else {

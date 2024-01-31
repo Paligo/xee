@@ -12,7 +12,7 @@ use crate::xml;
 #[xpath_fn("fn:node-name($arg as node()?) as xs:QName?", context_first)]
 fn node_name(context: &DynamicContext, arg: Option<xml::Node>) -> Option<ast::Name> {
     if let Some(node) = arg {
-        node.node_name(context.xot)
+        node.node_name(context.xot())
     } else {
         None
     }
@@ -21,7 +21,7 @@ fn node_name(context: &DynamicContext, arg: Option<xml::Node>) -> Option<ast::Na
 #[xpath_fn("fn:string($arg as item()?) as xs:string", context_first)]
 fn string(context: &DynamicContext, arg: Option<sequence::Item>) -> error::Result<String> {
     if let Some(arg) = arg {
-        arg.string_value(context.xot)
+        arg.string_value(context.xot())
     } else {
         Ok("".to_string())
     }
@@ -30,7 +30,7 @@ fn string(context: &DynamicContext, arg: Option<sequence::Item>) -> error::Resul
 #[xpath_fn("fn:data($arg as item()*) as xs:anyAtomicType*", context_first)]
 fn data(context: &DynamicContext, arg: &sequence::Sequence) -> error::Result<Vec<sequence::Item>> {
     let data = arg
-        .atomized(context.xot)
+        .atomized(context.xot())
         .map(|atom| atom.map(|a| a.into()))
         .collect::<error::Result<Vec<sequence::Item>>>()?;
     Ok(data)

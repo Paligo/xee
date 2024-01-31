@@ -17,7 +17,7 @@ use crate::qt;
 const NS: &str = "http://www.w3.org/2010/09/qt-fots-catalog";
 
 impl qt::TestSet {
-    pub(crate) fn load_from_file(xot: &mut Xot, path: &Path) -> Result<Self> {
+    pub(crate) fn load_from_file(xot: Xot, path: &Path) -> Result<Self> {
         let xml_file = File::open(path)?;
         let mut buf_reader = BufReader::new(xml_file);
         let mut xml = String::new();
@@ -25,7 +25,7 @@ impl qt::TestSet {
         Self::load_from_xml(xot, path, &xml)
     }
 
-    pub(crate) fn load_from_xml(xot: &mut Xot, path: &Path, xml: &str) -> Result<Self> {
+    pub(crate) fn load_from_xml(mut xot: Xot, path: &Path, xml: &str) -> Result<Self> {
         let xot_root = xot.parse(xml)?;
         let root = Node::Xot(xot_root);
         let namespaces = Namespaces::new(
@@ -38,7 +38,7 @@ impl qt::TestSet {
         let r = {
             let queries = Queries::new(&static_context);
 
-            let (queries, query) = test_set_query(xot, path, queries)?;
+            let (queries, query) = test_set_query(&xot, path, queries)?;
 
             let dynamic_context = DynamicContext::empty(xot, &static_context);
             let session = queries.session(&dynamic_context);
@@ -53,7 +53,7 @@ impl qt::TestSet {
 
 impl qt::Catalog {
     // XXX some duplication here with qt::TestSet
-    pub(crate) fn load_from_file(xot: &mut Xot, path: &Path) -> Result<Self> {
+    pub(crate) fn load_from_file(xot: Xot, path: &Path) -> Result<Self> {
         let xml_file = File::open(path)?;
         let mut buf_reader = BufReader::new(xml_file);
         let mut xml = String::new();
@@ -61,7 +61,7 @@ impl qt::Catalog {
         Self::load_from_xml(xot, path, &xml)
     }
 
-    pub(crate) fn load_from_xml(xot: &mut Xot, path: &Path, xml: &str) -> Result<Self> {
+    pub(crate) fn load_from_xml(mut xot: Xot, path: &Path, xml: &str) -> Result<Self> {
         let xot_root = xot.parse(xml)?;
         let root = Node::Xot(xot_root);
         let namespaces = Namespaces::new(
@@ -75,7 +75,7 @@ impl qt::Catalog {
         let r = {
             let queries = Queries::new(&static_context);
 
-            let (queries, query) = catalog_query(xot, path, queries)?;
+            let (queries, query) = catalog_query(&xot, path, queries)?;
 
             let dynamic_context = DynamicContext::empty(xot, &static_context);
             let session = queries.session(&dynamic_context);
@@ -548,7 +548,7 @@ mod tests {
     fn test_load() {
         let mut xot = Xot::new();
         assert_debug_snapshot!(qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("qt/fn/test.xml"),
             ROOT_FIXTURE
         )
@@ -559,7 +559,7 @@ mod tests {
     fn test_load_params() {
         let mut xot = Xot::new();
         assert_debug_snapshot!(qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("qt/fn/test.xml"),
             PARAMS_FIXTURE
         )
@@ -570,7 +570,7 @@ mod tests {
     fn test_load_catalog() {
         let mut xot = Xot::new();
         assert_debug_snapshot!(qt::Catalog::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("qt/catalog.xml"),
             CATALOG_FIXTURE
         )

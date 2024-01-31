@@ -16,12 +16,12 @@ pub fn evaluate(
 ) -> SpannedResult<Sequence> {
     let mut xot = Xot::new();
     let root = xot.parse(xml).unwrap();
-    evaluate_root(&xot, root, xpath, default_element_namespace)
+    evaluate_root(xot, root, xpath, default_element_namespace)
 }
 
 /// A high level function that evaluates an xpath expression on an xml document.
 pub fn evaluate_root(
-    xot: &Xot,
+    xot: Xot,
     root: xot::Node,
     xpath: &str,
     default_element_namespace: Option<&str>,
@@ -34,7 +34,7 @@ pub fn evaluate_root(
     let static_context = StaticContext::from_namespaces(namespaces);
     let uri = Uri::new("http://example.com");
     let mut documents = Documents::new();
-    documents.add_root(xot, &uri, root);
+    documents.add_root(&xot, &uri, root);
     let context = DynamicContext::from_documents(xot, &static_context, &documents);
     let document = documents.get(&uri).unwrap();
 
@@ -46,7 +46,7 @@ pub fn evaluate_root(
 pub fn evaluate_without_focus(s: &str) -> SpannedResult<Sequence> {
     let xot = Xot::new();
     let static_context = StaticContext::default();
-    let context = DynamicContext::empty(&xot, &static_context);
+    let context = DynamicContext::empty(xot, &static_context);
 
     let program = parse(context.static_context, s)?;
     let runnable = program.runnable(&context);
@@ -61,7 +61,7 @@ pub fn evaluate_without_focus_with_variables(
     let namespaces = Namespaces::default();
     let variable_names = variables.keys().cloned().collect();
     let static_context = StaticContext::new(namespaces, variable_names);
-    let context = DynamicContext::from_variables(&xot, &static_context, &variables);
+    let context = DynamicContext::from_variables(xot, &static_context, &variables);
     let program = parse(context.static_context, s)?;
     let runnable = program.runnable(&context);
     runnable.many(None)

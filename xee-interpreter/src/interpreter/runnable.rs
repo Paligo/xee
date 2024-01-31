@@ -7,6 +7,7 @@ use xot::Xot;
 
 use crate::atomic::Atomic;
 use crate::context::DynamicContext;
+use crate::context::StaticContext;
 use crate::error::SpannedError;
 use crate::function;
 use crate::occurrence::Occurrence;
@@ -158,7 +159,7 @@ impl<'a> Runnable<'a> {
                 .program
                 .declarations
                 .pattern_lookup
-                .lookup(&item, self.dynamic_context.xot);
+                .lookup(&item, self.dynamic_context.xot());
             if let Some(function_id) = function_id {
                 let position: IBig = (i + 1).into();
                 let arguments: Vec<sequence::Sequence> = vec![
@@ -193,8 +194,12 @@ impl<'a> Runnable<'a> {
         &self.dynamic_context.documents.annotations
     }
 
+    pub fn static_context(&self) -> &StaticContext {
+        self.dynamic_context.static_context
+    }
+
     pub fn xot(&self) -> &xot::Xot {
-        self.dynamic_context.xot
+        self.dynamic_context.xot()
     }
 
     pub fn default_collation_uri(&self) -> &str {

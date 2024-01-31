@@ -91,7 +91,7 @@ impl RunContext {
 
     pub(crate) fn from_path(path: &Path) -> Result<Self> {
         let mut xot = Xot::new();
-        let catalog = qt::Catalog::load_from_file(&mut xot, path)?;
+        let catalog = qt::Catalog::load_from_file(xot, path)?;
         Ok(RunContextBuilder::default()
             .xot(xot)
             .catalog(catalog)
@@ -185,20 +185,20 @@ impl qt::Dependencies {
 }
 
 impl qt::TestCase {
-    pub(crate) fn run(&self, run_context: &mut RunContext, test_set: &qt::TestSet) -> TestOutcome {
+    pub(crate) fn run(&self, mut run_context: RunContext, test_set: &qt::TestSet) -> TestOutcome {
         let variables = self.variables(run_context, test_set);
         let variables = match variables {
             Ok(variables) => variables,
             Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
         };
 
-        let context_item = self.context_item(run_context, test_set);
+        let context_item = self.context_item(&mut run_context, test_set);
         let context_item = match context_item {
             Ok(context_item) => context_item,
             Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
         };
 
-        let namespaces = self.namespaces(run_context, test_set);
+        let namespaces = self.namespaces(&mut run_context, test_set);
         let namespaces = match namespaces {
             Ok(namespaces) => namespaces,
             Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
@@ -221,7 +221,7 @@ impl qt::TestCase {
         };
 
         let dynamic_context = DynamicContext::new(
-            &run_context.xot,
+            run_context.xot,
             &static_context,
             Cow::Borrowed(&run_context.documents),
             Cow::Borrowed(&variables),
@@ -264,15 +264,14 @@ impl qt::TestCase {
         Ok(None)
     }
 
-    fn variables(&self, run_context: &mut RunContext, test_set: &qt::TestSet) -> Result<Variables> {
+    fn variables(&self, mut run_context: RunContext, test_set: &qt::TestSet) -> Result<Variables> {
         let environment_specs = self
             .environment_specs(&run_context.catalog, test_set)
             .collect::<Result<Vec<_>>>()?;
         let mut variables = Variables::new();
-        let xot = &mut run_context.xot;
         let source_cache = &mut run_context.documents;
         for environment_spec in environment_specs {
-            variables.extend(environment_spec.variables(xot, source_cache)?);
+            variables.extend(environment_spec.variables(run_context.xot, source_cache)?);
         }
         Ok(variables)
     }
@@ -312,15 +311,15 @@ mod tests {
 
     fn run(mut xot: Xot, test_set: &qt::TestSet) -> TestOutcome {
         let catalog =
-            qt::Catalog::load_from_xml(&mut xot, &PathBuf::from("my/catalog.xml"), CATALOG_FIXTURE)
+            qt::Catalog::load_from_xml(xot, &PathBuf::from("my/catalog.xml"), CATALOG_FIXTURE)
                 .unwrap();
         let mut run_context = RunContext::new(xot, catalog);
         assert_eq!(test_set.test_cases.len(), 1);
         let test_case = &test_set.test_cases[0];
-        test_case.run(&mut run_context, test_set)
+        test_case.run(run_context, test_set)
     }
 
-    fn load(xot: &mut Xot, test_cases_path: &Path) -> qt::TestSet {
+    fn load(xot: Xot, test_cases_path: &Path) -> qt::TestSet {
         qt::TestSet::load_from_file(xot, test_cases_path).unwrap()
     }
 
@@ -328,7 +327,7 @@ mod tests {
     fn test_assert_true() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -351,7 +350,7 @@ mod tests {
     fn test_assert_true_fails() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -380,7 +379,7 @@ mod tests {
     fn test_assert_count() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -403,7 +402,7 @@ mod tests {
     fn test_assert_expected_error() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -426,7 +425,7 @@ mod tests {
     fn test_assert_error_code_unexpected() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -452,7 +451,7 @@ mod tests {
     fn test_unexpected_runtime_error() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -478,7 +477,7 @@ mod tests {
     fn test_unexpected_compilation_error() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -504,7 +503,7 @@ mod tests {
     fn test_expected_compilation_error() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -527,7 +526,7 @@ mod tests {
     fn test_assert_eq_passes() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -550,7 +549,7 @@ mod tests {
     fn test_assert_eq_passes2() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -573,7 +572,7 @@ mod tests {
     fn test_assert_eq_fails() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -602,7 +601,7 @@ mod tests {
     fn test_assert_any_of_error_case() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#"
     <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -628,7 +627,7 @@ mod tests {
     fn test_assert_any_of_eq_case() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#"
     <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -654,7 +653,7 @@ mod tests {
     fn test_assert_all_of_passes() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#"
     <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -680,7 +679,7 @@ mod tests {
     fn test_assert_all_of_fails() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#"
     <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -712,7 +711,7 @@ mod tests {
     fn test_assert_string_value_passes() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#"
     <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -735,7 +734,7 @@ mod tests {
     fn test_assert_string_value_fails() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#"
     <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -764,7 +763,7 @@ mod tests {
     fn test_assert_string_value_sequence_passes() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#"
     <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -812,7 +811,7 @@ mod tests {
         let mut data_file = File::create(tmp_dir.path().join("data.xml")).unwrap();
         write!(data_file, r#"<doc><p>Hello world!</p></doc>"#).unwrap();
         let mut xot = Xot::new();
-        let test_set = load(&mut xot, &test_cases_path);
+        let test_set = load(xot, &test_cases_path);
         assert_eq!(run(xot, &test_set), TestOutcome::Passed);
     }
 
@@ -844,7 +843,7 @@ mod tests {
         let mut data_file = File::create(tmp_dir.path().join("data.xml")).unwrap();
         write!(data_file, r#"<doc><p>Hello world!</p></doc>"#).unwrap();
         let mut xot = Xot::new();
-        let test_set = load(&mut xot, &test_cases_path);
+        let test_set = load(xot, &test_cases_path);
         assert_eq!(run(xot, &test_set), TestOutcome::Passed);
     }
 
@@ -877,7 +876,7 @@ mod tests {
         let mut data_file = File::create(tmp_dir.path().join("data.xml")).unwrap();
         write!(data_file, r#"<doc><p>Hello world!</p></doc>"#).unwrap();
         let mut xot = Xot::new();
-        let test_set = load(&mut xot, &test_cases_path);
+        let test_set = load(xot, &test_cases_path);
         assert_eq!(run(xot, &test_set), TestOutcome::Passed);
     }
 
@@ -911,7 +910,7 @@ mod tests {
         write!(data_file, r#"<doc><p>Hello world!</p></doc>"#).unwrap();
 
         let mut xot = Xot::new();
-        let test_set = load(&mut xot, &test_cases_path);
+        let test_set = load(xot, &test_cases_path);
 
         assert_eq!(
             run(xot, &test_set),
@@ -958,7 +957,7 @@ mod tests {
         .unwrap();
 
         let mut xot = Xot::new();
-        let test_set = load(&mut xot, &test_cases_path);
+        let test_set = load(xot, &test_cases_path);
 
         assert_eq!(run(xot, &test_set), TestOutcome::Passed);
     }
@@ -992,7 +991,7 @@ mod tests {
         write!(data_file, r#"<doc><p>Hello world!</p></doc>"#).unwrap();
 
         let mut xot = Xot::new();
-        let test_set = load(&mut xot, &test_cases_path);
+        let test_set = load(xot, &test_cases_path);
 
         assert_eq!(run(xot, &test_set), TestOutcome::Passed);
     }
@@ -1001,7 +1000,7 @@ mod tests {
     fn test_dependency_spec_supported() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -1034,7 +1033,7 @@ mod tests {
     fn test_dependency_spec_supported2() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -1067,7 +1066,7 @@ mod tests {
     fn test_dependency_feature_supported() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -1101,7 +1100,7 @@ mod tests {
     fn test_dependency_feature_supported2() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">
@@ -1141,7 +1140,7 @@ mod tests {
     fn test_dependency_feature_supported3() {
         let mut xot = Xot::new();
         let test_set = qt::TestSet::load_from_xml(
-            &mut xot,
+            xot,
             &PathBuf::from("my/test.xml"),
             r#" 
 <test-set xmlns="http://www.w3.org/2010/09/qt-fots-catalog" name="test">

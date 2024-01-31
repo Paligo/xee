@@ -14,7 +14,7 @@ use crate::xml;
 #[xpath_fn("fn:name($arg as node()?) as xs:string", context_first)]
 fn name(context: &DynamicContext, arg: Option<xml::Node>) -> String {
     if let Some(node) = arg {
-        let name = node.node_name(context.xot);
+        let name = node.node_name(context.xot());
         if let Some(name) = name {
             name.to_full_name()
         } else {
@@ -28,7 +28,7 @@ fn name(context: &DynamicContext, arg: Option<xml::Node>) -> String {
 #[xpath_fn("fn:local-name($arg as node()?) as xs:string", context_first)]
 fn local_name(context: &DynamicContext, arg: Option<xml::Node>) -> String {
     if let Some(arg) = arg {
-        arg.local_name(context.xot)
+        arg.local_name(context.xot())
     } else {
         "".to_string()
     }
@@ -39,7 +39,7 @@ fn namespace_uri(context: &DynamicContext, arg: Option<xml::Node>) -> atomic::At
     if let Some(arg) = arg {
         atomic::Atomic::String(
             atomic::StringType::AnyURI,
-            Rc::new(arg.namespace_uri(context.xot)),
+            Rc::new(arg.namespace_uri(context.xot())),
         )
     } else {
         atomic::Atomic::String(atomic::StringType::AnyURI, "".to_string().into())
@@ -55,8 +55,8 @@ fn root(context: &DynamicContext, arg: Option<xml::Node>) -> Option<xml::Node> {
             xml::Node::Namespace(node, _) => node,
         };
         // XXX there should be a xot.root() to obtain this in one step
-        let top = context.xot.top_element(xot_node);
-        let root = context.xot.parent(top).unwrap();
+        let top = context.xot().top_element(xot_node);
+        let root = context.xot().parent(top).unwrap();
 
         Some(xml::Node::Xot(root))
     } else {
@@ -68,7 +68,7 @@ fn root(context: &DynamicContext, arg: Option<xml::Node>) -> Option<xml::Node> {
 fn has_children(context: &DynamicContext, node: Option<xml::Node>) -> bool {
     if let Some(node) = node {
         match node {
-            xml::Node::Xot(node) => context.xot.first_child(node).is_some(),
+            xml::Node::Xot(node) => context.xot().first_child(node).is_some(),
             xml::Node::Attribute(_, _) => false,
             xml::Node::Namespace(_, _) => false,
         }
@@ -84,7 +84,7 @@ fn innermost(context: &DynamicContext, nodes: &[xml::Node]) -> Vec<xml::Node> {
     for node in nodes {
         let mut parent_node = *node;
         // insert all parents into ancestors
-        while let Some(parent) = parent_node.parent(context.xot) {
+        while let Some(parent) = parent_node.parent(context.xot()) {
             ancestors.insert(parent);
             parent_node = parent;
         }
@@ -107,7 +107,7 @@ fn outermost(context: &DynamicContext, nodes: &[xml::Node]) -> Vec<xml::Node> {
     'outer: for node in nodes {
         let mut parent_node = *node;
         // if we find an ancestor in node_set, then we don't add this node
-        while let Some(parent) = parent_node.parent(context.xot) {
+        while let Some(parent) = parent_node.parent(context.xot()) {
             if node_set.contains(&parent) {
                 continue 'outer;
             }
