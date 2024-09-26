@@ -68,12 +68,10 @@ impl<E: Environment> TestCase<E> {
         let environments = self
             .environments(catalog, test_set)
             .collect::<std::result::Result<Vec<_>, crate::error::Error>>()?;
-        let xot = &mut run_context.xot;
-        let documents = &run_context.dynamic_context.documents;
         for environment in environments {
             let item = environment
                 .environment_spec()
-                .context_item(xot, documents)?;
+                .context_item(&mut run_context.session)?;
             if let Some(item) = item {
                 return Ok(Some(item));
             }
@@ -91,13 +89,11 @@ impl<E: Environment> TestCase<E> {
             .environments(catalog, test_set)
             .collect::<std::result::Result<Vec<_>, crate::error::Error>>()?;
         let mut variables = Variables::new();
-        let xot = &mut run_context.xot;
-        let source_cache = &run_context.dynamic_context.documents;
         for environment in environments {
             variables.extend(
                 environment
                     .environment_spec()
-                    .variables(xot, source_cache)?,
+                    .variables(&mut run_context.session)?,
             );
         }
         Ok(variables)

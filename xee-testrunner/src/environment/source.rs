@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 
-use xee_xpath::{Queries, Query};
+use xee_xpath::{Queries, Query, Session};
 use xee_xpath_compiler::xml::{Documents, Uri};
 use xee_xpath_load::{convert_string, Loadable};
 use xot::Xot;
@@ -43,50 +43,37 @@ pub(crate) enum SourceRole {
 }
 
 impl Source {
-    pub(crate) fn node(
-        &self,
-        xot: &mut Xot,
-        base_dir: &Path,
-        documents: &RefCell<Documents>,
-    ) -> Result<xot::Node> {
+    pub(crate) fn node(&self, base_dir: &Path, session: &mut Session) -> Result<xot::Node> {
         match &self.content {
             SourceContent::Path(path) => {
                 let full_path = base_dir.join(path);
-                // construct a Uri
-                // TODO: this is not really a proper URI but
-                // what matters is that it's unique here
-                let uri = Uri::new(&full_path.to_string_lossy());
+                // this is not really a full URI but what matters is that it's
+                // unique
+                let uri = full_path.to_string_lossy();
 
-                // try to get the cached version of the document
-                {
-                    // scope borrowed_documents so we drop it afterward
-                    let borrowed_documents = documents.borrow();
-
-                    let document = borrowed_documents.get(&uri);
-                    if let Some(document) = document {
-                        let root = document.root();
-                        return Ok(root);
-                    }
+                let root = session.get_document_node_by_uri(&uri);
+                if let Some(root) = root {
+                    return Ok(root);
                 }
-
                 // could not get cached version, so load up document
                 let xml_file = File::open(&full_path)?;
                 let mut buf_reader = BufReader::new(xml_file);
                 let mut xml = String::new();
                 buf_reader.read_to_string(&mut xml)?;
 
-                documents.borrow_mut().add(xot, &uri, &xml)?;
+                session.add_document_by_uri(&uri, &xml);
                 // now obtain what we just added
-                Ok(documents.borrow().get(&uri).unwrap().root())
+                Ok(session.get_document_node_by_uri(&uri).unwrap())
             }
+
             SourceContent::String(value) => {
                 // create a new unique uri
-                let uri = Uri::new(&format!("string-source-{}", documents.borrow().len()));
+                let uri = format!("string-source-{}", session.documents_count());
                 // we don't try to get a cached version of the document, as
                 // that would be different each time. we just add it to documents
                 // and return it
-                documents.borrow_mut().add(xot, &uri, value)?;
-                Ok(documents.borrow().get(&uri).unwrap().root())
+                session.add_document_by_uri(&uri, &value);
+                Ok(session.get_document_node_by_uri(&uri).unwrap())
             }
         }
     }

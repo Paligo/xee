@@ -90,18 +90,14 @@ pub fn cli() -> Result<()> {
     let path = cli.command.path();
     let path_info = paths(path)?;
 
-    let xot = Xot::new();
     let ns = XPATH_TEST_NS;
     let static_context = StaticContext::from_namespaces(namespaces(ns));
-    let documents = RefCell::new(Documents::new());
-    let dynamic_context = DynamicContext::from_documents(&static_context, &documents);
 
-    let run_context = RunContext::new(
-        xot,
-        dynamic_context,
-        xpath_known_dependencies(),
-        cli.verbose,
-    );
+    let documents = xee_xpath::Documents::new();
+    let queries = xee_xpath::Queries::new(static_context);
+    let session = queries.session(documents);
+
+    let run_context = RunContext::new(session, xpath_known_dependencies(), cli.verbose);
 
     let mut runner = Runner::<XPathEnvironmentSpec, XPathTestCase>::new(run_context, path_info);
 

@@ -1,3 +1,4 @@
+use xee_xpath::Session;
 use xee_xpath_compiler::context::DynamicContext;
 use xot::Xot;
 
@@ -9,22 +10,19 @@ use crate::{
 };
 
 pub(crate) struct RunContext<'a> {
-    pub(crate) xot: Xot,
-    pub(crate) dynamic_context: DynamicContext<'a>,
+    pub(crate) session: Session<'a>,
     pub(crate) known_dependencies: KnownDependencies,
     pub(crate) verbose: bool,
 }
 
 impl<'a> RunContext<'a> {
     pub(crate) fn new(
-        xot: Xot,
-        dynamic_context: DynamicContext<'a>,
+        session: Session<'a>,
         known_dependencies: KnownDependencies,
         verbose: bool,
     ) -> Self {
         Self {
-            xot,
-            dynamic_context,
+            session,
             known_dependencies,
             verbose,
         }

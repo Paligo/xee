@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use xee_name::Namespaces;
-use xee_xpath::{Queries, Query};
+use xee_xpath::{Queries, Query, Session};
 use xee_xpath_compiler::{
     context::{DynamicContext, StaticContext, Variables},
     parse, sequence,
@@ -108,30 +108,22 @@ impl EnvironmentSpec {
         }
     }
 
-    pub(crate) fn context_item(
-        &self,
-        xot: &mut Xot,
-        documents: &RefCell<Documents>,
-    ) -> Result<Option<sequence::Item>> {
+    pub(crate) fn context_item(&self, session: &mut Session) -> Result<Option<sequence::Item>> {
         for source in &self.sources {
             if let SourceRole::Context = source.role {
-                let node = source.node(xot, &self.base_dir, documents)?;
+                let node = source.node(&self.base_dir, session)?;
                 return Ok(Some(sequence::Item::from(node)));
             }
         }
         Ok(None)
     }
 
-    pub(crate) fn variables(
-        &self,
-        xot: &mut Xot,
-        documents: &RefCell<Documents>,
-    ) -> Result<Variables> {
+    pub(crate) fn variables(&self, session: &mut Session) -> Result<Variables> {
         let mut variables = Variables::new();
         for source in &self.sources {
             if let SourceRole::Var(name) = &source.role {
                 let name = &name[1..]; // without $
-                let node = source.node(xot, &self.base_dir, documents)?;
+                let node = source.node(&self.base_dir, session)?;
                 variables.insert(Name::name(name), sequence::Item::from(node).into());
             }
         }
