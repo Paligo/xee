@@ -227,4 +227,47 @@ mod tests {
 
         assert_eq!(result.value, Expr::Atom(make_int(24)));
     }
+
+    #[test]
+    fn test_fold_let_if_add() {
+        // Test folding: let $x := 5 + 3 return if ($x) then 42 else 24
+        let expr = ExprS {
+            value: Expr::Let(Let {
+                name: "x".into(),
+                var_expr: Box::new(ExprS {
+                    value: Expr::Binary(Binary {
+                        left: make_int(5),
+                        op: BinaryOperator::Add,
+                        right: make_int(3),
+                    }),
+                    span: dummy_span(),
+                }),
+                return_expr: Box::new(ExprS {
+                    value: Expr::If(If {
+                        condition: AtomS {
+                            value: Atom::Variable("x".into()),
+                            span: dummy_span(),
+                        },
+                        then: Box::new(ExprS {
+                            value: Expr::Atom(make_int(42)),
+                            span: dummy_span(),
+                        }),
+                        else_: Box::new(ExprS {
+                            value: Expr::Atom(make_int(24)),
+                            span: dummy_span(),
+                        }),
+                    }),
+                    span: dummy_span(),
+                }),
+            }),
+            span: dummy_span(),
+        };
+
+        let result = fold_expr(&expr);
+
+        // Should fold to 42 because:
+        // 1. 5 + 3 = 8
+        // 2. if (8) then 42 else 24 = 42
+        assert_eq!(result.value, Expr::Atom(make_int(42)));
+    }
 }
