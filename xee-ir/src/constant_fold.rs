@@ -69,13 +69,57 @@ fn fold_unary(unary: &Unary, span: Span) -> Expr {
 
 fn fold_let(let_expr: &Let, span: Span) -> Expr {
     let var_expr = Box::new(fold_expr(&let_expr.var_expr));
-    let return_expr = Box::new(fold_expr(&let_expr.return_expr));
+    
+    // If the var_expr folded to a constant, substitute it in the return expression
+    if let Expr::Atom(atom) = &var_expr.value {
+        // Create a modified return expression with the variable replaced by the constant
+        let modified_return = substitute_var(&let_expr.return_expr, &let_expr.name, atom);
+        return fold_expr(&modified_return).value;
+    }
 
+    // Otherwise keep the let expression with folded subexpressions
+    let return_expr = Box::new(fold_expr(&let_expr.return_expr));
     Expr::Let(Let {
         name: let_expr.name.clone(),
         var_expr,
         return_expr,
     })
+}
+
+fn substitute_var(expr: &ExprS, var_name: &Name, replacement: &AtomS) -> ExprS {
+    let span = expr.span;
+    let value = match &expr.value {
+        Expr::Atom(atom) => {
+            if let Atom::Variable(name) = &atom.value {
+                if name == var_name {
+                    return replacement.clone();
+                }
+            }
+            Expr::Atom(atom.clone())
+        }
+        Expr::Binary(binary) => Expr::Binary(Binary {
+            left: substitute_var_atom(&binary.left, var_name, replacement),
+            op: binary.op,
+            right: substitute_var_atom(&binary.right, var_name, replacement),
+        }),
+        Expr::If(if_expr) => Expr::If(If {
+            condition: substitute_var_atom(&if_expr.condition, var_name, replacement),
+            then: Box::new(substitute_var(&if_expr.then, var_name, replacement)),
+            else_: Box::new(substitute_var(&if_expr.else_, var_name, replacement)),
+        }),
+        // Add other cases as needed
+        _ => expr.value.clone(),
+    };
+    ExprS { value, span }
+}
+
+fn substitute_var_atom(atom: &AtomS, var_name: &Name, replacement: &AtomS) -> AtomS {
+    if let Atom::Variable(name) = &atom.value {
+        if name == var_name {
+            return replacement.clone();
+        }
+    }
+    atom.clone()
 }
 
 fn fold_if(if_expr: &If, span: Span) -> Expr {
