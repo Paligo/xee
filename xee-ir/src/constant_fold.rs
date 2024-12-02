@@ -4,6 +4,7 @@ use crate::ir::{
 use ibig::IBig;
 use ordered_float::OrderedFloat;
 use rust_decimal::Decimal;
+use xee_interpreter::function::Name;
 use xee_xpath_ast::ast::Span;
 
 pub fn fold_expr(expr: &ExprS) -> ExprS {
@@ -69,7 +70,7 @@ fn fold_unary(unary: &Unary, span: Span) -> Expr {
 
 fn fold_let(let_expr: &Let, span: Span) -> Expr {
     let var_expr = Box::new(fold_expr(&let_expr.var_expr));
-    
+
     // If the var_expr folded to a constant, substitute it in the return expression
     if let Expr::Atom(atom) = &var_expr.value {
         // Create a modified return expression with the variable replaced by the constant
@@ -92,7 +93,10 @@ fn substitute_var(expr: &ExprS, var_name: &Name, replacement: &AtomS) -> ExprS {
         Expr::Atom(atom) => {
             if let Atom::Variable(name) = &atom.value {
                 if name == var_name {
-                    return replacement.clone();
+                    return ExprS {
+                        value: Expr::Atom(replacement.clone()),
+                        span,
+                    };
                 }
             }
             Expr::Atom(atom.clone())
