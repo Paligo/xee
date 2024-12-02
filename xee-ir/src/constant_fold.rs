@@ -99,6 +99,7 @@ fn fold_if(if_expr: &If, span: Span) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use xee_interpreter::function::Name;
     use xee_xpath_ast::ast::Span;
 
     fn dummy_span() -> Span {
@@ -231,9 +232,10 @@ mod tests {
     #[test]
     fn test_fold_let_if_add() {
         // Test folding: let $x := 5 + 3 return if ($x) then 42 else 24
+        let name = Name::new("x".to_string());
         let expr = ExprS {
             value: Expr::Let(Let {
-                name: "x".into(),
+                name: name.clone(),
                 var_expr: Box::new(ExprS {
                     value: Expr::Binary(Binary {
                         left: make_int(5),
@@ -245,7 +247,7 @@ mod tests {
                 return_expr: Box::new(ExprS {
                     value: Expr::If(If {
                         condition: AtomS {
-                            value: Atom::Variable("x".into()),
+                            value: Atom::Variable(name),
                             span: dummy_span(),
                         },
                         then: Box::new(ExprS {
