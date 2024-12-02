@@ -4,7 +4,7 @@ use crate::ir::{
 use ibig::IBig;
 use ordered_float::OrderedFloat;
 use rust_decimal::Decimal;
-use xee_xpath_ast::span::Span;
+use xee_xpath_ast::ast::Span;
 
 pub fn fold_expr(expr: &ExprS) -> ExprS {
     let span = expr.span;
@@ -24,45 +24,32 @@ pub fn fold_expr(expr: &ExprS) -> ExprS {
 }
 
 fn fold_binary(binary: &Binary, span: Span) -> Expr {
-    if let (
-        Atom::Const(left_const),
-        Atom::Const(right_const),
-    ) = (&binary.left.value, &binary.right.value) {
-        match (left_const, right_const) {
-            (Const::Integer(l), Const::Integer(r)) => {
-                match binary.op {
-                    BinaryOperator::Add => {
-                        return Expr::Atom(AtomS {
-                            value: Atom::Const(Const::Integer(l + r)),
-                            span,
-                        });
-                    }
-                    BinaryOperator::Subtract => {
-                        return Expr::Atom(AtomS {
-                            value: Atom::Const(Const::Integer(l - r)),
-                            span,
-                        });
-                    }
-                    BinaryOperator::Multiply => {
-                        return Expr::Atom(AtomS {
-                            value: Atom::Const(Const::Integer(l * r)),
-                            span,
-                        });
-                    }
-                    // Add more integer operations as needed
-                    _ => {}
-                }
-            }
-            (Const::String(l), Const::String(r)) => {
-                if binary.op == BinaryOperator::Concatenate {
+    if let (Atom::Const(left_const), Atom::Const(right_const)) =
+        (&binary.left.value, &binary.right.value)
+    {
+        if let (Const::Integer(l), Const::Integer(r)) = (left_const, right_const) {
+            match binary.op {
+                BinaryOperator::Add => {
                     return Expr::Atom(AtomS {
-                        value: Atom::Const(Const::String(format!("{}{}", l, r))),
+                        value: Atom::Const(Const::Integer(l + r)),
                         span,
                     });
                 }
+                BinaryOperator::Sub => {
+                    return Expr::Atom(AtomS {
+                        value: Atom::Const(Const::Integer(l - r)),
+                        span,
+                    });
+                }
+                BinaryOperator::Mul => {
+                    return Expr::Atom(AtomS {
+                        value: Atom::Const(Const::Integer(l * r)),
+                        span,
+                    });
+                }
+                // Add more integer operations as needed
+                _ => {}
             }
-            // Add more constant type combinations as needed
-            _ => {}
         }
     }
     Expr::Binary(binary.clone())
@@ -70,15 +57,11 @@ fn fold_binary(binary: &Binary, span: Span) -> Expr {
 
 fn fold_unary(unary: &Unary, span: Span) -> Expr {
     if let Atom::Const(const_val) = &unary.atom.value {
-        match (const_val, &unary.op) {
-            (Const::Integer(val), UnaryOperator::Minus) => {
-                return Expr::Atom(AtomS {
-                    value: Atom::Const(Const::Integer(-val.clone())),
-                    span,
-                });
-            }
-            // Add more unary operations as needed
-            _ => {}
+        if let (Const::Integer(val), UnaryOperator::Minus) = (const_val, &unary.op) {
+            return Expr::Atom(AtomS {
+                value: Atom::Const(Const::Integer(-val.clone())),
+                span,
+            });
         }
     }
     Expr::Unary(unary.clone())
@@ -87,7 +70,7 @@ fn fold_unary(unary: &Unary, span: Span) -> Expr {
 fn fold_let(let_expr: &Let, span: Span) -> Expr {
     let var_expr = Box::new(fold_expr(&let_expr.var_expr));
     let return_expr = Box::new(fold_expr(&let_expr.return_expr));
-    
+
     Expr::Let(Let {
         name: let_expr.name.clone(),
         var_expr,
@@ -97,20 +80,15 @@ fn fold_let(let_expr: &Let, span: Span) -> Expr {
 
 fn fold_if(if_expr: &If, span: Span) -> Expr {
     // If we have a constant condition, we can eliminate the branch
-    if let Atom::Const(const_cond) = &if_expr.condition.value {
-        match const_cond {
-            Const::Integer(val) => {
-                if !val.is_zero() {
-                    return fold_expr(&if_expr.then).value;
-                } else {
-                    return fold_expr(&if_expr.else_).value;
-                }
-            }
-            // Add more constant condition types as needed
-            _ => {}
+    if let Atom::Const(Const::Integer(val)) = &if_expr.condition.value {
+        let zero: IBig = 0.into();
+        if val != &zero {
+            return fold_expr(&if_expr.then).value;
+        } else {
+            return fold_expr(&if_expr.else_).value;
         }
     }
-    
+
     Expr::If(If {
         condition: if_expr.condition.clone(),
         then: Box::new(fold_expr(&if_expr.then)),
@@ -121,7 +99,7 @@ fn fold_if(if_expr: &If, span: Span) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use xee_xpath_ast::span::Span;
+    use xee_xpath_ast::ast::Span;
 
     fn dummy_span() -> Span {
         Span::new(0, 0)
@@ -153,7 +131,7 @@ mod tests {
         };
 
         let result = fold_expr(&expr);
-        
+
         assert_eq!(
             result.value,
             Expr::Atom(AtomS {
@@ -168,40 +146,18 @@ mod tests {
         let expr = ExprS {
             value: Expr::Binary(Binary {
                 left: make_int(5),
-                op: BinaryOperator::Subtract,
+                op: BinaryOperator::Sub,
                 right: make_int(3),
             }),
             span: dummy_span(),
         };
 
         let result = fold_expr(&expr);
-        
+
         assert_eq!(
             result.value,
             Expr::Atom(AtomS {
                 value: Atom::Const(Const::Integer(IBig::from(2))),
-                span: dummy_span(),
-            })
-        );
-    }
-
-    #[test]
-    fn test_fold_string_concatenation() {
-        let expr = ExprS {
-            value: Expr::Binary(Binary {
-                left: make_string("Hello"),
-                op: BinaryOperator::Concatenate,
-                right: make_string(" World"),
-            }),
-            span: dummy_span(),
-        };
-
-        let result = fold_expr(&expr);
-        
-        assert_eq!(
-            result.value,
-            Expr::Atom(AtomS {
-                value: Atom::Const(Const::String("Hello World".to_string())),
                 span: dummy_span(),
             })
         );
@@ -218,7 +174,7 @@ mod tests {
         };
 
         let result = fold_expr(&expr);
-        
+
         assert_eq!(
             result.value,
             Expr::Atom(AtomS {
@@ -246,11 +202,8 @@ mod tests {
         };
 
         let result = fold_expr(&expr);
-        
-        assert_eq!(
-            result.value,
-            Expr::Atom(make_int(42))
-        );
+
+        assert_eq!(result.value, Expr::Atom(make_int(42)));
     }
 
     #[test]
@@ -271,10 +224,7 @@ mod tests {
         };
 
         let result = fold_expr(&expr);
-        
-        assert_eq!(
-            result.value,
-            Expr::Atom(make_int(24))
-        );
+
+        assert_eq!(result.value, Expr::Atom(make_int(24)));
     }
 }
