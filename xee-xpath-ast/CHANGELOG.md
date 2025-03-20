@@ -1,0 +1,180 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0](https://github.com/Paligo/xee/releases/tag/xee-xpath-ast-v0.1.0) - 2025-03-20
+
+### Other
+
+- Clippy.
+- Update copyright year.
+- Update all the licenses to MIT.
+- Remove all the apache licenses, MIT only.
+- Ignore the new errors for now, as the parser is so much faster it's worth it.
+- Upgrade the parser.
+- Upgrade ron.
+- Upgrade some more dependencies and unify rust_decimal_macros.
+- Depend on specify version of chumsky to prevent weird compile errors.
+- Tweak license text.
+- Preparing licenses, attribution, etc.
+- Fix comment parsing.
+- make namespaces own their strings, rather than using a lifetime which leaks through everything.
+- Modify so that xee-xpath-ast uses xee-xpath-lexer
+- Upgrade logos version.
+- Upgrade all the dependencies. Not sure why parse error gives a different message now but it's not a priority.
+- Actually use alpha6, not latest git.
+- Upgrade to the a6 of chumsky so we stop relying on a git checkout.
+- Convert to use Xot's OwnedName.
+- Add a way to transform a pattern into another pattern replacing predicates.
+- Make it so we can maintain pattern at the ast level, but in the future also on the ir level and interpreter level.
+- Reorganize so that we can handle attributes better.
+- Implement union and intersection rules.
+- Various patterns.
+- A very simple pattern registry with lookup by relative name only.
+- Move some more dependencies into the workspace.
+- Depend on xee-name and xee-xpath-type where possible.
+- Separate out sequence type ast so interpreter can start to depend on it alone.
+- Add basic readmes for the various sub-crates.
+- Factor out naming related stuff into its own module, xee-name.
+- Rename old xee-xpath to xee-interpreter.
+- More reworking so that compilation is separated into outer, interpretation in xee-xpath.
+- Another update.
+- Integrate pattern parsing in AST parser.
+- Predicates in step expressions work.
+- The pattern parser is getting more correct now.
+- Cleanup.
+- Refactor the AST and parser for patterns some more.
+- Remove unneeded pattern ast stuff after refactoring.
+- Kick the pattern parser into a better shape.
+- More work on the pattern parser. It's still a mess though.
+- More work towards a pattern parser.
+- Add a pattern AST. Now to parse it.
+- Nicer Variables API.
+- Introduce XPathParserContext which has the parse methods.
+- Work towards a cleaner API to parse and execute xpath.
+- Start working on a visitor for XSLT AST. We will need to do implement expand_text, likely for renaming too.
+- context-item
+- Make it so that element specific namespaces are used in XSLT parser
+- Infrastructure to help track namespaces during parsing.
+- Actually approve snapshot.
+- Parse actual XPath in value templates.
+- Clippy.
+- Cleaner adjust.
+- Adjust error span for xpath.
+- An experiment with tokens from xmlparser
+- Get rid of expected found, so we can get rid of the lifetime on ParserError, which simplifies things.
+- To try to integrate XPath parsing into the XSLT parser we need better error handling in XPath
+- More precise errors are coming from the parser now.
+- More specific errors in the xpath parser.
+- Modifications so that serde is an explicit dependency.
+- implement 'treat as'
+- arrows for dynamic functions too.
+- arrow functions for static function calls.
+- Wrapper functions unlike normal inline functions shouldn't affect the context.
+- Fix it so we can properly parse map tests.
+- A stab at sequence type subtype relations. Not finished yet.
+- Parse atomic type directly into the Xs type when we construct the AST.
+- Clarifying comment.
+- Fix the parser: we can only have one comparison per expression, unless other binary operators.
+- Make a few more casting behaviors work.
+- Implement array:get
+- Ability to parse array() and map(*). Typed map test doesn't work yet for some reason I don't understand.
+- Start to add map constructor and array constructor to the IR.
+- Implement lookup, unary lookup.
+- Parse map and array.
+- Implement fn:function-lookup
+- parse function tests now into ast.
+- casting to QName now respects default element namespace.
+- Support for namespace in qt3 tests.
+- Implement various fn surrounding qname.
+- name tests
+- Implement fn:node-name
+- Clippy
+- Start to implement collator lookup by query.
+- Upgrade to Xot 0.14.
+- Parse year month duration
+- We can now parse xs:QName
+- Prepare casting to qname, though it's not working yet.
+- Further progress on sequence type matching.
+- Simplify element test and attribute test in AST.
+- Move things around some more, introduce parse constructor functions on ast to make API cleaner.
+- break the parser into many modules.
+- Change import signatures. Still not done moving parser around.
+- Rename to parser; temporarily break snapshots as we're moving them.
+- Get rid of parser module.
+- Move the ebnf file out of the source tree, just keep it as a reference.
+- First round of cleanups: get rid of pest parser and associated stuff.
+- Keywords can now be ncnames too. Phew.
+- Fix typo.
+- A few cleanups.
+- We now have better parser organization.
+- Unused parameter.
+- Further reorganization into multiple parsers.
+- Split out more into a function.
+- Spit up some more.
+- Further splitting into functions.
+- Split out parser kind test.
+- Split parser some more.
+- Better organization.
+- Split mega function into two, in the hopes analyzer performance goes up.
+- Box more things in the hopes of positively affecting compile/analyzer times.
+- We verify the parens grammar note; we know the comments grammar note is implemented in the lexer.
+- Leading lone slash rule.
+- Some occurrence indicator tests.
+- Reserved function name for name references too.
+- Reserved function names
+- Fix if clause problem.
+- Trying to make the tests work again. Still a lot of work in progress.
+- Fix xee-xpath-macros with new ast
+- Default element namespace support.
+- Default function namespace.
+- Try to introduce context-dependent parsing for default element namespace but not yet successful
+- rename question_mark to optional.
+- Put parse function back.
+- We don't use this anymore.
+- Cleanup.
+- Parse signatures too.
+- Move more out of recursive.
+- Move a few more things out of the recursive block.
+- Move things out of recursive function that don't need to be recursive.
+- Further improve path parsing.
+- We can parse paths again, mostly.
+- Dealing with postfix argument list function calls.
+- Handle placeholders.
+- Static function calls (without placeholders)
+- Parse inline functions again.
+- Cleanup WithSpan next to Spanned definitions.
+- SimpeMap and Context Items
+- Quantified expressions.
+- if expr
+- We can parse for again.
+- We can parse let expressions now.
+- Parse the end for each subexpression.
+- Fix a lexer bug and allow parsing of full xpath expressions.
+- Integrate new parser.
+- More kind tests.
+- The most simple document test, without argument.
+- Use mod.rs instead of explicit module.
+- Allow parsing of kind test so we can more easily test it.
+- Parse type information for inline functions.
+- Better IR generation for cast and castable.
+- Parse treat expression.
+- Also add the snaps.
+- We can parse instance of too now.
+- We can parse castable into AST.
+- We can now parse cast expression.
+- Compile unary operator to the IR. The IR doesn't handle it yet.
+- Start of an implementation of a type checker.
+- More advanced conversion code, so we can handle more cases.
+- Properly support KindTest in signature.
+- We can now convert incoming arguments.
+- A first stab at a macro.
+- A little bit more explanation
+- Clean up some unused code.
+- Use xee_xpath_ast in xee_xpath
+- Pull parser and ast into a separate package.

@@ -1,0 +1,147 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0](https://github.com/Paligo/xee/releases/tag/xee-testrunner-v0.1.0) - 2025-03-20
+
+### Other
+
+- Make it so the test runner errors (with non-zero exit status) if 'check' encounters any failures.
+- Update copyright year.
+- Update all the licenses to MIT.
+- Remove all the apache licenses, MIT only.
+- Upgrade testrunner dependencies.
+- Make insta a single workspace dependency so it's easier to upgrade.
+- uri-collection. Harden uri types.
+- Implement fn:collection.
+- Tweak license text.
+- Preparing licenses, attribution, etc.
+- Remove Occurrence trait in favor of one and option functions.
+- Move things from trait onto Sequence.
+- Consuming one and option.
+- Rewrite to consolidated sequence.
+- Add the ability to add documents without a URI.
+- Fix a broken test.
+- Retire Uri to indicate documents in favor if iri-string based approach.
+- Use a better algorithm for permutation comparison.
+- Make it so that if we pipe test output to the terminal, we don't get weird ansi escape codes.
+- Refactor the way collations work. This fixes 2 tests in the big test suite.
+- Implement more fn:error behavior.
+- Realized that session wasn't pulling its weight, so replace it with documents.
+- Better handling of static base uri
+- Set up static base uri properly.
+- Work on fn:doc.
+- We don't need the compiler anymore to run the tests.
+- The dynamic context now references the program.
+- Clippy.
+- The dynamic context builder should be built from the program.
+- Use the new API on program, rather than runnable.
+- Let program own static context.
+- make namespaces own their strings, rather than using a lifetime which leaks through everything.
+- Further modify xee-xpath so that we can use it fully in the test runner.
+- The load system had a crazy lifetime story. Massively simplify lifetimes.
+- Make it so that the query owns the program, and there is no more query id.
+- Make the Item type top-level as we need it quite often.
+- Trying to get the run method to use xee_xpath, but no luck yet.
+- Get rid more of usage of the compiler API in the testrunner in favor of xee_xpath.
+- Expose ValueResult for now, it may be possible to make it go away later.
+- Low handing fruit import fixes to xee_xpath instead of xee_xpath_compiler.
+- Lots more clippy.
+- Clean up enum into struct.
+- Tweak imports.
+- Update filter code display trait.
+- Handle clippy problems.
+- A lot of work to make the API cleaner.
+- Make recurse query based around a trait as well, so we get the same behavior consistently.
+- Introduce DocumentsRef and StaticContextRef to wrap Rc away from public API.
+- Explicit use of dynamic context in the API now. Make documents Rc too, instead of a Cow.
+- Isolated static context and reconstruct dynamic context each time we run.
+- Finish renaming.
+- Add the context item to the dynamic context too.
+- Use a builder everywhere for dynamic context.
+- Passing variables separately from the DynamicContext turns out to be misguided.
+- A static context builder so it's easier to create them.
+- Make it so that the item is optional.
+- Further API cleanups.
+- Improve documents API by pushing most of it down into the interpreter.
+- Clean up imports.
+- We use the new queries infastructure to do the work for the testrunner.
+- A note.
+- Modify how variables are passed.
+- More clippy and documentation work.
+- Make it so that session owns DynamicContext. We need to make documents a cow to make this work.
+- Make it so that the various iterators return an error early if the data is absent.
+- Also rename xee-xslt to xee-xslt-compiler.
+- Rename xee-xpath to xee-xpath-compiler so we can better hide information from the public APIs.
+- We try to move towards a DynamicContext we can live with.
+- Make a convenience static_context function on runnable.
+- Dynamic context owns static context now.
+- Filter tests for xsd version too.
+- Fix a bug where we couldn't run an individual test file anymore.
+- Rework dynamic context so that it owns documents, which makes the API we want in the load functionality feasible.
+- Rename it to load everywhere.
+- More renaming, calling the hook method "load" instead of query.
+- Upgrade to the a6 of chumsky so we stop relying on a git checkout.
+- Use xee-xpath-load from xee-testrunner.
+- Cleanup.
+- Make it so we can decode 'content' in source too.
+- Make the test runner work for XPath.
+- Clippy.
+- Add a readme describing the fictional future.
+- Wire it all up.
+- Make things more generic.
+- Adjust check code until it compiles.
+- Start wiring things up.
+- Start to port over CLI.
+- Enable filter tests.
+- Build renderers back up.
+- We can load a test set.
+- Cleanup.
+- And make more loadable.
+- Make more generic and context loadable.
+- Make more context loadable.
+- Loading a test case.
+- Make loading more generic.
+- Reverse arguments some more.
+- Flip arguments to be more consistent with loadable.
+- Change this so that the test use an element for context.
+- A test for loading the environment.
+- Make it so we can load with a context, like a path.
+- Refactor to match statement.
+- assert logic.
+- Move Xot import.
+- Load dependencies test.
+- Speculative MapQuery.
+- Structuring load logic.
+- More code ported over.
+- Rename all the queries.
+- Port over catalog query.
+- Port over more loading code.
+- Port over more xpath query logic.
+- Start to add loading logic to the various structs.
+- Try to write a simple test case but it is rather a lot unfortunately.
+- Mirror run on testset.
+- More tweaking.
+- Refactor so that catalog is passed in just like testcase.
+- Reorganization.
+- More porting over from qt.
+- Swap generic parameters.
+- More tinkering with setting up a generic test runner.
+- Further clean up and porting of qt code into testrunner.
+- Hook in dependencies.
+- Dependencies.
+- an xpath testcase.
+- wire in iterator.
+- Rename these modules to be more succinct.
+- More sketching out of how environments are managed.
+- Further sketch out structure.
+- More sketching out environment story.
+- Move metadata out of environment as it's shared.
+- Move environment into sub module.
+- Sketch out more.
+- Start sketching out environment information for test runner.

@@ -1,0 +1,451 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0](https://github.com/Paligo/xee/releases/tag/xee-xslt-ast-v0.1.0) - 2025-03-20
+
+### Other
+
+- Update copyright year.
+- Update all the licenses to MIT.
+- Remove all the apache licenses, MIT only.
+- Ignore the new errors for now, as the parser is so much faster it's worth it.
+- Upgrade ron.
+- Make insta a single workspace dependency so it's easier to upgrade.
+- Upgrade a bunch of dependencies to latest versions.
+- Update to newer version of Rust and do some clippy work.
+- Tweak license text.
+- Preparing licenses, attribution, etc.
+- Move things from trait onto Sequence.
+- Rewrite to consolidated sequence.
+- Clippy.
+- The dynamic context builder should be built from the program.
+- Let program own static context.
+- make namespaces own their strings, rather than using a lifetime which leaks through everything.
+- Lots more clippy.
+- Introduce DocumentsRef and StaticContextRef to wrap Rc away from public API.
+- Isolated static context and reconstruct dynamic context each time we run.
+- Add the context item to the dynamic context too.
+- Use a builder everywhere for dynamic context.
+- Passing variables separately from the DynamicContext turns out to be misguided.
+- Modify how variables are passed.
+- Rename xee-xpath to xee-xpath-compiler so we can better hide information from the public APIs.
+- We try to move towards a DynamicContext we can live with.
+- Dynamic context owns static context now.
+- A few tests for mode parsing.
+- Parse mode information properly for xsl:apply-templates
+- Handle the default mode early in AST parsing.
+- Refactor things so we support the various mode values.
+- Prepare the ground for modes. We can't actually use modes yet or declare them.
+- Calculate priority now for rules.
+- Support for xsl:processing-instruction
+- comment
+- namespace
+- Adjust to latest xmlname
+- A few clippy items.
+- Convert to use Xot's OwnedName.
+- attribute support.
+- Rename Root to Document.
+- Port over to new xot.
+- element anx xsl:text
+- Test attributes with value template. Attribute stability by avoiding a hashmap.
+- We now parse literal attributes into the XSLT ast.
+- Use xee-name for xslt ast.
+- support for text attribute value templates.
+- A bit more renaming for clarity.
+- Turn Element into a type of content.
+- Add a way to transform a pattern into another pattern replacing predicates.
+- sequence
+- Make xslt-ast work again.
+- Start to weave through apply-templates support
+- We got a tiny XSLT example working at last.
+- Some preparations for compiling XSL.
+- Nested non-sequence constructor instruction in literal element.
+- Add support for nesting of literal elements.
+- Move some more dependencies into the workspace.
+- Separate out sequence type ast so interpreter can start to depend on it alone.
+- Add basic readmes for the various sub-crates.
+- Factor out naming related stuff into its own module, xee-name.
+- Don't rely on xee-interpreter if we already have xee-xpath as a dependency.
+- Rename xee-xpath-outer to the new xee-xpath
+- Rename old xee-xpath to xee-interpreter.
+- Clean up imports to use indirect imports only.
+- Finish extracting main behavior into xee-xpath-outer (to be xee-xpath).
+- Integrate pattern parsing in AST parser.
+- Slight refactor.
+- Modify static evaluation so we have access to mutable state.
+- Cleaner way to set up namespace prefixes.
+- Set up the prefixes each time we set up standard attributes, so we can simplify our call.
+- A few more tests for complex use-when behavior.
+- Processing use-when on other content
+- StaticEvaluator
+- Static standard attributes make sure that the attributes is correct for each declaration top-level.
+- Updates.
+- use-when for top-level element.
+- Devise a test for the use of xpath default namespace.
+- Logic to construct the right top-level context
+- Todo and get rid of a spurious clone.
+- Move use-when check so it applies to everything.
+- Some more complex scenario where use-when depends on a variable is working.
+- Add a test where use-when succeeds
+- Pull use-when into its own method. Eliminate some unnecessary clone().
+- Evaluate top-level use-when.
+- Refactor the way sub-attributes with standard attributes applied to context is constructed.
+- Add another ignored test for use-when.
+- More renaming.
+- Start to handle static evaluation logic for non-variable & non-parameter.
+- Refactor some more.
+- Factor out param processing.
+- Factor variable logic into a method.
+- Add a new test that fails for now.
+- Make signature simpler by using state.
+- Cleanup.
+- More tests, including as behavior.
+- A description of what we're trying to do.
+- We now set variable names before static parsing.
+- Cleanup.
+- We have basic variable setting working!
+- Add a whole bunch of notes about static evaluation.
+- More steps on the way to static execution.
+- Variables is stored as a cow.
+- Continue work on static evaluation.
+- Validate unseen attributes.
+- Nicer Variables API.
+- Use XPathParserContext for parser context, not full StaticContext.
+- Introduce XPathParserContext which has the parse methods.
+- More work to use the improved static context API.
+- Work towards a cleaner API to parse and execute xpath.
+- Try to figure out how to do static evaluation
+- Preliminary preprocessing code.
+- Start of use-when preprocessing logic.
+- No more span for attributes.
+- More reorganization.
+- Avoid clone.
+- Simplified constract using attributes more often and getting content from that.
+- Multi-phase creation logic.
+- Construct the correct context in stages.
+- Construct content in stages.
+- Rename for clarity.
+- Use content in more places.
+- Cleaner way to unpack.
+- Start using content in more places.
+- Move Content into combinator.
+- Unify Content with ParseInfo.
+- Cleanup.
+- Unify Content with ParseInfo.
+- ParseInfo moving it up the chain.
+- Factor out a ParseInfo.
+- More renaming.
+- Rename element to content some more.
+- Rename Element to Content. But is it pulling its weight?
+- element doesn't need to carry xot element anymore. Which likely means it's a misnomer.
+- Simplify invocation.
+- Use OnceLock so we can reuse parsers some more.
+- Convert more parsers to use once lock
+- Reorganize parsers
+- declarations and sequence constructor are now parsed using a once lock.
+- Use once lock to reuse parsers.
+- Clippy.
+- Let parse_element_attributes call the underlying function.
+- factor out element/attributes creation.
+- Remove next from context as it turns out not to be needed.
+- Disabling expand text works.
+- Expand text works now works for content.
+- Plug in the multi parser.
+- Add multi parser and flatten operation.
+- Reorganize AST for text/value content.
+- This test works again.
+- This method is now unused.
+- Prefixes can now be passed as a reference.
+- Combine prefixes upon construction, not later when we use it.
+- Pass in prefixes explicitly.
+- Really pass attributes separately from element.
+- Clippy.
+- Use attributes API some more.
+- Switching over to attributes object API.
+- Make attributes an explicit parameter.
+- Hook in standard attribute parsing.
+- Make it so that we can combine standard attributes into context.
+- Start to pull out Attributes into its own structure.
+- Parse standard attributes.
+- Make element a reference as it's nicer.
+- Simplify context construction.
+- Make Element be owned at the cost of not being able to validate properly yet.
+- standard attributes really should be maintained on the context, not on the instruction itself.
+- Cleanup.
+- A more complete visitor.
+- expand visitor.
+- Start working on a visitor for XSLT AST. We will need to do implement expand_text, likely for renaming too.
+- Prepare for expand-text behavior.
+- handle xsl:catch rule.
+- Have to remove comment/pi nodes in an earlier phase.
+- More whitespace rules.
+- space support.
+- Start to implement strip whitespace rules.
+- Unsupported attributes are now rejected.
+- Add an explanatory comment.
+- reverse the order of the complex or, otherwise it will greedily conclude that we have no sequence elements too early.
+- Write down the elusive fork content parser.
+- Use or to make the parsers a lot more clean.
+- use or in a real parser.
+- Add a map combinator.
+- Get rid of this old code.
+- Rename combinator2 to combinator, replacing the old module.
+- Replace combinator with combinator2
+- The or parser now works.
+- Add a better combinator library
+- where-populated
+- value-of
+- text
+- strip-space
+- source-document
+- sequence
+- processing-instruction
+- preserve-space
+- added xsl:override
+- output
+- Start work on xsl:output
+- Some thinking about the or parser. But it's not quite right yet.
+- More tests for one.
+- Add a test for the one combinator.
+- template
+- Check what still remains to be done.
+- on-non-empty
+- on-empty
+- number
+- next-match
+- next-iteration
+- namespace-alias
+- namespace
+- mode
+- message
+- merge
+- add xsl:map-entry
+- add xsl:map
+- add xsl:key, also rename content to sequence_constructor in AST
+- iterate
+- import-schema
+- import
+- global-context-item
+- Attempt to implement fork, but the parser requirements need an or...
+- Add xsl:function
+- ForEachGroup
+- for-each parser
+- expose
+- evaluate
+- element
+- Add Document
+- decimal-format
+- context-item
+- Add Comment
+- parse xsl:choose
+- Add CharacterMap.
+- Implement catch
+- Add call-template
+- Implement break
+- Add attribute-set
+- Parse attribute.
+- Clippy.
+- Add ApplyImports.
+- ApplyTemplates
+- Add Sort
+- Cleanup.
+- copy-of, which should not be empty.
+- parse element has now been redefined in a cleaner way.
+- Add a magical instruction parser.
+- Add an instruction parser rule.
+- Add a bunch of tests and add a test for span for error scenario.
+- We can implement analyze-string properly now.
+- Simplify content parse rule.
+- Simplify this by not using the children parser.
+- Rename it to content parse.
+- Make it so we can construct the content parser as easily as possible.
+- Rename this to parser.
+- Nicer API to construct parsers with elements.
+- Introduce element_name_parse
+- Rename parse module to element.
+- Use the children api to do the right thing.
+- Use nicer api.
+- Towards a nicer API.
+- Better names.
+- Rename to NodeParser
+- Actually add combinator.
+- Rename module to combinator.
+- No need for these comments anymore.
+- Accumulator parse rule.
+- Cleanup some more.
+- Plug in the children parser. Awkward for now.
+- Get rid of more old parser infrastructure.
+- use new declarations parser.
+- Start to clean up the old parser infrastructure.
+- Try to plug in sequence constructor parser now.
+- Remove error module in favor of ElementError and AttributeError.
+- Better errors; separate element error from attribute error.
+- A step on the way to allow us to construct parser.
+- Pass through context.
+- Generalize ElementNamespaces into Context.
+- Pull out State into its own module.
+- Rename Context to State, and start work on introducing actual context.
+- Pull out context into its own module.
+- Little cleanup.
+- Pull ElementNamespaces into its own module.
+- Cleanup.
+- Use Context as part of the main element parser too.
+- Use span on context instead of the loose function.
+- Extend context to be passed in and used.
+- Context is now simpler; get rid of data.
+- Try integration again, bounce off again.
+- Carry data into parsers.
+- Reorganize so that Element doesn't require a reference to xslt_parser anymore.
+- Try to construct a children parser for SequenceConstructor; first step is to pub(crate) it.
+- Add an ignore_right so we can ignore the end parser's result.
+- Make it so that we parse content after we parse the attributes.
+- A few tweaks to the code organization.
+- Rename State to Context which probably fits it a bit better.
+- Make State simpler, no more generics for it.
+- Start to refactor error handling in XSLT parser.
+- Define a local error type.
+- Pass next through state.
+- The parser doesn't need to know about Xot next sibling anymore.
+- We can combine 3 values.
+- Hook in span info.
+- Rewrite to use structs for parsers.
+- Add a many_nodes and a test for it.
+- Rename this to children_parser as we can parse non-elements too.
+- Clean up tests.
+- Expand the element parser.
+- Start working on an element parser.
+- Various cleanups.
+- Derive the sequence constructor names from sequence constructor instruction.
+- Add analyze-string. The sub-parser isn't working correctly yet.
+- Refactor away duplication.
+- Make parsing an individual element more generic.
+- Factor out a more generic way to parse.
+- Add a few more checks.
+- Rename things to be more clear.
+- Add the ability to parse a whole transform.
+- Implement parser for accumulator and accumulator rule.
+- Add Accept parser.
+- Make it so we can define InstructionParser that are not SequenceConstructorParser.
+- More convenient result.
+- Automate away adding sequence constructor names.
+- Refactor so we keep the logic handling sequence constructor names together.
+- Handle value templates.
+- parse Fallback. Start to wire up attribute template value parser.
+- Make it so that element specific namespaces are used in XSLT parser
+- Infrastructure to help track namespaces during parsing.
+- Use better name.
+- Simplify parser API by returning closures directly.
+- Properly parse eqname with proper span.
+- Parse eqname properly.
+- Split off instruction parsers into their own module.
+- Factor out Error
+- Factor names into seperate module.
+- Actually approve snapshot.
+- Test a scenario with broken xpath.
+- Parse actual XPath in value templates.
+- Convert to use snapshot testing.
+- We need to make the xpath parser do something new.
+- Handle unescaped end curly.
+- Refactor span creation.
+- The item function wasn't pulling its weight.
+- More parsing rules.
+- Shut up warning.
+- value template parsing, no escape sequences yet.
+- Whitespace splitting with spans.
+- Standard attributes work on non-xsl instructions.
+- Standard attribute gets parsed on xsl instruction
+- Parse span and standard attributes.
+- Add the ability to parse literal elements.
+- Prepare to parse standard names on non XSL elements.
+- Parse standard for all elements.
+- Parse standard attributes for if
+- Add XSLT namespace to names.
+- Add namespace.
+- Move sequence constructor parsing onto element.
+- Nested if now works.
+- Define instruction parser as a InstructionParser.
+- Slight reorganization.
+- Make references more explicit in Element.
+- Move over more to Element.
+- Move over more parse functions to Element.
+- Separate out validation logic.
+- Nicer error generator for validation issue.
+- Fix this code; we want to indicate the wrong attribute, not visibility.
+- Use From trait to convert into SequenceConstructorItem.
+- Added trait implementation.
+- No generic is needed.
+- Simplify signature of parse functions.
+- Slight reorganization to make it easier to read.
+- Reorganize names.
+- Improve parsing of sequence constructor items.
+- Add a todo note.
+- We can parse eqnames (at least without actually validating them)
+- copy first stab
+- select attribute cannot occur when visibility is abstract
+- Rename tests.
+- Simplify tests.
+- Handle static.
+- We can parse sequence type.
+- Tweak import
+- maintain span as part of the ast nodes.
+- Rename to optional and required.
+- Renames Attributes to Element
+- Simpler element_span.
+- We want to get span information for non-error cases so we can do it a lot more simply.
+- We now have the span everywhere, so we don't need to get it only for errors.
+- Carry span information into expressions.
+- Move span information into the ast.
+- Get rid of various previous prototypes.
+- Further refactoring.
+- Factor out an Attributes to make it easier to parse attributes with less repetition.
+- Cleanup.
+- Introduce a general attribute and required attribute.
+- Refactor required_string in terms of string.
+- Refactor how to get attributes.
+- Make getting eqname explicit.
+- Further improvement of the AST model.
+- Cleanup.
+- Tweak attribute parsing some more.
+- Further tweaks of the AST
+- Further define XSTL AST.
+- Extend AST more. fix parser for extended Variable
+- Pick up point.
+- Extend the AST
+- More XSLT AST
+- Extend the AST
+- Start implementing the AST.
+- Cleanup.
+- Further cleanup of getting xpath attributes.
+- A refactor to make parsing values a bit cleaner.
+- The xpath parser now gets an adjust for spans.
+- Missing required name.
+- Snapshot.
+- We can parse variables.
+- parse4, without chumsky.
+- Add a comment to improve things.
+- Cleanup.
+- Adjust error span for xpath.
+- Handle missing attribute with error message
+- Cleanup.
+- Add snapshot!
+- We can also parse variable.
+- Make parse3 work.
+- Third stab at the parser, with span info from Xot.
+- A more efficient way to get things from attributes.
+- We can also parse parts of variable.
+- We now have an attribute creation function.
+- Spanned tokens should be handled now.
+- An experiment with tokens from xmlparser
+- Get rid of expected found, so we can get rid of the lifetime on ParserError, which simplifies things.
+- Hook in the real xpath parser. But unfortunately we can't wrap the underlying parser error.
+- To try to integrate XPath parsing into the XSLT parser we need better error handling in XPath
+- Clean up all the clippy messages
+- Modifications so that serde is an explicit dependency.
+- Get dumb parser working.
+- Add experiments towards an XSLT parser

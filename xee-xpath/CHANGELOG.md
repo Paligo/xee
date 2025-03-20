@@ -1,0 +1,1329 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0](https://github.com/Paligo/xee/releases/tag/xee-xpath-v0.1.0) - 2025-03-20
+
+### Other
+
+- Add a few categories.
+- Update copyright year.
+- Update all the licenses to MIT.
+- Remove all the apache licenses, MIT only.
+- Upgrade divan.
+- Make insta a single workspace dependency so it's easier to upgrade.
+- Newest ordered-float.
+- Add another benchmark. Ignore some flamegraph cruft.
+- Tweak license text.
+- Preparing licenses, attribution, etc.
+- Remove Occurrence trait in favor of one and option functions.
+- Slightly tweak how large map works to make it a trifle faster.
+- Move things from trait onto Sequence.
+- A simple exmaple to do some benchmarking with.
+- Whitespace.
+- Add benchmarking.
+- We can now remove the old evaluation code in xee-xpath-compiler.
+- Also move over arithmetic tests.
+- Port the tests from the xee-xpath-compiler to the xee-xpath API.
+- Make iter() deliver Item, not &Item.
+- Consuming one and option.
+- Clippy.
+- Rewrite to consolidated sequence.
+- Add the ability to add documents without a URI.
+- Retire Uri to indicate documents in favor if iri-string based approach.
+- Realized that session wasn't pulling its weight, so replace it with documents.
+- We don't need the compiler anymore to run the tests.
+- Clippy.
+- The dynamic context builder should be built from the program.
+- Simplify crate, we now have access to the program.
+- No more static context ref is needed.
+- Let program own static context.
+- make namespaces own their strings, rather than using a lifetime which leaks through everything.
+- Work towards getting signature information, but we're not there yet.
+- One way to construct a dynamic context, including documents.
+- Further modify xee-xpath so that we can use it fully in the test runner.
+- Session is created from documents alone now.
+- The load system had a crazy lifetime story. Massively simplify lifetimes.
+- Make it so that the query owns the program, and there is no more query id.
+- Typo.
+- Rename item to function as the other item types are top-level.
+- Make the Item type top-level as we need it quite often.
+- Trying to get the run method to use xee_xpath, but no luck yet.
+- Expose ValueResult for now, it may be possible to make it go away later.
+- Lots more clippy.
+- Handle clippy problems.
+- A lot of work to make the API cleaner.
+- Make recurse query based around a trait as well, so we get the same behavior consistently.
+- Rename a misnamed function.
+- Introduce DocumentsRef and StaticContextRef to wrap Rc away from public API.
+- Explicit use of dynamic context in the API now. Make documents Rc too, instead of a Cow.
+- Isolated static context and reconstruct dynamic context each time we run.
+- Finish renaming.
+- Better name now variables aren't really part of the API anymore.
+- Clean up a lot of documents cruft.
+- Add the context item to the dynamic context too.
+- Use a builder everywhere for dynamic context.
+- Passing variables separately from the DynamicContext turns out to be misguided.
+- Make it so that the item is optional.
+- Offer a nicer way to access and manipulate documents given a session.
+- Improve documents API by pushing most of it down into the interpreter.
+- Allow documentation references.
+- Improve the documentation and public API.
+- Add a sequence query.
+- Relaxed is good enough.
+- We use the new queries infastructure to do the work for the testrunner.
+- Make it so that we can pass in variables in public API.
+- Modify how variables are passed.
+- Cloning map query works.
+- Implement trait for the various queries.
+- Simplify map query.
+- Port over MapQuery. The type signature is very grotty right now...
+- Introduce a DocumentsError to handle both xot errors as well as duplicate documents.
+- Add a note about one_recurse.
+- Many query recurse.
+- Remove sequence wrapper.
+- Port over recursive system.
+- Tweak and document.
+- Port over recurse story. Now to fine-tune it.
+- used query with wrong query id error.
+- Simplify repeated code.
+- Factor out QueryId.
+- A note.
+- Split off itemable.
+- Trying to refactor but no success.
+- Split things up a little.
+- Add option query.
+- Better whitespace.
+- Create a nested query too.
+- More clippy and documentation work.
+- More progress documenting the high level API.
+- Cleanup, start documenting it better.
+- Make it so that session owns DynamicContext. We need to make documents a cow to make this work.
+- Make span optional in SpannedError. This makes it a bit more convenient to use it in the outer layer.
+- Port and document more of the queries API.
+- Introduce try_into_value to make conversions of atomics from items more nice.
+- The queries API is quite nice, but we need to make it nicer learning lessons from high level.
+- Test basic behavior.
+- Make it so that the various iterators return an error early if the data is absent.
+- Improve API.
+- A very simple test. We can now start improving the API.
+- Document a lot more.
+- Expand documentation.
+- Move high level stuff into xee-xpath.
+- Rename xee-xpath to xee-xpath-compiler so we can better hide information from the public APIs.
+- Start documenting stuff. But realize this is in the wrong module.
+- Add a way to prevent bogus handles.
+- Tweak high level evaluation API.
+- We try to move towards a DynamicContext we can live with.
+- A stab towards a high level API to use this functionality.
+- Dynamic context owns static context now.
+- Rework dynamic context so that it owns documents, which makes the API we want in the load functionality feasible.
+- Use xee-xpath-load from xee-testrunner.
+- Start to extract xpath load functionality from xee-xpath.
+- Make loading more generic.
+- Speculative MapQuery.
+- Convert to use Xot's OwnedName.
+- Port over to new xot.
+- Attribute name match.
+- We now pass in a mutable xot everywhere.
+- We pass in an explicit mutable xot, and retain it in state.
+- Move more common code to variables.
+- Various cleanups, run tests from integration tests in xee_xslt.
+- centralize compilation logic into xee_ir.
+- It now compiles this structure but doesn't yet return the right results.
+- Make variables something we share between xpath and xslt.
+- Pull variable handling into shared ir crate.
+- Extract Variable management out of ast_ir.
+- A step towards being able to execute apply-templates.
+- A faltering step towards compiling XSLT.
+- Move the binding stuff into xee-ir as it's general and we want to use it for xslt too.
+- Simplified IR api.
+- Add a bit of documentation.
+- Write a test for the whole ir transformation of XML.
+- Move some more dependencies into the workspace.
+- Clean up code.
+- Flatten xee-xpath.
+- A few cleanups.
+- Factor out xee-ir as it's going to be shared between xpath and xslt.
+- Add non-functional IR and compilation infrastructure for generating XML.
+- Add basic readmes for the various sub-crates.
+- Don't rely on xee-interpreter if we already have xee-xpath as a dependency.
+- Rename xee-xpath-outer to the new xee-xpath
+- Rename old xee-xpath to xee-interpreter.
+- Clean up imports to use indirect imports only.
+- Remove unused dependencies.
+- Remove build and ir code as it's been moved into xee-xpath-outer.
+- Finish extracting main behavior into xee-xpath-outer (to be xee-xpath).
+- More reworking so that compilation is separated into outer, interpretation in xee-xpath.
+- Use newer version of Xot. also fix broken code.
+- Modify static evaluation so we have access to mutable state.
+- Evaluate top-level use-when.
+- More steps on the way to static execution.
+- Variables is stored as a cow.
+- Continue work on static evaluation.
+- Nicer Variables API.
+- Step towards better DynamicContext API.
+- Reorganize for clarity.
+- Clarity more of the XPath API.
+- Cleaner API for Program.
+- Introduce XPathParserContext which has the parse methods.
+- More work to use the improved static context API.
+- Static context creation is now cleaner.
+- We can now use a StaticContext::default in many cases.
+- static context owns namespaces now.
+- Use parse_xpath method on static context now to parse xpath.
+- Work towards a cleaner API to parse and execute xpath.
+- Make it so that element specific namespaces are used in XSLT parser
+- This comment can be removed as this should be fixed.
+- Get rid of expected found, so we can get rid of the lifetime on ParserError, which simplifies things.
+- To try to integrate XPath parsing into the XSLT parser we need better error handling in XPath
+- Less repetitive error messages.
+- More precise errors are coming from the parser now.
+- Cleanup.
+- Use ariadne for error reporting.
+- Reenable span tests.
+- Add an explicit SpannedResult
+- Get rid of Miette entirely.
+- Clean up all the clippy messages
+- Further progress in removing Miette
+- Step to transform Error into a simple Error code without source of span information.
+- Instead of human-readable error names, which we had partially done, we go back to spec mandated codes.
+- Cleanups.
+- Update snapshots.
+- Remove commented out code.
+- Improved range generation.
+- implement 'treat as'
+- Implement more rules, though it doesn't seem to make any effect in the tests.
+- Typed map test.
+- Implemented typed array test.
+- implement assert-permutation.
+- Factor out sorting logic into methods on sequence.
+- typo.
+- Wrapper functions unlike normal inline functions shouldn't affect the context.
+- for-each
+- Implement map:find
+- Implement map:merge
+- Forgot to update snapshots for lookup.
+- Make postfix lookup use Map.
+- Factor postfix lookup into its own function.
+- First stab at (non-unary) Lookup behavior.
+- Implement wildcard unary lookup.
+- Implement Lookup as an instruction.
+- Implement basic form of unary lookup.
+- Wire in sequence type matching for functions.
+- A stab at sequence type subtype relations. Not finished yet.
+- Parse atomic type directly into the Xs type when we construct the AST.
+- Add arity-based function tests.
+- Throw away xpath module.
+- Finally hook up the signature function for AssertType.
+- Get information off runnable instead of assert context
+- Rewrite in terms of runnable and pass it into xee-qt.
+- Move program construction into Program::new
+- Move Program into interpreter.
+- Start to use the runnable API instead of the XPath API directly.
+- Move more of this API into runnable.
+- Fix the signature again so we can run the xee-qt tests.
+- Move run_value onto runnable. Interpreter gets a reference to runnable.
+- We can get the main id from the program when we start, no need to store it in XPath.
+- Build the infrastructure so we can do function matching.
+- These low level tests aren't coming back.
+- A bit more about the fast path.
+- Implement signature for each function type.
+- pull out inline function and signature into new modules.
+- Change things so that StaticFunctions carry signatures.
+- rename for clarity.
+- Port hof name and arity to the new function info abstraction.
+- Another note about why this is hard.
+- A bit more cleanup, but still can't break the disclosure of the dynamic context.
+- More import cleanups.
+- Cleanup imports.
+- Unused code.
+- Pull out runnable into its own module, so we get the contract more clear.
+- Separate state into a separate module so we can get the contract more solid.
+- Cleanup.
+- First rough cut of refactoring the interpreter.
+- Slightly increased abstraction.
+- Pull Program into its own module.
+- A bit of preparatory refactoring to enable function tests.
+- disable round test as it fails.
+- Refactoring rounding code a bit.
+- proper overflow and division by zero detection for durations.
+- Fix the division operations for floats.
+- A merry bug hunt.
+- Fix a bug where contains wasn't behaving correctly in the html ascii collation.
+- respect xml-version in test runner and filter for xml character.
+- respect 24:00 to indicate the next day in date time.
+- Implement fn:apply
+- Fix string concatenation.
+- We got the error code wrong; get it right.
+- Handle 24 hour time.
+- Make a few more casting behaviors work.
+- Fix various casting rules and errors.
+- Fix some more casting rules.
+- Fix the error if casting from a string fails.
+- Rename 'func' to 'library' as it's the library of xpath functions.
+- Better naming, name this closure_vars.
+- Consistency in naming - using function over closure.
+- Move static function stuff into the function module.
+- Pull out map and array modules.
+- Pull function out of the stack module into its own module.
+- implement various map functions.
+- sort, array:flatten
+- Implement more array fns
+- More array fns
+- Implement a bunch of array functions.
+- Implement array:get
+- I forgot to add these.
+- Implement the cores of Map and Array: construction and calling them.
+- Reorganize matters so that we classify Map and Array as a string.
+- Start to add map constructor and array constructor to the IR.
+- Add Map and Array to Item. Make sure we can atomize an array.
+- Implement map key
+- function-name, fn:function-arity
+- Implement fn:function-lookup
+- sort. Also add caseblind collation
+- Implement more higher order functions.
+- implement fn:for-each higher order function
+- add higherOrderFunctions checks back, and fix a few things that broke as a result.
+- tweak things. It turns out there is no real point to coercing functions for real.
+- Refactor so we have a Closure enum.
+- Factor out a call closure function which may be closer to what we want.
+- Simplifly the call logic a bit more.
+- Further cleanup of this function.
+- Refactor call behavior into its own method.
+- Some preparatory steps. More clarity of naming.
+- Some preparatory moves to support higher order functions.
+- Implement default-collation
+- Implement various context functions for current datetime, timezone
+- Create a new context module for fn and move things to the right place
+- Clean up commented out code.
+- tokenize with regex
+- replace
+- Hook in fancy_regex for fn:matches
+- Properly fail if seconds isn't 2 digits in time.
+- whitespace collapse when parsing AnyURI
+- casting to QName now respects default element namespace.
+- Fix milliseconds representation.
+- Some more validation for g year month, g month day
+- More improved casting behavior.
+- Distinct values stability fix, float rendering fix.
+- Fix formatting of GYear
+- Update chrono
+- Stop mixing data-equality and xpath equality.
+- distinct-values
+- normalize-unicode
+- min, fn:max
+- avg
+- sum
+- Implement assert-deep-eq
+- Implement preceding and following axes, is, precedes, follows operators.
+- outermost
+- Implement deduplication after combining steps.
+- Actually wire up fn:deep-equal properly.
+- Fix rounding for duration seconds.
+- Add the ability to load namespaces into environment. Not using that information yet.
+- Implement various fn surrounding qname.
+- deep-equal support
+- except, intersect, and a provisional implementation of innermost
+- move fn:root, implement fn:has-children
+- Move the functions and make the atomic type for anyURI correct.
+- name tests
+- Implement fn:node-name
+- zero-or-one, one-or-more
+- index-of, first stab at fn:deep-equal
+- Bad implementation of fn:unordered, but it works.
+- reverse and subsequence
+- head, tail, insert-before, remove bugfix
+- Pull out the sequence functions we already implemented into their own module.
+- The adjust functions.
+- adjust dateTime logic.
+- Lots of date/time related functions.
+- Work towards date-time functions.
+- Operations on durations.
+- years-from-duration support
+- data
+- Pull out accessor module.
+- Cleanups.
+- Proper comment.
+- Split out boolean.
+- All the math things.
+- Lots of math functions.
+- number
+- ceiling, fn:floor, fn:round
+- Support xs:numeric enough to implement fn:abs
+- substring-before, fn:substring-after
+- contains
+- A note on how to build the .postcard file.
+- A more realistic postcard, based on the keys from the xee binary.
+- implement translate
+- upper-case and lower-case
+- substring
+- Implement contains token, tokenize.
+- normalize space. First stab at tokenize too.
+- Implement fn:codepoint-equal
+- codepoints-to-string and vice versa
+- Move string related functions into their own module.
+- Start organizing fn into modules.
+- Make the collation test cases work as we need to use semicolons.
+- Fix argument bindings logic.
+- context rule is the wrong name, rename to function rule.
+- Need an exception to the context rule in order to support collation argument.
+- Wire in the new collation module.
+- A few more tests.
+- We can load collations now.
+- Implementating collators again, now that I understand spec and ICU better.
+- Fix macro handling some more, so we're properly eating the collation argument.
+- Implement enough macro magic to accept a `collation` argument.
+- Integrate collator into string comparison operations.
+- Don't use qt3 tests anymore as we have the new xee-qt test runner.
+- Clean up some comments.
+- A few more comments.
+- Fallback behavior for collator lookup.
+- First stab at integrating icu for collator story.
+- Start to implement collator lookup by query.
+- Speculative implementation of support for more atomic types.
+- The implementation of the and operator was buggy, possibly or too.
+- Handle situation when we ask for the len but component is absent.
+- Fake implementations so we avoid a crash when running all the crash.
+- Don't crash in kind tests.
+- Don't crash if this is a big number either.
+- Don't crash if the year doesn't fit in a i32
+- Cleanup
+- If arity isn't 0, we error out instead of crashing.
+- Make documents shared so annotations are available.
+- Use Documents instead of the SourceCache.
+- Implement remove(). Unfortunately the remove tests require assert-deep-eq
+- Node name needs a bit more work; we need to be able to get the prefix from Xot.
+- Even though the spec doesn't quite say you can compare anyURI and string, the qt3 tests do state this
+- Hook in these functions.
+- Make more tests in the qt3 suite not crash.
+- Some of these inverse operations make no sense either.
+- Fix more bugs; subtract isn't like add
+- Need to go through date time stamp in order to do duration arithmetic right
+- Most of the duration add tests are working.
+- Remove old comparison module.
+- Remove some unused imports.
+- Fix general comparison using the new infrastructure.
+- Hook in new value comparison.
+- Get the comparison operations working properly.
+- op_gt module.
+- Start implementing offset dependent comparison operations.
+- Retire old arithmetic module.
+- Move unary operation too.
+- Replace arithmetic with new implementation.
+- Convert idiv, and clean up.
+- Simplify by using From/Into
+- Simplify multiply using From/Into
+- Simplify substract code using From/Into
+- Simplify by using From/Into
+- Implement op_mod
+- Lots more work on division.
+- Implement op_idiv and part of op_div.
+- Add a multiplication module.
+- Add op_subtract
+- Add a new module to add things. It's not in use yet.
+- Work towards comparison. Needs refactoring to support distinguishing different comparisons.
+- Move date time types into its own module.
+- Simplify comparison infrastructure.
+- A few more casting rules are now supported.
+- Lots of casting rules.
+- Reorganize according to casting table in 19.1
+- We can represent and parse the various g* atomics
+- Implement more parsers for the various g types.
+- Make the parsers return the new objects.
+- Return Duration directly from parser.
+- Everything is a struct, and rc decimal.
+- Convert all the date time types to rc-ed structs.
+- Timestamp is also rc
+- Convert more datetime stuff to struct with rc.
+- Convert YearMonthDuration.
+- Duration becomes its own struct so we can refcount it.
+- We don't need to exclude this feature as we now properly filter it.
+- Add some notes about why it's not properly working yet.
+- We had a bug in the representation of offsets.
+- Enable a bunch of literal test and fix a test surrounding effective boolean.
+- Plug in various instance of tests.
+- implement and tests various date/time related parsing, canonicalization
+- Properly parse offsets.
+- time parser, date time parser
+- Offset parsing.
+- Start adding a date parser.
+- duration
+- Duration parser
+- Actually approve this snapshot.
+- Add these to the xs constructor functions.
+- We can parse day time duration
+- Cast things back to string, testing canonical representation.
+- Parse year month duration
+- canonical versions of xs:duration, xs:dayTimeDuration, xs:yearMonthDuration
+- Add Chrono and define various atomic types based on it.
+- Pull out cast_string, further cleanups.
+- split off numeric related functionality into its own module.
+- A comment
+- The numeric add tests appear to work, except for missing functions.
+- numeric will require more work
+- xs/anyURI tests
+- xs/normalizedString tests work
+- double, xs:float work
+- Integrate the base64 and hex binary tests and make them all work (except for codepoints-to-string)
+- base64 encode, decode
+- hex binary and cast to hex binary
+- Plug in xs:QName constructor
+- We can now parse xs:QName
+- Prepare casting to qname, though it's not working yet.
+- Pull types into their own module.
+- Extract integration tests into a proper integration test.
+- Introduce xs:AnyURI
+- When representing a decimal, use ibig, not i64
+- Implement the remaining xs:string derived types
+- add xs:NCName
+- Cast as name
+- Support xs:NMTOKEN
+- Add xs:language support
+- Factor out whitespace rules into functions.
+- Support cast as token
+- cast as normalized string
+- Open things up for different basic string types.
+- Clean up more comments.
+- These comments weren't pulling their weight
+- A few helpful comments.
+- Make casting consume self as that expresses what casting is better.
+- Instead of a lot of enum for various integer types, store it all as an ibig
+- This method is not needed anymore.
+- Move the matching module into the sequence module
+- Function result conversion now takes place.
+- Use the option API here.
+- Distinguish function conversion rules from instance of check; instance of doesn't convert.
+- A few more tests work. But I need to implement assert-type.
+- We got type promotion and things integrated now. Now only to test them.
+- Further progress on sequence type matching.
+- Prepare for type matching for function calls.
+- Verify we have kind test in paths too
+- instance of is working.
+- Start instance of support; we can now get it into the ir
+- integrate kind test into sequence type matching
+- document-node test
+- Attribute kind test.
+- Rewrite element test so we should be able to handle attributes too.
+- Simplify element test and attribute test in AST.
+- Move some things back into step, as they're not kind test.
+- Separate kind_test into its own module.
+- Analyze a bit further.
+- All the Let tests work now.
+- Move things around some more, introduce parse constructor functions on ast to make API cleaner.
+- break the parser into many modules.
+- Change import signatures. Still not done moving parser around.
+- Reserved function names
+- Much more works now. We still have some integration test failures.
+- Trying to make the tests work again. Still a lot of work in progress.
+- Default function namespace.
+- rename question_mark to optional.
+- More kind tests.
+- The most simple document test, without argument.
+- Bring kind_test under test.
+- Unused import
+- Proper casting when we do numeric plus or minus.
+- Factor out kind test.
+- Reorganize this a bit.
+- Use a reference count for atomic ibigs so we keep a smaller stack.
+- A few comments.
+- Add early return.
+- Refactor and simplify casting logic for both numeric comparison and arithmetic.
+- Simplify the matching logic and make it work in the face of subclasses.
+- Introduce a base numeric type system and rewrite in terms of that.
+- Enable more tests.
+- This is represented correctly now.
+- Parse type information for inline functions.
+- Rename for clarity.
+- Use schema type functionality for better checking.
+- More support for non-positive and friends.
+- Add some castable tests.
+- Enable some casting tests.
+- Use ibig to store integer, to be closer to spec.
+- We can reenable these tests.
+- Implement castable.
+- cast as operator now works.
+- Better IR generation for cast and castable.
+- Work towards supporting cast as, castable.
+- Make many more concat tests work.
+- Plug in more casting functions.
+- Implementation of xs constructor functions based on casting.
+- Factor out xs constructor functions into their own module.
+- This isn't in use anymore.
+- Clarifying comment.
+- Get rid of non-type aware logic and instead use new infrastructure.
+- Get rid of old comparison operation and old operations used to support it.
+- Replace general comparison with more powerful version.
+- Further implementation of general compare.
+- Start building out new generic compare.
+- We now have enough infrastructure for this test.
+- Build goes on a separate build stack. This makes for much simpler code, avoiding refcell altogether.
+- move output::Sequence into sequence::Sequence
+- Small tweak.
+- Remove some output stuff that wasn't pulling its weight.
+- Rename stack::Item and output::Item to sequence::Item
+- Rename 'Value::Item' to 'Value::One' to better reflect its behavior.
+- Clean up.
+- Move atomization into the modules, so it's easier to follow and better factored.
+- More cleanup.
+- Cleanup.
+- Make items refcounted.
+- Progress. Many tests pass, but some integration tests hang or fail.
+- Rename the construction instructions to separate them from the sequence access ones.
+- Work towards refactoring so we build the sequence with a cell, but otherwise we use a simple vec.
+- :Item wasn't pulling its weight. Collapse it into stack::Item
+- We can remove the old numeric code.
+- Use newer smarter more type-aware arithmetic.
+- Use new comparison for language-level comparison too.
+- Switch over to new comparison code, for non-general comparisons.
+- Comparing integers also works.
+- Comparison now obeys the casting rules and subtypes for integers work.
+- Extend the value comparison behavior.
+- Simplify the comparison logic and add a test.
+- Make some new comparison stuff public.
+- Remove original Occurrence, rename ResultOccurrence to Occurrance.
+- Replace all iterators that only iterate through one item with std::iter::once
+- Better handling of Absent error.
+- Move Absent from atomic into stack value
+- We can't yet compare short to short before we have comparison up to snuff.
+- Explain weirdness.
+- Make some more code generic.
+- Write generic code so that we can implement the rest of this more easily.
+- More casting behavior.
+- Make the float formatting rules also work for double.
+- More rules of representing numbers
+- Better method name.
+- More casting behavior.
+- Parsing various numbers.
+- Some more thoughts.
+- Work on casting behavior.
+- Better error names.
+- Consolidate Absent errors
+- Consolidate numeric operation overflow error.
+- Further cleanups of the Error system.
+- More cleanup of errors.
+- Change all imports of output::Atomic to atomic::Atomic
+- Clean this up.
+- We don't need this.
+- There is only one Atomic. There is only one Error
+- Move atomic into its own module.
+- Rename op2 to atomic; they're operations on atomic
+- We're going to reconsider atomic.
+- Implement comparison for all the known types.
+- Move into op2 module, so we can implement more operations.
+- Various tweaks, unary behavior
+- Simplify some code.
+- Define these inner operations in terms of the stack, not output.
+- Implement numeric integer division.
+- Extend operations.
+- Start of rewriting arithmetic ops so we can support other integer types.
+- Make it so we can create a lot of different types of atomics.
+- We decide on what type to use for xs:integer
+- Adding these converters won't work, at least not yet.
+- Reorganize From
+- Reorganize enum.
+- These can become private.
+- Don't duplicate these definitions.
+- Some renaming to avoid confusion.
+- More work on the Integer wrapper for Decimal
+- Work towards making Integer a Decimal.
+- Add a whole bunch of atomic types. They don't do anything yet.
+- Add tests for unary minus.
+- Support for unary plus and minus in the interpreter.
+- Compile unary operator to the IR. The IR doesn't handle it yet.
+- Make concat work.
+- Implement fn:string-length, fn:boolean, fn:concat
+- Fix function call bug by making static function references an atom
+- Merge branch 'main' of github.com:Paligo/xee
+- Support strings in xpath_fn functions
+- Cleanup.
+- exactly_one is now rewritten to use macro.
+- Tweak comment
+- Fully write out this comparison.
+- Redundant lifetime.
+- We can do static function references so let's not worry.
+- Simplify iterators on stack level to conform to new structure.
+- Name back to ValueIter, as we're going to introduce a real ItemIter that iterates over a single item
+- Move string_value into stack::Item
+- Move effective_boolean_value logic into Item
+- Rewrite so that Item is part of Value
+- Empty is not atomic anymore, but part of the Value enum
+- Comment is out of date.
+- Step is now a special instruction, instead of a stack value.
+- Reorganize this enum a little.
+- More cleanups.
+- Clean up Sequence API
+- We don't need this in favor of iterators.
+- Use From to construct from items
+- Use one way to construct a sequence instead of two.
+- prefer mod.rs over external modules named the same name as the directory.
+- Rename ValueIter to ItemIter
+- Use from trait to intialize Value
+- Remove shaky method that we weren't using anyway.
+- remove from_items in favor of From trait
+- We're not using this API anymore either.
+- A lot more cleanups; things we don't need anymore.
+- :Error is now finally an internal thing.
+- Throw away things we don't need anymore.
+- These conversions aren't in use.
+- Move conversion into stack::Sequence
+- Remove a lot of converters in favor of simpler solution in interpreter.
+- Move TryFrom with stack::value
+- Get rid of implicit conversion to an explicit way to get an atomic item from the stack.
+- Clippy
+- This doesn't need to be public.
+- use matches!
+- Cleanup.
+- Rewrite the xpath_fn system to be output::Sequence based
+- Implement conversion code based on output::Sequence
+- Simplify output::Item a lot
+- StackValue items aren't necessary, so simplify. Not yet done simplifying.
+- Clarifying comment.
+- Cleanup.
+- Cleanup.
+- .iter() becomes .items()
+- Add converter for to_atomic but keep it as it's handy.
+- Eliminate to_stack_item in favor of converters
+- Get if of into_stack_value in favor of converter
+- Get rid of the misguided AtomicValue in favor of conversion APIs.
+- Better use of From for various conversions.
+- Some basic conversion functions to extract boxed values.
+- Document it a little.
+- Implement Occurrence extension traits on various iterators.
+- Make it flexible in terms of error type.
+- Actually add the occurrence module.
+- Move Occurrence into its own module.
+- Implement output iter on top of new value iter.
+- Define an Occurrence trait and use that in various places.
+- Clippy.
+- Atomization may fail, handle that case.
+- Start of an implementation of a type checker.
+- Clean up types module
+- Leave a note
+- Various steps in the direction of conversion for output.
+- Use iterators now to do general comparison.
+- We use the new iterator for atomization everywhere now.
+- Simplify
+- Expose atomized to output.
+- Start to work on output-layer conversion, and get side-tracked into atomizing
+- Clippy cleanups
+- Get rid of ConvertError, in favor of public-facing Error
+- Clean up to_bool in favor of better naming.
+- Cleanup
+- Rename output2 back to output
+- Remove old output module
+- We rewrote outcome to outcome2, which is in terms of the stack.
+- Rename OutputClosure to output::Closure
+- Thinking about a better API for functions
+- Move ContextTryFrom and ContextInto into context module.
+- Clean up old comment
+- Get rid of output::Atomic API that wasn't really used
+- Empty and Absent aren't part of the output contract
+- Rename StackValue to stack::Value
+- Rename StackInnerSequence and StackSequence to stack::InnerSequence and stack::Sequence
+- Rename StackItem to stack::Item
+- Rename ValueError and ValueResult to stack::Error and stack::Result
+- Now use output as a namespace, so we don't have Output* names anymore.
+- Import output module, not directly.
+- Rename data module to output
+- Move convert into stack level
+- Move function into stack too
+- Fix import to import from stack module
+- Move step out of data into xml
+- Move documents and annotations into xml module
+- Move Node into new xml module.
+- Move ValueError and ValueResult into stack module
+- Clarify imports
+- Import from crate::stack where possible
+- Import directly from stack module
+- Move stack item into stack module too.
+- Move Atomic into Stack
+- Move sequence stuff into stack module
+- Add stack module
+- Create stack submodule, which contains things which pertain to the stack only.
+- Rename item to StackItem.
+- Rename InnerSequence and Sequence to StackSequence and StackInnerSequence
+- Rename Value back to StackValue.
+- Try to make another type signature work.
+- Some inline function exp rtests.
+- Run qt3 tests for ForClause and LetClause
+- add if expr tests
+- Support for Assert expressions.
+- Make OutputSequence an explicit struct
+- Make it possible to indicate tests with glob.
+- Improve display of errors
+- Work towards a better way to integrate qt errors.
+- We can now do basic qt3 tests from the xee-xpath test suite!
+- Make Item crate-only also.
+- Make Value and Sequence be an internal thing.
+- Ban Value from the public API entirely now.
+- Much work to simplify the API of xee-xpath to be in terms of OutputItem.
+- Move span tests into the package, so we can make Value private
+- Trying to remove Value and Atomic from the API in favor of OutputItem everywhere (and OutputAtomic).
+- Further consolidation of the API.
+- Get rid of OutputValue as we don't use it anymore in the public API.
+- Switch over to new items based API
+- Further work on converting to the new API.
+- halfway a rewrite so the xpath API is in terms of a vec of OutputItem, and Value is banned from the public API
+- xpath_fn can return ValueResult now.
+- Make it so we can also pass through context information.
+- Make it easier to wrap, do not require namespaces.
+- Remove some unused dependencies.
+- Shut up clippy, clean up
+- Implement wrap_xpath_fn! macro
+- Separate out static function from static context into its own module
+- true and false
+- Better generate_id
+- rewrite exists. We failed on string as need to be able to return a result.
+- make fn:root work too
+- Make fn:count work with the new system.
+- Local name is an option argument.
+- Convert namespace_uri
+- Now local-name can be written with a wrapper
+- Optionally get context and pass it in.
+- Use xpath_fn on my_function, it works!
+- We can now convert incoming arguments.
+- We generate a very basic wrapper with the macro now.
+- A first stab at a macro.
+- More thinking about wrapping and conversion.
+- More converters in order to make it easier to write wrappers.
+- Use xee_xpath_ast in xee_xpath
+- ast doesn't depend on static context, so don't import it
+- We don't want the ast to depend on static context.
+- Move static functions into their own sub-module.
+- Start of macros crate.
+- Make intra-module imports use super::
+- Reasonable conversions coverage to do the next step
+- to_node is now also used with into
+- Eliminate to_step in favor of into
+- Get rid of to_closure in favor of Into
+- No more to_sequence in favor of TryFrom
+- Remove references to to_sequence in favor of try_into
+- Create a new Sequence abstraction to hide the Rc/RefCell details
+- Move to_atomic completely into convert.
+- Banish references to to_atomic so we can move implementation.
+- the convert module belongs in the data sub module.
+- Implement a bunch of conversion traits. Use them in the interpreter.
+- Add this module too for now.
+- Rename to_bool to effective_boolean_value so as not to confuse with the real to_bool later
+- Rename the 'value' module into the 'data' module.
+- Finishing up value splitting
+- Factor function types into their own module.
+- Move Item into its own module.
+- Factor out Sequence into its own module.
+- Factor out Atomic
+- Extract Node into its own module.
+- Move ValueError into its own module
+- Move value module back in place, fixing things again
+- Move into submodule. This temporarily breaks stuff, but we want a proper git move!
+- Rename StackValue to Value
+- parse function signature, also into ast
+- Add the ability to parse signatures for functions.
+- Some more thought about easier way to write these functions.
+- Some unfinished thoughts about converters for a type.
+- We can extract some type information from a Rust fn and convert it into a xpath function signature
+- Create a context submodule.
+- Move instruction into interpreter
+- Move scope.rs into interpreter
+- Remove snapshots that have since moved to submodules
+- Move interpreter into its own submodule
+- Fix clippy warnings about module inception
+- Move renaming and visitor into ast module
+- Move ir stuff into its own submodule
+- Move ast related code into submodule
+- Move parser into subdirectory.
+- Make visitor not crash if we can't really visit something yet.
+- Unused imports, clippy
+- No need to take reference
+- We can now deal with bogus names without running into shadowing issues.
+- Ensure we know of the outer variables too during renaming.
+- Implement unique naming. This causes some tests to fail, because we don't handle external variables yet
+- Implement a visitor to make renaming more easy.
+- Manage name creation.
+- Comment test
+- Implement And and Or
+- Implement text kind check
+- Cast to boolean; simplistic implementation.
+- Properly parse >= and <=
+- Better test failure diagnostics.
+- Implement xs:untypedAtomic() and no argument error()
+- Make atomization return untyped atomic. implement general comparison casting.
+- Add Untyped. Clean up string value along the way.
+- Implement not()
+- Variables can now be defined and used.
+- Stub for obtaining variables.
+- We want to handle integer overflow properly
+- Improve the test runner and get rid of one parse error
+- Don't panic, instead return unsupported type for now
+- Add in xml namespace by default
+- Support environment with source for context in qt
+- Implement PartialEq by hand for Atomic values, to use the xpath rules.
+- More test runner test cases
+- Make a few basic tests pass and fail
+- Avoid NamedSource from Miette and go for simpler strings instead for now.
+- as_ to to_as this fits the API conventions better
+- No need for this instruction
+- Rewrite filter so we really treat numeric as nr = fn:position() check
+- Avoid a superfluous clone.
+- We put the related functions next to each other
+- Faster as_atomic
+- Cleanup
+- If we have a non-whole integer for position we get the empty sequence.
+- Test various scenarios and ensure that they work as per spec.
+- We can get positional items in filters now.
+- Simple position filter
+- Cleanup
+- Implement a bunch of functions
+- Separate static functions into their own module.
+- More tests for general comparisons.
+- Implement general comparisons
+- Optimization note
+- Implement value comparisons
+- Cleanup
+- Plug in value comparison for eq
+- Whitespace
+- Work to support comparison
+- Factor out argument type unification logic so we can later reuse it for equality ops.
+- Switch to using OrderedFloat in the inside of the interpret
+- Use effective boolean in the jump instructions.
+- Make a note about type error
+- Implement effective boolean value rules
+- A bit more commenting
+- Accept the wrong errors here for the sake of performance.
+- Add missing snapshots
+- We can handle an absent context better.
+- Support external variables for xpath expressions
+- Minor tweaking on error handling, and thinking about variable arguments.
+- Use a trait for Query which makes the API easier to use.
+- Clean up some duplicate error conversion code.
+- Rename query2 to query
+- Remove the old query module.
+- A bit of cleanup
+- We can now parse any-of
+- Copy isn't going to work, so don't derive this.
+- The tests work again with query2.
+- Implement Many
+- Move things around a little
+- Rename test to recurse
+- Document and clean up a bit more
+- Pass recurse directly into option_recurse
+- Clean up clippy.
+- Make Recurse more generic now.
+- Get rid of Thingy, you served me well.
+- Trying to straighten out the logic to be more reusable.
+- Some cleanups
+- query2 which aims to solve problems with recursive queries.
+- The ref story is *still* not working properly, but this code is slightly nicer.
+- We now have a nicer OneQueryRef, implementation is still redundant, however.
+- More cleanup.
+- A system for forward references for queries, not quite finished.
+- Now the lifetimes are correct.
+- Rearrange matters so that we construct the query in a function.
+- Factor out query construction into its own function.
+- Make it nicer to express xpath queries in xee-qt, improving the API
+- Export query functionality
+- Support for ManyQuery
+- Introduce a query object that makes it easier to express a query.
+- Make some basic loading work.
+- We make ValueError a miette diagnostic so the public API becomes easier.
+- clippy
+- Tweak public API to try to make it more pleasant to use on the outside.
+- Program retains a reference to source code, not dynamic context
+- Try to clarity naming a bit more in the API; running without focus
+- Rename Context to DynamicContext for clarity.
+- Only rely on the static context in the interpreter compiler.
+- Start exposing XPath (renamed from CompiledXPath) and required structures in public API.
+- Simplify code.
+- Better display for xee xpath commands.
+- We got arithmetic
+- Mul is working
+- Unify BinaryOperator between ast and ir.
+- Share operator between AST and IR
+- We can now handle decimals and doubles.
+- Accept extra space character
+- Some commented out tests
+- Missing snapshots.
+- Work out some problems with span when we translate to the ir.
+- Create a bunch of snapshot tests to help debug error behavior
+- Clarifying comment
+- Implement the bytecodes for various mathematical operations. No tests yet as no real ast/ir integration
+- Some more work implementing this.
+- Implement a bunch of operations
+- Start adding numeric ops.
+- More use of Result
+- Continue with the resultification of value
+- Nicer as_sequence
+- Also use result for as_bool and as_string.
+- Make as_integer return a Result for nicer interpreter code.
+- And now we get the proper span information back. But it's much easier to maintain.
+- Add clarifying comment.
+- Rewrite to maintain an explicit frame with ip.
+- Use VecArray for frames and check for capacity.
+- Remove some commented out code
+- Since we always emit a return in the end, we don't need to do this check.
+- Move read functions into instruction module.
+- Use EncodedInstruction in the interpreter. Decode on demand, instead of generally.
+- Better naming.
+- Cleaner mapping function.
+- Restructure so we have a ValueError and an outside reported error.
+- Move away from Spanned tuple to Spanned struct.
+- Add codes to errors.
+- We now get error spans for atomization errors on the interpreter level.
+- Pass context to functions, not just xot.
+- as_atomic returns a Result now.
+- Add span information when compiling. We're not using it yet.
+- Miette SourceSpan is copy so no need to clone.
+- Also introduce span for ir Expr
+- Use Miette source span throughout.
+- Missing named function ref
+- Missing variable name, missing function names.
+- Report missing function names/wrong arity
+- Clean up triggering parse error
+- Oops, couldn't remove this line.
+- Clippy clean
+- Error message for context in wrong place
+- Report proper error when context is absent in function
+- Weave Result into ast_ir
+- Compile-time limits exceeded are returned from ir_interpret
+- Atoms now have spans associated with them.
+- Exprs -> Expr, which better reflects the grammar.
+- Spanned ExprsS
+- Span for StepExpr
+- Get rid of nodetest span as it doesn't seem accurate. Need to rethink spans for paths.
+- Put span around node test
+- Move span definitions into own module.
+- Add span information to all primary expr
+- Associate Span information with AST expressions.
+- Better parse error display
+- We get span information from the parser
+- Start of simple xee tool that lets us evaluate xpath
+- Add miette for parse errors
+- Parsing and evaluation can fail.
+- Rename for clarity
+- Clippy
+- A few tweaks
+- More error codes
+- Link to spec
+- Declare various errors as per xpath spec
+- We can now find a specific attribute
+- Make atomization work well enough so empty sequences are taken into account
+- atomize works on attributes
+- Atomize tests
+- Rewrite this so we can more easily generate focus-dependent functions
+- Function parameters and return type will have to wait. Replace with simpler arity.
+- implementation of string()
+- Attributes aren't in a default namespace in xpath, unlike elements
+- A basic integration test
+- allow default namespaces for both element and function in xpath expression. weave it throughout
+- start of xee-qt, which allows us to use the qt test suite. It doesn't do anything at all yet.
+- // works too
+- Abbreviated path works now.
+- root
+- count() function
+- namespace-uri
+- local name with implicit context is now working
+- Basic string equality.
+- String concatenation
+- String literals
+- Make it so that static functions can use context.
+- Static functions need to use closures too - in order to access context item.
+- Initialize by_index automatically
+- Shut up clippy
+- Start implementing some support functions for exposing local name, namespace uri
+- Make the main function be the function call with context, position and last
+- Every quantifier with empty sequence
+- some quantifier with empty sequence
+- Handle empty sequence with filter
+- Handle empty sequence in map
+- Fix taking full expr as condition
+- A note about ANF
+- A note about sequence
+- Clarity
+- A few tweaks to comments
+- 1 indexed note
+- Predicates on path expressions work
+- position works for path expressions too
+- Last works too
+- position!
+- Clippy
+- Adjust by 1 so that we have the right variables
+- Now use context name information in loops.
+- Explicit context management as a step towards fn:position and fn:last
+- A note about making the stack value rc completely
+- ast to ir step expression and predicates
+- Clean up imports
+- Extract CompiledXpath into its own module.
+- Clean up; no more ast_interpret; ir is the way to go.
+- The ir interpret is now feature complete
+- Implement the step expression too
+- Call with let is working
+- comma simple map 2
+- comma simple map; the big problem case easily works
+- Multiple predicates
+- Implement filter
+- Every nested false
+- Nested true for every
+- every false
+- nested some quantifier
+- Quantified false
+- Basic quantifier support
+- More simple map tests
+- mapping sequences
+- Simple map works too
+- Nested for loop variable scope
+- Nested for loop
+- Implement for loop again
+- if with let
+- Fix let generation so we get the proper behavior
+- More range tests
+- Range works
+- placeholdering more test
+- Simplify tests; no need to take reference
+- Args are placeholdered
+- Placeholder
+- Named function refs work too
+- Static function support
+- Nested closure
+- Closure with arguments
+- Multiple variables
+- Support closures.
+- A whole lot more function behavior
+- A lot of comparison tests
+- if false
+- Make it even more easy to write tests.
+- We got if
+- Add a bunch of passing tests
+- This works too
+- It's starting to do something
+- First stab at ir interpreter. Doesn't work properly yet.
+- Axis step is doing something now!
+- Support nested path expressions
+- Basic path expressions
+- Support named function refs too.
+- Proper arg bindings logic
+- More complex arguments work
+- We can call static functions
+- Function calls now seem to work properly.
+- Further cleanups
+- Cleanups
+- Rewrite to use Bindings struct
+- Simple inline function definition
+- Nested postfix
+- Handle postfix expressions
+- Quantified expression
+- Nested simple map works too
+- Support simple map with context
+- Add a very simple map expression
+- for expressions
+- Variable reference
+- Compile let expression
+- Not really optimal ir conversion code but it's getting better
+- Deal with empty sequence
+- Better comma implementation
+- Deal with a single comma
+- Convert to ir beginnings
+- Start of ir and conversion to ir
+- No reference needed
+- Union also eliminates duplicate nodes
+- A better test for document order
+- Sort by document order
+- Add in another problematic case
+- Support for empty sequences.
+- Introduce a documents and make sure it's available in context.
+- Create an annotations structure where we can annotate various Xee nodes
+- Start implementing the union operation. Not working properly yet
+- Deal with a chain of operators.
+- parse intersect and except
+- We can parse unions
+- Clean up the way operators are parsed
+- Rename error to standard error type
+- Refactor the axis implementation to be more accurate.
+- Attributes have parents too
+- Basic descendant test.
+- Interpret with xot node convenience API
+- Path step expression is starting to work.
+- Weave in a reference to Xot in the static context
+- Start implementing axis and node test resolution logic.
+- Parse double slash abbreviation
+- Support predicates with abbreviated parent step, which is a special case
+- Predicates with path expression
+- Basic handling of parent step. Had to hack the grammar.
+- Leading double slash
+- Single leading slash
+- Support for initial slash.
+- Default to namespace axis for namespace-node kind test
+- We default to the attribute axis in case of an attribute test
+- Parse basic attribute test
+- Handle multiple relative steps
+- Handle AbbrevForwardStep
+- Comparison is not used
+- Better handling of namespaces for wildcard name test in AST.
+- Support braced URI literals
+- Allow the use of namespaces in names.
+- Basic element kind test, namespace node test
+- Comment and text kind tests are easy enough
+- Improve parser.
+- Start to explore parsing more path expressions, but somehow it conflicts with function calls.
+- We can parse predicates
+- We can parse more name tests
+- Reverse axis
+- Very basic parsing of steps
+- Supporting this requires some form of type analysis.
+- Predicate multiple is working too
+- Reuse iteration block
+- Basic predicate filter is working
+- Rearrange the code a bit
+- Rename this to get rid of 'expr'
+- Rename compile_map_expr to more general compile_map
+- factor out cleanup
+- Factor out sequence_loop_iterate
+- factor out compile_sequence_get_item
+- Apply init for quantified expression too
+- Factor out sequence_loop_init
+- Refactor the way jumps and conditionals work.
+- Parse predicate
+- Starting to think about axis steps.
+- Pull out scope into its own module
+- Detect incomplete parse
+- Quantified expressions
+- Preparing for quantified expression
+- Properly parse quantifier expressions
+- It works with a single entry too
+- Sequence works too
+- We can apply map multiple times.
+- Simple map is now basically working
+- Factor out map expr so we can reuse it.
+- parse simple map and context item
+- Nested loops with variable scoping
+- Nested for loops work too
+- Make the for loop work
+- Make sequences refcells too so they're mutable.
+- Small step forward to support sequence manipulation.
+- Took one stab at for loop but realized why it won't work; we really need to implement it using jump somehow
+- Turns out we already had a for
+- We can parse for
+- Implement range
+- Rename interpret2 to interpret
+- Delete interpret.rs as interpret2.rs now has feature parity (except for string concatenation)
+- Clarifying comment
+- Complex sequences are now read properly
+- Parse comma expressions properly now, I hope
+- Simple comma parsing
+- Concatenate with comma operator
+- Rename 'AtomicValue' to 'Atomic' to make the code a bit shorter
+- Integrate AtomicValue
+- ast test for placeholders for static function calls
+- A snapshot of placeholderification
+- We now can handle placeholdered functions
+- We can do a static call with a placeholder now
+- Simplify AST to get rid of placeholders.
+- Factor out a compile_call
+- we can parse placeholder aguments
+- An arity sanity check
+- Clean up the stack after static function call. No need to obtain frame if we do a static function call.
+- Named function ref calls work
+- We can parse named function refs
+- We got basic static function calls working
+- We can now parse function calls
+- Use arity too for lookup
+- Prepare for static function calls; we work up the interpreter but don't use it yet
+- Get closure amount from function instead of putting it into the code.
+- Sketch out data model. Do not use it yet
+- Rename Value to StackValue for now so we can define Value differently.
+- Get rid of commented out code; we have enough to know it works.
+- Closures now work!
+- Another step towards closure support
+- Unused lifetime
+- Allow nesting of scopes, so we can hopefully use that to help obtain closure information
+- Factor out builder
+- Unused import
+- Turn compile functions into methods
+- More cleanup
+- Cleanup
+- Factor out value related structs
+- Factor out instruction into its own module
+- Factor out error into its own module
+- Fix scoping and pop off function value from stack
+- We can now call with arguments properly
+- Dynamic function call without arguments is working now
+- Accept snapshot properly
+- Test for a more complex function call
+- Parse a dynamic function call without arguments
+- Functions own their instructions, instead of sharing them in a program.
+- Prepare for function compilation. Not working properly yet
+- Parse a more complex inline function
+- We can now parse inline function expressions
+- We can get compare values
+- Make if work again
+- Rename back to Scope
+- We port things over to interpret2
+- We now have function calls working it appears
+- Explicitly pass main id to start
+- Clean up program construction API
+- Improve the API a bit
+- Get rid of start, we can do this during construction
+- We can loop now
+- We can now jump forward
+- Very basic test
+- Sketch out interpret2
+- Implementing range makes us think about the interpreter
+- Implement value comparison
+- Build infastructure to handle for, range
+- Build up infrastructure to support for. We're not there yet
+- We can interpret if expressions
+- We can a conditional expression
+- We can parse for expressions now, not yet execute
+- We can now parse let expressions
+- Comment now moved
+- We have var references
+- Superfluous rule
+- Add a note
+- We can now parse let expressions, including nested ones
+- The comma operator now works (at the outer level)
+- We now compile xpath
+- work towards the parsing of sequences
+- This code can now be removed
+- Do not need to retain the ast
+- Simplify
+- Add some basic runtime error handling
+- We support nested expressions too
+- Try to write execute; some lifetime issues ensue
+- Support string concatentation
+- The interpreter is doing basic addition!
+- Trivial interpreter
+- Accept insta test
+- Support nested expression, multiplicative expr
+- Throw away some old code
+- Fix string parsing and implement concat
+- Comparison ast
+- and support
+- Additive expr fully converted too
+- Fully convert to insta
+- Simplify lots of tests with insta
+- Make it easy to write this test
+- Implement or, use insta snapshot
+- We now have a binary add
+- The arrow AST can be simpler
+- Handle plus minus
+- SimpleMapExpr is represented in the AST
+- Starting to get an approach for AST construction going
+- Serious reworking of the AST for simplicity
+- We can parse path expressions that have postfix expr steps
+- PostfixExpr
+- basic primary expr
+- Double support
+- Start to build the AST
+- More tweaking
+- More work on the AST
+- Add the start of an AST model
+- Solve a bug where names weren't parsed correctly
+- A note about what still needs to be handled
+- We can parse xpath. Now to do something with the output
+- Convert the grammar to pest grammar
+- starting to implement a pest parser
+- Initial commit

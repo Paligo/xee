@@ -1,0 +1,360 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0](https://github.com/Paligo/xee/releases/tag/xee-interpreter-v0.1.0) - 2025-03-20
+
+### Fixed
+
+- fix effective boolean variable error bug.
+
+### Other
+
+- Add a few categories.
+- Update copyright year.
+- Update all the licenses to MIT.
+- Remove all the apache licenses, MIT only.
+- Partial implementation of parse-ietf-date.
+- implement fn:lang
+- Convenience method to initialize from current system env.
+- Simple environment variable support.
+- Upgrade the parser.
+- rstest is not actually used.
+- Update base64.
+- Upgrade lexical dependency.
+- Upgrade some more dependencies and unify rust_decimal_macros.
+- Clippy.
+- Make insta a single workspace dependency so it's easier to upgrade.
+- We can take a shortcut here.
+- By specializing the atomizing route we can make it a bit faster again.
+- Refactor atomic type matching.
+- Split atomic from non-atomic in item type matching.
+- Do the additional check that only function coercion wants to do.
+- Separate atomization of the sequence from casting/promotion.
+- Make this operation more clear.
+- Improve comments.
+- Skip a bit of reversing of things.
+- Simplify return.
+- Fix type coercion rules for anyURI, and update the test run.
+- Use coercion rules with static function calls too.
+- Factor out parts of the coercion code.
+- uri-collection. Harden uri types.
+- Implement fn:collection.
+- Implement document-uri. Some tests still fail but I think that's due to a testrunner bug.
+- id support.
+- Move id-related function into a separate module.
+- Split this into multiple modules for ease of maintenance.
+- Use nodes directly instead of to_node.
+- Specialized implementations of one_node.
+- I realized we don't need the annotations for node comparison!
+- A simpler atomized node iter.
+- Special case checking one item in a range.
+- Fix commetn.
+- More clarifying comment.
+- Improve comment.
+- Invert arguments to speed up general comparison.
+- Clippy.
+- Introduce size hint for our custom iterators.
+- more efficient general compare is harder than I thought. But at least we can shortcircuit in case of error.
+- Make Range use ibig instead of usize, so we can tackle ranges of really large numbers.
+- Shortcut various general comparisons that will definitely result in false.
+- Cache all regex creation.
+- Update to newer version of Rust and do some clippy work.
+- Tweak license text.
+- Preparing licenses, attribution, etc.
+- The interpreter now relies on regexml only, not regex, at least in its direct dependencies.
+- use LazyLock as the code is easier to follow.
+- Fix a remaining bug where we were getting the wrong error.
+- Remove Occurrence trait in favor of one and option functions.
+- Use iterators in library.
+- Clippy.
+- We now have specialized versions of empty and one map.
+- Refactor Map to prepare it for other, more efficient representations for special cases.
+- Avoid a few clones to make combining maps slightly faster.
+- Slightly tweak how large map works to make it a trifle faster.
+- Use capacity.
+- A few small cleanups.
+- Create a bit of abstraction for the build stack.
+- Clean up the code a bit by using .into() to construct Rc where possible.
+- Nicer non-nested match statements listing all combinations.
+- Improve comments.
+- Move things from trait onto Sequence.
+- Add specialized versions for atomized_one and atomized_option, which should allow compiling away stuff more often.
+- Add a specialized atomized implementation for One, this seems to speed things up a bit.
+- Move value comparison onto sequence.
+- Make initialization of the default collation faster by doing the iri string business earlier.
+- Port the tests from the xee-xpath-compiler to the xee-xpath API.
+- Use Rc slice where we can.
+- Add a few comments.
+- A more efficient representation of ranges.
+- get rid of superfluous clones.
+- Make iter() deliver Item, not &Item.
+- Eliminate IntoIterator in favor of iter().cloned() as we're going to change iter anyway.
+- Make one and option consume item.
+- Consuming one and option.
+- Add a bunch of static assertions to control the size of core types.
+- A note about the static assertion.
+- Make Rc internal to function. This allows us to clean up a lot of Rc in the codebase.
+- Move conversion traits into its own module.
+- Clean up some refactoring traces.
+- Clippy.
+- Fix a bug where we really need absent information in order to create the proper closure.
+- Rewrite to consolidated sequence.
+- Move responsibility towards sequence from stack value.
+- We are now explicitly erroring if absent cannot be converted. Now to move this earlier.
+- I think this helps with namespaces later.
+- Another convenience conversion.
+- Port more conversion logic.
+- Port over some missing things into neovalue land.
+- Move item into neovalue.
+- Port over serialization logic.
+- Port over normalize method.
+- Port over normalization module.
+- Port over matching implementation as best as we can for now (excluding map and array)
+- Implement unboxed_atomized.
+- Clippy.
+- Lifetimey whimey to make aotmized work properly.
+- Make this public.
+- Clippy.
+- Port over compare logic.
+- Add a few FromIterator implementations.
+- Creation API from single item.
+- Rename various things so that they make more sense. now the main value is called Sequence.
+- More sequence-type into xee-xpath-type as it has no other dependencies.
+- A few more tweaks to prepare for matching port.
+- Port more creation code over.
+- Rename items to iter as it's cleaner.
+- Add one creation method.
+- Move the stack sequence into its own module.
+- More tweaking.
+- Implement more traits.
+- More work to ensure specialized versions for one and empty case.
+- Sketching out the new sequence approach.
+- Better error handling for loading a file. Now commands need to handle their own errors.
+- Update to new Xot. Use this to display better parse errors.
+- Better representation of various things.
+- Start using improved display representation.
+- xpath representation for atomic.
+- Start working on inverse operation: xpath representation of atomics.
+- Add a command system for repl.
+- Make the tests pass but it's bizarro, so report on that.
+- Make a bunch more parse-json tests work.
+- parse-json.
+- Json serialization.
+- Move normalization as it's not used for some serializations.
+- Move serialization stuff around a bit.
+- Wire in HTML serialization.
+- Wire in map-based serialization parameters.
+- Split option parameter convention out as it's intended to be reusable.
+- Writing this as a bunch of macros was ugly and silly. Use generics and simplify it.
+- More macro driven serialization option parsing.
+- More macro usage for fun and profit.
+- Start working getting serialization map.
+- Serialize xml, not working properly with parameters yet.
+- Move flatten to a method on sequence.
+- Implement parse-xml-fragment.
+- Add fn:parse-xml
+- Add the ability to add documents without a URI.
+- Retire Uri to indicate documents in favor if iri-string based approach.
+- First stab at parse implementation. But URLs need some work for documents first.
+- substring wasn't handling nan properly.
+- Fix resolve-QName bugs.
+- Fix generate id which wasn't correctly creating only alphanumeric.
+- Fix another arity related test failure.
+- Go through more issues.
+- Make debugging this more easy.
+- Refactor the way collations work. This fixes 2 tests in the big test suite.
+- Add another todo note.
+- Add a note on the whole LEIRI thing.
+- base-uri
+- Fix in-scope-prefixes.
+- Implement more fn:error behavior.
+- Nicer implementation now that it's possible.
+- Implement fn:path
+- In progress PHP bindings.
+- doc-available
+- Better handling of static base uri
+- Set up static base uri properly.
+- Implement static-base-uri and update filters.
+- Rewrite more in terms of iri-string.
+- Add iri-string which seems to offer a better type-driven API for what we need with URLs.
+- Work on fn:doc.
+- Very partial support for fn:doc
+- Implement round-half-to-even
+- Move rounding stuff into atomic.
+- resolve-uri implementation.
+- Add a static base URI to the static context. It's not used by anything yet.
+- encode-for-uri
+- iri-to-uri
+- Implement escape-html-uri.
+- Make things more private, and expose as methods instead.
+- Better information hiding.
+- Work towards better information hiding.
+- Reduce how public this is.
+- Reduce access.
+- The dynamic context now references the program.
+- The dynamic context builder should be built from the program.
+- Use the new API on program, rather than runnable.
+- This didn't turn out to be in use.
+- No more static context ref is needed.
+- Let program own static context.
+- make namespaces own their strings, rather than using a lifetime which leaks through everything.
+- Further modify xee-xpath so that we can use it fully in the test runner.
+- Expose ValueResult for now, it may be possible to make it go away later.
+- More clippy.
+- Context is not needed anymore here.
+- Clippy
+- More clippy.
+- More clippy.
+- These can be for loops after all, thanks clippy.
+- Lots more clippy.
+- A lot of work to make the API cleaner.
+- More tweaking of library API.
+- More efficient library functions as we take the sequence directly.
+- into_mut() isn't needed here.
+- Cleanup.
+- Introduce DocumentsRef and StaticContextRef to wrap Rc away from public API.
+- Explicit use of dynamic context in the API now. Make documents Rc too, instead of a Cow.
+- Don't use blob provider anymore. This is much, much faster and simpler to boot.
+- Isolated static context and reconstruct dynamic context each time we run.
+- Clean up a lot of documents cruft.
+- Add the context item to the dynamic context too.
+- Use a builder everywhere for dynamic context.
+- Passing variables separately from the DynamicContext turns out to be misguided.
+- Make new private for static context, ensuring we use the builder (or default)
+- A static context builder so it's easier to create them.
+- start xee-xpath2 as a new fresh attempt at API. Implement a builder, but realize it belongs in the interpreter.
+- Rearrange the way context info is constructed, pulling it higher.
+- Make them sequences instead of items.
+- Make ContextInfo more generic so we can handle absent case more easily.
+- Offer a nicer way to access and manipulate documents given a session.
+- Further API cleanups.
+- Finish renaming back to document again.
+- document2 is now the only one.
+- Improve documents API by pushing most of it down into the interpreter.
+- Clarify.
+- Improve the documentation and public API.
+- Make it so that we can pass in variables in public API.
+- Modify how variables are passed.
+- Update Xot version.
+- Introduce a DocumentsError to handle both xot errors as well as duplicate documents.
+- used query with wrong query id error.
+- More clippy and documentation work.
+- More progress documenting the high level API.
+- Make it so that session owns DynamicContext. We need to make documents a cow to make this work.
+- Make span optional in SpannedError. This makes it a bit more convenient to use it in the outer layer.
+- Introduce try_into_value to make conversions of atomics from items more nice.
+- Remove unused code.
+- Make it so that the various iterators return an error early if the data is absent.
+- Document a lot more.
+- A note about a todo item.
+- We try to move towards a DynamicContext we can live with.
+- Make a convenience static_context function on runnable.
+- Dynamic context owns static context now.
+- Minor tweak.
+- Implement analyze-string.
+- More old code.
+- Remove old flags code.
+- We had some regressions but also a lot of progress in the amount of tests pass.
+- Upgrade all the dependencies. Not sure why parse error gives a different message now but it's not a priority.
+- Add a note about a possible future improvement.
+- Store strings and arrays a bit more efficiently.
+- Rework dynamic context so that it owns documents, which makes the API we want in the load functionality feasible.
+- Use anyhow for error handling, as this is the simplest.
+- Make it so we can decode 'content' in source too.
+- Wire in mode system.
+- Make mode id be part of the system. Unfortunately we can't refer to it yet, as we need some kind of DeclarationBuilder.
+- ModeValue only needs to exist on the IR level.
+- Refactor things so we support the various mode values.
+- Prepare the ground for modes. We can't actually use modes yet or declare them.
+- Priority and declaration order for rules is obeyed.
+- Support for xsl:processing-instruction
+- comment
+- namespace
+- A few minor cleanups to comments; we won't do StateName.
+- Adjust to latest xmlname
+- A few clippy items.
+- Convert to use Xot's OwnedName.
+- Tweak to imports.
+- Generate literal attribute nodes using xot attribute nodes now.
+- Rename Root to Document.
+- Better prefix support.
+- Adjust to latest xot.
+- Port over to new xot.
+- Literal attributes support.
+- Wire in the new pattern lookup. This should work with predicates, but that's not tested yet.
+- more clarity about what we can't do yet.
+- More matching behavior is working now.
+- Reorganize it so we can inject the interpreter.
+- Start to build infrastructure so we can run function ids.
+- Add a way to transform a pattern into another pattern replacing predicates.
+- Make it so we can maintain pattern at the ast level, but in the future also on the ir level and interpreter level.
+- Clippy.
+- Handle double slash case.
+- Integrate kind test we already have.
+- We can match element()
+- Remove redundant check.
+- Update comment.
+- Some counter intuitive node matching rules.
+- Reorganize so that we can handle attributes better.
+- Other name matching patterns.
+- More tests for attribute matching.
+- Refactor to use associated functions.
+- Refactor so we can match patterns individually.
+- Attribute name match.
+- Dealing with descendant axis.
+- Towards a general pattern matching facility.
+- Better complex content support.
+- copy-of
+- copy is starting to take shape.
+- Fix linter warnings.
+- We now pass in a mutable xot everywhere.
+- We pass in an explicit mutable xot, and retain it in state.
+- Describe the problem in a comment.
+- We fail if we try to copy a sequence of multiple values.
+- Implement basic xsl:value-of
+- Various cleanups, run tests from integration tests in xee_xslt.
+- We now can do recursive apply-templates properly.
+- A better way to run output; compile a main function with apply-templates in it.
+- A step towards being able to execute apply-templates.
+- Start to weave through apply-templates support
+- We can handle nested elements now.
+- We got a tiny XSLT example working at last.
+- A faltering step towards compiling XSLT.
+- Make declarations public.
+- Make declarations available.
+- Start to construct a declarations struct that contains all global declarations.
+- Store name references, not names.
+- Finally we can use Name
+- Get rid of static lifetime requirement.
+- Don't need Rc in the actual closures, only for self.
+- Store global value once calculated once to avoid recalculations.
+- Make the value generic.
+- Better error handling.
+- A little bit of documentation for the various modules.
+- Rename to declaration.
+- Simplify the API a bit.
+- Slight tweak.
+- More clarity.
+- Simple circularity detection.
+- Simplify the API a little using a trait.
+- Some preparations for compiling XSL.
+- A very simple pattern registry with lookup by relative name only.
+- Get hand-written AST right with proper variables. Use element to construct elements into isolated root.
+- Rename instructions to use Xml prefix for clarity.
+- We don't use this as we can use the stack for nodes.
+- We can now create a basic root node.
+- Work towards an implementation of the instructions. We need to do something sensible with output.
+- Write a test for the whole ir transformation of XML.
+- Move some more dependencies into the workspace.
+- Add non-functional IR and compilation infrastructure for generating XML.
+- Depend on xee-name and xee-xpath-type where possible.
+- Separate out sequence type ast so interpreter can start to depend on it alone.
+- Add basic readmes for the various sub-crates.
+- Factor out naming related stuff into its own module, xee-name.
+- Rename old xee-xpath to xee-interpreter.
