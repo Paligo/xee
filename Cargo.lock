@@ -2907,7 +2907,7 @@ dependencies = [
 
 [[package]]
 name = "xee"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",
@@ -2997,7 +2997,7 @@ dependencies = [
 
 [[package]]
 name = "xee-testrunner"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",
@@ -3100,7 +3100,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xpath-load"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "ibig",
@@ -3139,7 +3139,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xslt-ast"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ahash 0.8.11",
  "blanket",

@@ -1,6 +1,6 @@
 [package]
 name = "xee-testrunner"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["The Xee Project Developers"]
 keywords = ["xml", "xpath", "xslt", "testing"]
@@ -12,7 +12,7 @@ documentation = "https://docs.rs/xee-testrunner"
 homepage = "https://github.com/Paligo/xee"
 
 [dependencies]
-xee-xpath-load = { path = "../xee-xpath-load", version = "0.1.1" }
+xee-xpath-load = { path = "../xee-xpath-load", version = "0.1.2" }
 xee-xpath = { path = "../xee-xpath", version = "0.1.2" }
 xee-xslt-compiler = { path = "../xee-xslt-compiler", version = "0.1.2" }
 xee-name = { path = "../xee-name", version = "0.1.1" }

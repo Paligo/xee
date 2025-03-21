@@ -18,7 +18,7 @@ serde = ["xee-xslt-ast/serde", "xee-interpreter/serde"]
 xee-name = { path = "../xee-name", version = "0.1.2" }
 xee-xpath-ast = { path = "../xee-xpath-ast", version = "0.1.1" }
 xee-xpath-compiler = { path = "../xee-xpath-compiler", version = "0.1.2" }
-xee-xslt-ast = { path = "../xee-xslt-ast", version = "0.1.1" }
+xee-xslt-ast = { path = "../xee-xslt-ast", version = "0.1.2" }
 xee-schema-type = { path = "../xee-schema-type", version = "0.1.2" }
 xee-interpreter = { path = "../xee-interpreter", version = "0.1.2" }
 xee-ir = { path = "../xee-ir", version = "0.1.2" }
