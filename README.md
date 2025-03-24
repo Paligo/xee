@@ -3,7 +3,7 @@
 XML Execution Engine written in Rust.
 
 It's been made possible by the generous support of
-[Paligo](https://paligo.net/).
+[Paligo](https://paligo.net/). See 
 
 ## What is Xee?
 
@@ -20,24 +20,59 @@ The Xee project contains the following:
   the time of writing a lot of XSLT is yet to be implemented, but there is a
   strong foundation. Please contribute!
 
+## Obtaining the `xee` commandline tool
+
+You can download a pre-built binary from
+[releases](https://github.com/Paligo/xee/releases).
+
+Alternatively you can compile it yourself. First you need to make sure you have
+the [Rust toolchain installed](https://www.rust-lang.org/tools/install).
+
+Then:
+
+```
+git clone https://github.com/Paligo/xee.git
+cd xee
+cargo install --path .
+```
+
+## Executing XPath expressions from Rust
+
+You can also use the [provided `xee-xpath`
+API](https://docs.rs/xee-xpath/latest/xee_xpath/) to execute XPath expressions
+from within Rust.
+
+## Executing XPath expressions from PHP
+
+A prototype PHP binding library is available as
+[`xee-php`](https://github.com/Paligo/xee-php)
+
 ## How is Xee implemented?
 
 Both XPath and XSLT are supported by the same bytecode interpreter. Compilation
 machinery exists to transform XPath and XSLT into bytecode, which the
 interpreter can then execute.
 
-The XPath functions in [the XPath standard function library](https://www.w3.org/TR/xpath-functions-31/) are implemented in Rust, using a Rust binding system.
+The XPath functions in [the XPath standard function
+library](https://www.w3.org/TR/xpath-functions-31/) are implemented in Rust,
+using a Rust binding system. The implementation is extensive but not everything
+is implemented yet; see
+[conformance](https://github.com/Paligo/xee/tree/main/conformance) for more.
 
-An affiliated project is `regexml`, which contains an XML Schema and XPath
-compatible version of regular expressions for Rust. 
+An affiliated project is [`regexml`](https://github.com/Paligo/regexml), which
+contains an XML Schema and XPath compatible version of regular expressions for
+Rust. 
 
-[`xee-php`](https://github.com/Paligo/xee-php) is the start of PHP bindings for Xee.
+[`xee-php`](https://github.com/Paligo/xee-php) is the start of PHP bindings for
+Xee.
 
 ## Testing
 
 This project undergoes extensive automated testing using using specific
 developer tests executed using `cargo test` as well as using the
-`xee-testrunner` infrastructure for running conformance tests.
+`xee-testrunner` infrastructure for running conformance tests. This is run in
+CI for PRS, and you can also run them locally. See [`hacking`](hacking.md) for
+more information.
 
 ## What's missing?
 
@@ -49,13 +84,13 @@ project. Contributions are encouraged!
 
 ### XPath
 
-- While much of it is covered, parts of the functions in [XPath and XQuery
+- While much of it is covered, some of the functions in [XPath and XQuery
   Functions and Operators 3.1](https://www.w3.org/TR/xpath-functions-31/) are
   not yet implemented. Contributions are welcome!
 
 - Of the 21859 tests in the QT3 test suite (vendored into `vendor/xpath-tests`)
   that match the features we support (so excluding XQuery tests), we support
-  over have 19987 at the time of writing. The failures are mostly due to
+  over have 20130 at the time of writing. The failures are mostly due to
   missing library implementation.
 
 - XMLSchema support. While the basic `xs:*` data types as defined by XML Schema
@@ -75,23 +110,26 @@ project. Contributions are encouraged!
 
 ## Architecture
 
-XPath gets lexed into tokens using a lexer (logos) in `xee-xpath-lexer`. This
-is then parsed into an XPath AST (abstract syntax tree) by `xee-xpath-ast`.
-This AST is then compiled down into a specialized IR (intermediate
-representation) by `xee-xpath-compiler`. This IR is then compiled down into a
-bytecode by `xee-ir`. This bytecode is executed using the interpreter
-implemented in `xee-interpreter`.
+XPath gets lexed into tokens using a lexer (logos) in
+[`xee-xpath-lexer`](xee-xpath-lexer). This is then parsed into an XPath AST
+(abstract syntax tree) by [`xee-xpath-ast`](`xee-xpath-ast`). This AST is then
+compiled down into a specialized IR (intermediate representation) by
+[`xee-xpath-compiler`](`xee-xpath-compiler`). This IR is then compiled down
+into a bytecode by [`xee-ir`](`xee-ir`). This bytecode is executed using the
+interpreter implemented in [`xee-interpreter`](`xee-interpreter`) which also
+implements the standard library functions for XPath.
 
-An XPath API is exposed for use by others in `xee-xpath`.
+An XPath API is exposed for use by others in [`xee-xpath`](xee-xpath) ([API
+docs](https://docs.rs/xee-xpath/latest/xee_xpath/)).
 
 XPath library functions are implemented with a special Rust binding system
-based around Rust macros (defined in `xee-xpath-macros`), which allows you to
-create Rust functions and register them into XPath.
+based around Rust macros (defined in [`xee-xpath-macros`](xee-xpath-macros)),
+which allows you to create Rust functions and register them into XPath.
 
 XSLT support is very similar: XSLT XML is parsed, then turned into an XSLT AST
-by `xee-xslt-ast`. Any embedded XPath expressions are also transformed into the
-XPath AST. The XSLT AST is then compiled into the IR by `xee-xslt-compiler`.
-The IR and interpreter are shared with XPath.
+by [`xee-xslt-ast`](xee-xslt-ast). Any embedded XPath expressions are also
+transformed into the XPath AST. The XSLT AST is then compiled into the IR by
+[`xee-xslt-compiler`](xee-xslt-compiler)]. The IR and interpreter are shared with XPath.
 
 ## Project structure
 
@@ -163,7 +201,8 @@ Some affiliated projects exist as well maintained outside of this project:
 
 ### Other directories
 
-- `conformance` - a manual tracking of various features of XPath and XSLT
+- [`conformance`](conformance) - a manual tracking of various features of XPath
+  and XSLT
 
-- `vendor` - the QT3 test suite (`xpath-tests`) and `xslt-tests` vendored into
-  this project for purposes of easy of access and stability.
+- [`vendor`](vendor) - the QT3 test suite (`xpath-tests`) and `xslt-tests`
+  vendored into this project for purposes of easy of access and stability.

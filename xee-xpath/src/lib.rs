@@ -8,8 +8,8 @@
 //!
 //! You can create a [`Documents`] store and load XML documents into it.
 //!
-//! You can then combine the queries and documents into a [`Session`]. You use
-//! this to execute queries.
+//! You can also add queries to a [`Queries`] object. You can
+//! then execute queries against the documents store.
 //!
 //! ```rust
 //! use xee_xpath::{Documents, Queries, Query};
