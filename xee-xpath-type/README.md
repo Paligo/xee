@@ -1,4 +1,7 @@
 # xee-xpath-type
+[![Crates.io](https://img.shields.io/crates/v/xee-xpath-type.svg)](https://crates.io/crates/xee-xpath-type)
+[![Documentation](https://docs.rs/xee-xpath-type/badge.svg)](https://docs.rs/xee-xpath-type)
+
 
 Type information for XPath. This is that part of the AST that defines function
 signatures. It's been extracted into its own crate so that it can be used by

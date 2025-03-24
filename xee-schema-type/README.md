@@ -1,4 +1,7 @@
 # xee-schema-type
+[![Crates.io](https://img.shields.io/crates/v/xee-schema-type.svg)](https://crates.io/crates/xee-schema-type)
+[![Documentation](https://docs.rs/xee-schema-type/badge.svg)](https://docs.rs/xee-schema-type)
+
 
 `xs` types as defined by the XPath and XML Schema specs, and support for
 Rust integration.

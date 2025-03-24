@@ -1,4 +1,7 @@
 # xee-xpath-compiler
+[![Crates.io](https://img.shields.io/crates/v/xee-xpath-compiler.svg)](https://crates.io/crates/xee-xpath-compiler)
+[![Documentation](https://docs.rs/xee-xpath-compiler/badge.svg)](https://docs.rs/xee-xpath-compiler)
+
 
 A compiler to compile XPath text to Xee IR (intermediate representation). This
 makes use of [`xee-xpath-ast`](https://crates.io/crates/xee-xpath-ast).

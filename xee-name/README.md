@@ -1,4 +1,7 @@
 # xee-name
+[![Crates.io](https://img.shields.io/crates/v/xee-name.svg)](https://crates.io/crates/xee-name)
+[![Documentation](https://docs.rs/xee-name/badge.svg)](https://docs.rs/xee-name)
+
 
 Basic XML name and namespace support as used by the rest of the Xee project.
 

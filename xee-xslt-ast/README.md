@@ -1,4 +1,7 @@
 # xee-xslt-ast
+[![Crates.io](https://img.shields.io/crates/v/xee-xslt-ast.svg)](https://crates.io/crates/xee-xslt-ast)
+[![Documentation](https://docs.rs/xee-xslt-ast/badge.svg)](https://docs.rs/xee-xslt-ast)
+
 
 Parser and AST support for XSLT 3.0. This defines the AST representing XSLT as
 Rust objects. It is used by

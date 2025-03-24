@@ -1,4 +1,7 @@
 # xee-xpath-macros
+[![Crates.io](https://img.shields.io/crates/v/xee-xpath-macros.svg)](https://crates.io/crates/xee-xpath-macros)
+[![Documentation](https://docs.rs/xee-xpath-macros/badge.svg)](https://docs.rs/xee-xpath-macros)
+
 
 Support macros to make it easy to create library functions for XPath. Used by
 [`xee-interpreter`](https://crates.io/crates/xee-interpreter) in the [library

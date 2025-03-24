@@ -1,4 +1,7 @@
 # xee-xpath-ast
+[![Crates.io](https://img.shields.io/crates/v/xee-xpath-ast.svg)](https://crates.io/crates/xee-xpath-ast)
+[![Documentation](https://docs.rs/xee-xpath-ast/badge.svg)](https://docs.rs/xee-xpath-ast)
+
 
 This is the implementation of parser and AST for XPath expressions. This is
 used by [`xee-xpath-compiler`](https://crates.io/crates/xee-xpath-compiler). It

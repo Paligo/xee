@@ -1,4 +1,7 @@
 # xee-xslt-compiler
+[![Crates.io](https://img.shields.io/crates/v/xee-xslt-compiler.svg)](https://crates.io/crates/xee-xslt-compiler)
+[![Documentation](https://docs.rs/xee-xslt-compiler/badge.svg)](https://docs.rs/xee-xslt-compiler)
+
 
 Transform XSLT AST as defined by
 [`xee-xslt-ast`](https://crates.io/crates/xee-xslt-ast) into IR so that it can

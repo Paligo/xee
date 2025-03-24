@@ -1,4 +1,7 @@
 # xee-testrunner
+[![Crates.io](https://img.shields.io/crates/v/xee-testrunner.svg)](https://crates.io/crates/xee-testrunner)
+[![Documentation](https://docs.rs/xee-testrunner/badge.svg)](https://docs.rs/xee-testrunner)
+
 
 This is a test runner that can run the XPath conformance test suite in the [Xee
 project](https://github.com/Paligo/xee). Work on enabling the XSLT conformance
