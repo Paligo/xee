@@ -1,6 +1,6 @@
 [package]
 name = "xee-schema-type"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["The Xee Project Developers"]
 keywords = ["xml", "xpath"]

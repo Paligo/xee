@@ -1,6 +1,6 @@
 [package]
 name = "xee-xpath-load"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["The Xee Project Developers"]
 keywords = ["xml", "xpath"]
@@ -13,8 +13,8 @@ homepage = "https://github.com/Paligo/xee"
 
 
 [dependencies]
-xee-xpath-compiler = { path = "../xee-xpath-compiler", version = "0.1.3" }
-xee-xpath = { path = "../xee-xpath", version = "0.1.3" }
+xee-xpath-compiler = { path = "../xee-xpath-compiler", version = "0.1.4" }
+xee-xpath = { path = "../xee-xpath", version = "0.1.4" }
 thiserror = { workspace = true }
 xot = { workspace = true }
 ibig = { workspace = true }

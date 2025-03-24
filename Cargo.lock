@@ -2907,7 +2907,7 @@ dependencies = [
 
 [[package]]
 name = "xee"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",
@@ -2923,7 +2923,7 @@ dependencies = [
 
 [[package]]
 name = "xee-interpreter"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "ahash 0.8.11",
  "arrayvec",
@@ -2964,7 +2964,7 @@ dependencies = [
 
 [[package]]
 name = "xee-ir"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "ahash 0.8.11",
  "ibig",
@@ -2979,7 +2979,7 @@ dependencies = [
 
 [[package]]
 name = "xee-name"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "ahash 0.8.11",
  "serde",
@@ -2988,7 +2988,7 @@ dependencies = [
 
 [[package]]
 name = "xee-schema-type"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "ahash 0.8.11",
  "insta",
@@ -2997,7 +2997,7 @@ dependencies = [
 
 [[package]]
 name = "xee-testrunner"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",
@@ -3021,7 +3021,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xpath"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "ahash 0.8.11",
  "chrono",
@@ -3043,7 +3043,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xpath-ast"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "ahash 0.8.11",
  "blanket",
@@ -3066,7 +3066,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xpath-compiler"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "ahash 0.8.11",
  "ibig",
@@ -3085,7 +3085,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xpath-lexer"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "ibig",
  "insta",
@@ -3100,7 +3100,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xpath-load"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "ibig",
@@ -3115,7 +3115,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xpath-macros"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "insta",
  "proc-macro2 1.0.86",
@@ -3129,7 +3129,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xpath-type"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "serde",
  "xee-name",
@@ -3139,7 +3139,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xslt-ast"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "ahash 0.8.11",
  "blanket",
@@ -3159,7 +3159,7 @@ dependencies = [
 
 [[package]]
 name = "xee-xslt-compiler"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "ahash 0.8.11",
  "ibig",

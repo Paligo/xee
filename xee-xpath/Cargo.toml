@@ -1,6 +1,6 @@
 [package]
 name = "xee-xpath"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["The Xee Project Developers"]
 keywords = ["xml", "xpath"]
@@ -16,11 +16,11 @@ homepage = "https://github.com/Paligo/xee"
 serde = ["xee-xpath-ast/serde", "xee-interpreter/serde"]
 
 [dependencies]
-xee-xpath-compiler = { path = "../xee-xpath-compiler", version = "0.1.3" }
-xee-xpath-ast = { path = "../xee-xpath-ast", version = "0.1.2" }
-xee-schema-type = { path = "../xee-schema-type", version = "0.1.2" }
-xee-interpreter = { path = "../xee-interpreter", version = "0.1.4" }
-xee-ir = { path = "../xee-ir", version = "0.1.3" }
+xee-xpath-compiler = { path = "../xee-xpath-compiler", version = "0.1.4" }
+xee-xpath-ast = { path = "../xee-xpath-ast", version = "0.1.3" }
+xee-schema-type = { path = "../xee-schema-type", version = "0.1.3" }
+xee-interpreter = { path = "../xee-interpreter", version = "0.1.5" }
+xee-ir = { path = "../xee-ir", version = "0.1.4" }
 chrono = { workspace = true }
 ahash = { workspace = true }
 ordered-float = { workspace = true }

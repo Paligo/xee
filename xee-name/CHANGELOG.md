@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4](https://github.com/Paligo/xee/compare/xee-name-v0.1.3...xee-name-v0.1.4) - 2025-03-24
+
+### Other
+
+- Add badges.
+- Update a whole lot of readmes, linking things.
+
 ## [0.1.3](https://github.com/Paligo/xee/compare/xee-name-v0.1.2...xee-name-v0.1.3) - 2025-03-24
 
 ### Docs
