@@ -43,7 +43,7 @@ xee indent foo.xml
 This is built using [`xee-xpath`](https://docs.rs/xee-xpath/latest/xee_xpath/),
 a high level API to issue XPath 3.1 expressions in Rust.
 
-[More about Xee](https://github.com/Paligo/xee)
+[Xee homepage](https://github.com/Paligo/xee)
 
 ## Credits
 
