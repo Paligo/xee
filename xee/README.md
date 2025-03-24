@@ -38,6 +38,13 @@ Pretty-print `foo.xml`, result to stdout:
 xee indent foo.xml
 ```
 
+## More Xee
+
+This is built using [`xee-xpath`](https://docs.rs/xee-xpath/latest/xee_xpath/),
+a high level API to issue XPath 3.1 expressions in Rust.
+
+[More about Xee](https://github.com/Paligo/xee)
+
 ## Credits
 
 This project was made possible by the generous support of
