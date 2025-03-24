@@ -1,5 +1,8 @@
 # xee-interpreter
 
+[![Crates.io](https://img.shields.io/crates/v/xee-interpreter.svg)](https://crates.io/crates/xee-interpreter)
+[![Documentation](https://docs.rs/xee-interpreter/badge.svg)](https://docs.rs/xee-interpreter)
+
 `xee-interpreter` provides the runtime to run Xee code. It includes a
 bytecode interpreter, an implementation of XPath data types, and the XPath
 standard library.
