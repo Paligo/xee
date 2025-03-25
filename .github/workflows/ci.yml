@@ -34,5 +34,8 @@ jobs:
       - name: Test
         run: cargo test --verbose
       
+      # we run these conformance tests in debug mode. While the debug tests run
+      # more slowly we catch some bounds check errors that release mode
+      # doesn't.
       - name: Check (conformance suite)
-        run: cargo run --release --bin xee-testrunner -- -v check vendor/xpath-tests/
+        run: cargo run --bin xee-testrunner -- -v check vendor/xpath-tests/
