@@ -12,6 +12,13 @@ Features include:
 
 This implements XPath 3.1.
 
+## Installation
+
+You can download a pre-build binary of `xee` from the [releases
+page](https://github.com/Paligo/xee/releases). You can also [build it
+yourself](https://github.com/Paligo/xee/?tab=readme-ov-file#obtaining-the-xee-commandline-tool)
+if you have the Rust toolchain installed.
+
 ## Usage
 
 ### Execute an XPath expression
