@@ -36,6 +36,9 @@ cd xee
 cargo install --path .
 ```
 
+Note that you need a recent stable version of Rust; `rustup update` should get
+you one.
+
 ## Executing XPath expressions from Rust
 
 You can also use the [provided `xee-xpath`
