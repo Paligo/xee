@@ -29,6 +29,12 @@ Execute an XPath expression `/doc/p` against a file `foo.xml`, result to stdout:
 xee xpath /doc/p foo.xml
 ```
 
+If you don't include the file, the XML is taken from stdin, allowing you to do:
+
+```
+cat foo.xml | xee xpath /doc/p
+```
+
 ### Interactive shell for XPath
 
 Interactive shell (REPL) to issue multiple xpath expressions against a document:
