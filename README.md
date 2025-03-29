@@ -3,7 +3,7 @@
 XML Execution Engine written in Rust.
 
 It's been made possible by the generous support of
-[Paligo](https://paligo.net/). See 
+[Paligo](https://paligo.net/).
 
 ## What is Xee?
 
