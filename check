@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 cargo test
 cargo run --release --bin xee-testrunner -- check vendor/xpath-tests/
