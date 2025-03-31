@@ -138,7 +138,7 @@ impl Sequence {
         self.sorted_by_key(context, collation, |item| {
             // the equivalent of fn:data()
             let seq: Self = item.into();
-            seq.atomized(xot).collect::<error::Result<Sequence>>()
+            seq.atomized(xot).collect::<error::Result<Self>>()
         })
     }
 
@@ -149,7 +149,7 @@ impl Sequence {
         get: F,
     ) -> error::Result<Self>
     where
-        F: FnMut(Item) -> error::Result<Sequence>,
+        F: FnMut(Item) -> error::Result<Self>,
     {
         // see also sort_by_sequence in array.rs. The signatures are
         // sufficiently different we don't want to try to unify them.
@@ -173,7 +173,7 @@ impl Sequence {
         let result = keys_and_items
             .into_iter()
             .map(|(_, item)| item)
-            .collect::<Sequence>();
+            .collect::<Self>();
         Ok(result)
     }
 
@@ -255,16 +255,16 @@ impl Sequence {
     pub fn display_representation(&self, xot: &Xot, context: &context::DynamicContext) -> String {
         // TODO: various unwraps
         match &self {
-            Sequence::Empty(_) => "()".to_string(),
-            Sequence::One(item) => item.item().display_representation(xot, context).unwrap(),
-            Sequence::Many(items) => {
+            Self::Empty(_) => "()".to_string(),
+            Self::One(item) => item.item().display_representation(xot, context).unwrap(),
+            Self::Many(items) => {
                 let mut representations = Vec::with_capacity(self.len());
                 for item in items.iter() {
                     representations.push(item.display_representation(xot, context).unwrap());
                 }
                 format!("(\n{}\n)", representations.join(",\n"))
             }
-            Sequence::Range(range) => {
+            Self::Range(range) => {
                 format!("{} to {}", range.start(), range.end())
             }
         }

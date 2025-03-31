@@ -743,7 +743,7 @@ impl Error {
 
     pub fn code(&self) -> String {
         match self {
-            Error::Application(application_error) => {
+            Self::Application(application_error) => {
                 application_error.qname.local_name().to_string()
             }
             _ => self.to_string(),
@@ -752,7 +752,7 @@ impl Error {
 
     pub fn code_qname(&self) -> xot::xmlname::OwnedName {
         match self {
-            Error::Application(application_error) => application_error.qname.clone(),
+            Self::Application(application_error) => application_error.qname.clone(),
             _ => xot::xmlname::OwnedName::new(
                 self.code(),
                 "http://www.w3.org/2005/xqt-errors".to_string(),
@@ -818,7 +818,7 @@ impl From<xee_xpath_ast::ParserError> for SpannedError {
             // TODO: this this the right error code?
             ParserError::IllegalFunctionInPattern { .. } => Error::XPST0003,
         };
-        SpannedError {
+        Self {
             error,
             span: Some(span.into()),
         }
@@ -831,10 +831,10 @@ impl From<regexml::Error> for Error {
         // TODO: pass more error details into error codes
         match e {
             Internal => panic!("Internal error in regexml engine"),
-            InvalidFlags(_) => Error::FORX0001,
-            Syntax(_) => Error::FORX0002,
-            MatchesEmptyString => Error::FORX0003,
-            InvalidReplacementString(_) => Error::FORX0004,
+            InvalidFlags(_) => Self::FORX0001,
+            Syntax(_) => Self::FORX0002,
+            MatchesEmptyString => Self::FORX0003,
+            InvalidReplacementString(_) => Self::FORX0004,
         }
     }
 }
@@ -842,16 +842,16 @@ impl From<regexml::Error> for Error {
 impl From<xot::Error> for Error {
     fn from(e: xot::Error) -> Self {
         match e {
-            xot::Error::MissingPrefix(_) => Error::XPST0081,
+            xot::Error::MissingPrefix(_) => Self::XPST0081,
             // TODO: are there other xot errors that need to be translated?
-            _ => Error::XPST0003,
+            _ => Self::XPST0003,
         }
     }
 }
 
 impl From<Error> for SpannedError {
     fn from(e: Error) -> Self {
-        SpannedError {
+        Self {
             error: e,
             span: None,
         }
@@ -868,7 +868,7 @@ impl From<Error> for SpannedError {
 
 impl From<OutOfBoundsError> for Error {
     fn from(_e: OutOfBoundsError) -> Self {
-        Error::FOCA0003
+        Self::FOCA0003
     }
 }
 

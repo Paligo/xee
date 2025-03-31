@@ -24,7 +24,7 @@ impl One {
 
 impl From<Item> for One {
     fn from(item: Item) -> Self {
-        One { item }
+        Self { item }
     }
 }
 
@@ -83,7 +83,7 @@ impl<'a> SequenceCore<'a, std::iter::Once<Item>> for One {
 impl<'a, I> SequenceExt<'a, I> for One
 where
     I: Iterator<Item = Item> + 'a,
-    One: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
     fn atomized(
         &'a self,
@@ -96,14 +96,14 @@ where
 impl<'a, I> SequenceCompare<'a, I> for One
 where
     I: Iterator<Item = Item> + 'a,
-    One: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
 }
 
 impl<'a, I> SequenceOrder<'a, I> for One
 where
     I: Iterator<Item = Item>,
-    One: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
     fn one_node(&self) -> error::Result<xot::Node> {
         match &self.item {

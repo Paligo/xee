@@ -5,7 +5,7 @@ use super::{Item, Sequence};
 // turn a single item into a sequence
 impl From<Item> for Sequence {
     fn from(item: Item) -> Self {
-        Sequence::One(item.into())
+        Self::One(item.into())
     }
 }
 
@@ -80,9 +80,9 @@ where
         match item {
             Some(item) => {
                 let item = item.into();
-                Sequence::One(item.into())
+                Self::One(item.into())
             }
-            None => Sequence::default(),
+            None => Self::default(),
         }
     }
 }
@@ -95,7 +95,7 @@ where
     fn from(atomic: T) -> Self {
         let atomic: atomic::Atomic = atomic.into();
         let item: Item = atomic.into();
-        Sequence::One(item.into())
+        Self::One(item.into())
     }
 }
 
@@ -109,7 +109,7 @@ where
             let item: Item = value.into();
             items.push(item);
         }
-        Sequence::new(items)
+        Self::new(items)
     }
 }
 

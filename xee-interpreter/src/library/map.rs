@@ -53,11 +53,11 @@ enum MergeDuplicates {
 impl MergeDuplicates {
     fn from_str(s: &str) -> error::Result<Self> {
         match s {
-            "reject" => Ok(MergeDuplicates::Reject),
-            "use-first" => Ok(MergeDuplicates::UseFirst),
-            "use-last" => Ok(MergeDuplicates::UseLast),
-            "use-any" => Ok(MergeDuplicates::UseAny),
-            "combine" => Ok(MergeDuplicates::Combine),
+            "reject" => Ok(Self::Reject),
+            "use-first" => Ok(Self::UseFirst),
+            "use-last" => Ok(Self::UseLast),
+            "use-any" => Ok(Self::UseAny),
+            "combine" => Ok(Self::Combine),
             _ => Err(error::Error::FOJS0005),
         }
     }

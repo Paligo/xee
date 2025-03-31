@@ -16,7 +16,7 @@ impl Many {}
 
 impl From<Vec<Item>> for Many {
     fn from(items: Vec<Item>) -> Self {
-        Many {
+        Self {
             items: items.into(),
         }
     }
@@ -73,21 +73,21 @@ impl<'a> SequenceCore<'a, std::iter::Cloned<std::slice::Iter<'a, Item>>> for Man
 impl<'a, I> SequenceExt<'a, I> for Many
 where
     I: Iterator<Item = Item> + 'a,
-    Many: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
 }
 
 impl<'a, I> SequenceCompare<'a, I> for Many
 where
     I: Iterator<Item = Item> + 'a,
-    Many: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
 }
 
 impl<'a, I> SequenceOrder<'a, I> for Many
 where
     I: Iterator<Item = Item>,
-    Many: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
     fn one_node(&self) -> error::Result<xot::Node> {
         Err(error::Error::XPTY0004)

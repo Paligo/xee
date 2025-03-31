@@ -59,7 +59,7 @@ impl AtomicCompare for OpEq {
     }
 
     fn arguments_inverted() -> impl AtomicCompare {
-        super::OpEq
+        Self
     }
 
     fn value() -> AtomicCompareValue {

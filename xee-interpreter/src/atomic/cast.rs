@@ -12,10 +12,10 @@ use crate::error;
 use super::cast_numeric::decimal_to_integer;
 
 impl atomic::Atomic {
-    pub(crate) fn parse_atomic<V>(s: &str) -> error::Result<atomic::Atomic>
+    pub(crate) fn parse_atomic<V>(s: &str) -> error::Result<Self>
     where
         Parsed<V>: FromStr,
-        V: Into<atomic::Atomic>,
+        V: Into<Self>,
     {
         // TODO: re-establish error. I am not sure what error is returned
         // from the FromStr trait; it should be error::Error but evidently it's
@@ -38,11 +38,11 @@ impl atomic::Atomic {
     // from an atomic type to a canonical representation as a string
     pub(crate) fn into_canonical(self) -> String {
         match self {
-            atomic::Atomic::Untyped(s) => s.to_string(),
-            atomic::Atomic::String(_, s) => s.to_string(),
-            atomic::Atomic::Float(OrderedFloat(f)) => Self::canonical_float(f),
-            atomic::Atomic::Double(OrderedFloat(f)) => Self::canonical_float(f),
-            atomic::Atomic::Decimal(d) => {
+            Self::Untyped(s) => s.to_string(),
+            Self::String(_, s) => s.to_string(),
+            Self::Float(OrderedFloat(f)) => Self::canonical_float(f),
+            Self::Double(OrderedFloat(f)) => Self::canonical_float(f),
+            Self::Decimal(d) => {
                 if d.is_integer() {
                     let i: IBig = decimal_to_integer(d).unwrap();
                     i.to_string()
@@ -50,39 +50,39 @@ impl atomic::Atomic {
                     d.normalize().to_string()
                 }
             }
-            atomic::Atomic::Integer(_, i) => i.to_string(),
-            atomic::Atomic::Duration(duration) => Self::canonical_duration(duration.as_ref()),
-            atomic::Atomic::YearMonthDuration(year_month) => {
+            Self::Integer(_, i) => i.to_string(),
+            Self::Duration(duration) => Self::canonical_duration(duration.as_ref()),
+            Self::YearMonthDuration(year_month) => {
                 Self::canonical_year_month_duration(year_month)
             }
-            atomic::Atomic::DayTimeDuration(duration) => {
+            Self::DayTimeDuration(duration) => {
                 Self::canonical_day_time_duration(duration.as_ref())
             }
-            atomic::Atomic::DateTime(date_time) => Self::canonical_date_time(date_time.as_ref()),
-            atomic::Atomic::DateTimeStamp(date_time) => {
+            Self::DateTime(date_time) => Self::canonical_date_time(date_time.as_ref()),
+            Self::DateTimeStamp(date_time) => {
                 Self::canonical_date_time_stamp(date_time.as_ref())
             }
-            atomic::Atomic::Time(time) => Self::canonical_time(time.as_ref()),
-            atomic::Atomic::Date(date) => Self::canonical_date(date.as_ref()),
-            atomic::Atomic::GYearMonth(year_month) => {
+            Self::Time(time) => Self::canonical_time(time.as_ref()),
+            Self::Date(date) => Self::canonical_date(date.as_ref()),
+            Self::GYearMonth(year_month) => {
                 Self::canonical_g_year_month(year_month.as_ref())
             }
-            atomic::Atomic::GYear(year) => Self::canonical_g_year(year.as_ref()),
-            atomic::Atomic::GMonthDay(month_day) => Self::canonical_g_month_day(month_day.as_ref()),
-            atomic::Atomic::GDay(day) => Self::canonical_g_day(day.as_ref()),
-            atomic::Atomic::GMonth(month) => Self::canonical_g_month(month.as_ref()),
-            atomic::Atomic::Boolean(b) => {
+            Self::GYear(year) => Self::canonical_g_year(year.as_ref()),
+            Self::GMonthDay(month_day) => Self::canonical_g_month_day(month_day.as_ref()),
+            Self::GDay(day) => Self::canonical_g_day(day.as_ref()),
+            Self::GMonth(month) => Self::canonical_g_month(month.as_ref()),
+            Self::Boolean(b) => {
                 if b {
                     "true".to_string()
                 } else {
                     "false".to_string()
                 }
             }
-            atomic::Atomic::Binary(binary_type, data) => match binary_type {
+            Self::Binary(binary_type, data) => match binary_type {
                 atomic::BinaryType::Base64 => Self::canonical_base64_binary(data.as_ref()),
                 atomic::BinaryType::Hex => Self::canonical_hex_binary(data.as_ref()),
             },
-            atomic::Atomic::QName(name) => name.full_name().to_string(),
+            Self::QName(name) => name.full_name().to_string(),
         }
     }
 
@@ -90,7 +90,7 @@ impl atomic::Atomic {
         self,
         xs: Xs,
         static_context: &context::StaticContext,
-    ) -> error::Result<atomic::Atomic> {
+    ) -> error::Result<Self> {
         // if we try to cast to any atomic type, we're already the correct type
         if xs == Xs::AnyAtomicType {
             return Ok(self);
@@ -158,18 +158,18 @@ impl atomic::Atomic {
 
     pub(crate) fn cast_to_schema_type_of(
         self,
-        other: &atomic::Atomic,
+        other: &Self,
         context: &context::StaticContext,
-    ) -> error::Result<atomic::Atomic> {
+    ) -> error::Result<Self> {
         self.cast_to_schema_type(other.schema_type(), context)
     }
 
     // if a derives from b, cast to b, otherwise vice versa
     pub(crate) fn cast_to_same_schema_type(
         self,
-        other: atomic::Atomic,
+        other: Self,
         context: &context::StaticContext,
-    ) -> error::Result<(atomic::Atomic, atomic::Atomic)> {
+    ) -> error::Result<(Self, Self)> {
         if self.derives_from(&other) {
             let a = self.cast_to_schema_type_of(&other, context)?;
             Ok((a, other))
@@ -181,17 +181,17 @@ impl atomic::Atomic {
         }
     }
 
-    pub(crate) fn cast_to_boolean(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_boolean(self) -> error::Result<Self> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::XPTY0004),
-            atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => {
+            Self::String(atomic::StringType::AnyURI, _) => Err(error::Error::XPTY0004),
+            Self::Untyped(s) | Self::String(_, s) => {
                 Self::parse_atomic::<bool>(&s)
             }
-            atomic::Atomic::Float(f) => Ok(atomic::Atomic::Boolean(!(f.is_nan() || f.is_zero()))),
-            atomic::Atomic::Decimal(d) => Ok(atomic::Atomic::Boolean(!d.is_zero())),
-            atomic::Atomic::Integer(_, i) => Ok(atomic::Atomic::Boolean(!i.is_zero())),
-            atomic::Atomic::Double(d) => Ok(atomic::Atomic::Boolean(!(d.is_nan() || d.is_zero()))),
-            atomic::Atomic::Boolean(_) => Ok(self.clone()),
+            Self::Float(f) => Ok(Self::Boolean(!(f.is_nan() || f.is_zero()))),
+            Self::Decimal(d) => Ok(Self::Boolean(!d.is_zero())),
+            Self::Integer(_, i) => Ok(Self::Boolean(!i.is_zero())),
+            Self::Double(d) => Ok(Self::Boolean(!(d.is_nan() || d.is_zero()))),
+            Self::Boolean(_) => Ok(self.clone()),
             _ => Err(error::Error::XPTY0004),
         }
     }
@@ -209,31 +209,31 @@ impl atomic::Atomic {
         self,
         binary_type: atomic::BinaryType,
         decode: F,
-    ) -> error::Result<atomic::Atomic>
+    ) -> error::Result<Self>
     where
         F: Fn(&str) -> error::Result<Vec<u8>>,
     {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::XPTY0004),
-            atomic::Atomic::String(_, s) | atomic::Atomic::Untyped(s) => {
+            Self::String(atomic::StringType::AnyURI, _) => Err(error::Error::XPTY0004),
+            Self::String(_, s) | Self::Untyped(s) => {
                 let s = s.as_ref();
                 let s = whitespace_remove(s);
                 let data = decode(&s)?;
-                Ok(atomic::Atomic::Binary(binary_type, data.into()))
+                Ok(Self::Binary(binary_type, data.into()))
             }
-            atomic::Atomic::Binary(_, data) => Ok(atomic::Atomic::Binary(binary_type, data)),
+            Self::Binary(_, data) => Ok(Self::Binary(binary_type, data)),
             _ => Err(error::Error::XPTY0004),
         }
     }
 
-    pub(crate) fn cast_to_hex_binary(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_hex_binary(self) -> error::Result<Self> {
         self.cast_to_binary(atomic::BinaryType::Hex, |s: &str| {
             let data = hex::decode(s);
             data.map_err(|_| error::Error::FORG0001)
         })
     }
 
-    pub(crate) fn cast_to_base64_binary(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_base64_binary(self) -> error::Result<Self> {
         self.cast_to_binary(atomic::BinaryType::Base64, |s: &str| {
             use base64::Engine;
             base64::engine::general_purpose::STANDARD
@@ -255,7 +255,7 @@ impl FromStr for Parsed<bool> {
     type Err = error::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Parsed(atomic::Atomic::parse_boolean(s)?))
+        Ok(Self(atomic::Atomic::parse_boolean(s)?))
     }
 }
 

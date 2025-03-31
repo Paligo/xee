@@ -21,7 +21,7 @@ impl Range {
             return Err(error::Error::FOAR0002);
         }
 
-        Ok(Range {
+        Ok(Self {
             start: start.into(),
             end: end.into(),
         })
@@ -151,7 +151,7 @@ pub struct RangeIterator {
 
 impl RangeIterator {
     pub(crate) fn new(start: IBig, end: IBig) -> Self {
-        RangeIterator {
+        Self {
             start,
             end,
             index: 0.into(),
@@ -184,21 +184,21 @@ impl Iterator for RangeIterator {
 impl<'a, I> SequenceExt<'a, I> for Range
 where
     I: Iterator<Item = Item> + 'a,
-    Range: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
 }
 
 impl<'a, I> SequenceCompare<'a, I> for Range
 where
     I: Iterator<Item = Item> + 'a,
-    Range: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
 }
 
 impl<'a, I> SequenceOrder<'a, I> for Range
 where
     I: Iterator<Item = Item>,
-    Range: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
     fn one_node(&self) -> error::Result<xot::Node> {
         // a range never contains nodes

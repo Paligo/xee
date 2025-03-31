@@ -20,19 +20,19 @@ pub enum IntegerType {
 impl IntegerType {
     pub(crate) fn schema_type(&self) -> Xs {
         match self {
-            IntegerType::Integer => Xs::Integer,
-            IntegerType::Long => Xs::Long,
-            IntegerType::Int => Xs::Int,
-            IntegerType::Short => Xs::Short,
-            IntegerType::Byte => Xs::Byte,
-            IntegerType::UnsignedLong => Xs::UnsignedLong,
-            IntegerType::UnsignedInt => Xs::UnsignedInt,
-            IntegerType::UnsignedShort => Xs::UnsignedShort,
-            IntegerType::UnsignedByte => Xs::UnsignedByte,
-            IntegerType::NonPositiveInteger => Xs::NonPositiveInteger,
-            IntegerType::NegativeInteger => Xs::NegativeInteger,
-            IntegerType::NonNegativeInteger => Xs::NonNegativeInteger,
-            IntegerType::PositiveInteger => Xs::PositiveInteger,
+            Self::Integer => Xs::Integer,
+            Self::Long => Xs::Long,
+            Self::Int => Xs::Int,
+            Self::Short => Xs::Short,
+            Self::Byte => Xs::Byte,
+            Self::UnsignedLong => Xs::UnsignedLong,
+            Self::UnsignedInt => Xs::UnsignedInt,
+            Self::UnsignedShort => Xs::UnsignedShort,
+            Self::UnsignedByte => Xs::UnsignedByte,
+            Self::NonPositiveInteger => Xs::NonPositiveInteger,
+            Self::NegativeInteger => Xs::NegativeInteger,
+            Self::NonNegativeInteger => Xs::NonNegativeInteger,
+            Self::PositiveInteger => Xs::PositiveInteger,
         }
     }
 }
@@ -69,17 +69,17 @@ pub enum StringType {
 impl StringType {
     pub(crate) fn schema_type(&self) -> Xs {
         match self {
-            StringType::String => Xs::String,
-            StringType::NormalizedString => Xs::NormalizedString,
-            StringType::Token => Xs::Token,
-            StringType::Language => Xs::Language,
-            StringType::NMTOKEN => Xs::NMTOKEN,
-            StringType::Name => Xs::Name,
-            StringType::NCName => Xs::NCName,
-            StringType::ID => Xs::ID,
-            StringType::IDREF => Xs::IDREF,
-            StringType::ENTITY => Xs::ENTITY,
-            StringType::AnyURI => Xs::AnyURI,
+            Self::String => Xs::String,
+            Self::NormalizedString => Xs::NormalizedString,
+            Self::Token => Xs::Token,
+            Self::Language => Xs::Language,
+            Self::NMTOKEN => Xs::NMTOKEN,
+            Self::Name => Xs::Name,
+            Self::NCName => Xs::NCName,
+            Self::ID => Xs::ID,
+            Self::IDREF => Xs::IDREF,
+            Self::ENTITY => Xs::ENTITY,
+            Self::AnyURI => Xs::AnyURI,
         }
     }
 }
@@ -96,8 +96,8 @@ pub enum BinaryType {
 impl BinaryType {
     pub(crate) fn schema_type(&self) -> Xs {
         match self {
-            BinaryType::Base64 => Xs::Base64Binary,
-            BinaryType::Hex => Xs::HexBinary,
+            Self::Base64 => Xs::Base64Binary,
+            Self::Hex => Xs::HexBinary,
         }
     }
 }

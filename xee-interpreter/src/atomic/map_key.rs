@@ -49,20 +49,20 @@ pub enum MapKey {
 static_assertions::assert_eq_size!(MapKey, [u8; 16]);
 
 impl MapKey {
-    pub(crate) fn new(atomic: Atomic) -> error::Result<MapKey> {
+    pub(crate) fn new(atomic: Atomic) -> error::Result<Self> {
         match &atomic {
             // string types (including AnyURI) and untyped are stored as the same key
-            Atomic::String(_, s) | Atomic::Untyped(s) => Ok(MapKey::String(s.to_string().into())),
+            Atomic::String(_, s) | Atomic::Untyped(s) => Ok(Self::String(s.to_string().into())),
             // floats and doubles are have special handling for NaN and infinity.
             // Otherwise they are stored as decimals
             Atomic::Float(OrderedFloat(f)) => {
                 if f.is_nan() {
-                    Ok(MapKey::NaN)
+                    Ok(Self::NaN)
                 } else if f.is_infinite() {
                     if f.is_sign_positive() {
-                        Ok(MapKey::PositiveInfinity)
+                        Ok(Self::PositiveInfinity)
                     } else {
-                        Ok(MapKey::NegativeInfinity)
+                        Ok(Self::NegativeInfinity)
                     }
                 } else {
                     Self::new(atomic.cast_to_decimal()?)
@@ -70,12 +70,12 @@ impl MapKey {
             }
             Atomic::Double(OrderedFloat(f)) => {
                 if f.is_nan() {
-                    Ok(MapKey::NaN)
+                    Ok(Self::NaN)
                 } else if f.is_infinite() {
                     if f.is_sign_positive() {
-                        Ok(MapKey::PositiveInfinity)
+                        Ok(Self::PositiveInfinity)
                     } else {
-                        Ok(MapKey::NegativeInfinity)
+                        Ok(Self::NegativeInfinity)
                     }
                 } else {
                     Self::new(atomic.cast_to_decimal()?)
@@ -88,65 +88,65 @@ impl MapKey {
                 if d.is_integer() {
                     Self::new(atomic.cast_to_integer()?)
                 } else {
-                    Ok(MapKey::Decimal(d.clone()))
+                    Ok(Self::Decimal(d.clone()))
                 }
             }
-            Atomic::Integer(_, i) => Ok(MapKey::Integer(i.clone())),
+            Atomic::Integer(_, i) => Ok(Self::Integer(i.clone())),
 
             // All types of duration as stored the same way, so they
             // can have the same key
-            Atomic::Duration(d) => Ok(MapKey::Duration(d.clone())),
-            Atomic::YearMonthDuration(d) => Ok(MapKey::Duration(
+            Atomic::Duration(d) => Ok(Self::Duration(d.clone())),
+            Atomic::YearMonthDuration(d) => Ok(Self::Duration(
                 Duration::from_year_month(d.clone()).into(),
             )),
-            Atomic::DayTimeDuration(d) => Ok(MapKey::Duration(
+            Atomic::DayTimeDuration(d) => Ok(Self::Duration(
                 Duration::from_day_time(*d.as_ref()).into(),
             )),
             // date times with a timezone are stored as a chrono datetime,
             // or they are stored as a naive datetime
             Atomic::DateTime(d) => {
                 if d.offset.is_some() {
-                    Ok(MapKey::DateTime(
+                    Ok(Self::DateTime(
                         d.to_naive_date_time(chrono::offset::Utc.fix()),
                     ))
                 } else {
-                    Ok(MapKey::NaiveDateTime(d.date_time))
+                    Ok(Self::NaiveDateTime(d.date_time))
                 }
             }
-            Atomic::DateTimeStamp(d) => Ok(MapKey::DateTime(d.naive_local())),
+            Atomic::DateTimeStamp(d) => Ok(Self::DateTime(d.naive_local())),
             // times and dates with a timezone are stored as a chrono
             // datetime (but separately), or they are stored as a naive
             // time or date
             Atomic::Time(t) => {
                 if t.offset.is_some() {
-                    Ok(MapKey::Time(
+                    Ok(Self::Time(
                         t.to_naive_date_time(chrono::offset::Utc.fix()),
                     ))
                 } else {
-                    Ok(MapKey::NaiveTime(t.time))
+                    Ok(Self::NaiveTime(t.time))
                 }
             }
             Atomic::Date(d) => {
                 if d.offset.is_some() {
-                    Ok(MapKey::Date(
+                    Ok(Self::Date(
                         d.to_naive_date_time(chrono::offset::Utc.fix()),
                     ))
                 } else {
-                    Ok(MapKey::NaiveDate(d.date))
+                    Ok(Self::NaiveDate(d.date))
                 }
             }
             // gregorian objects have hashes that are already okay
-            Atomic::GYearMonth(g) => Ok(MapKey::GYearMonth(g.clone())),
-            Atomic::GYear(g) => Ok(MapKey::GYear(g.clone())),
-            Atomic::GMonthDay(g) => Ok(MapKey::GMonthDay(g.clone())),
-            Atomic::GDay(g) => Ok(MapKey::GDay(g.clone())),
-            Atomic::GMonth(g) => Ok(MapKey::GMonth(g.clone())),
+            Atomic::GYearMonth(g) => Ok(Self::GYearMonth(g.clone())),
+            Atomic::GYear(g) => Ok(Self::GYear(g.clone())),
+            Atomic::GMonthDay(g) => Ok(Self::GMonthDay(g.clone())),
+            Atomic::GDay(g) => Ok(Self::GDay(g.clone())),
+            Atomic::GMonth(g) => Ok(Self::GMonth(g.clone())),
             // booleans are stored as themselves
-            Atomic::Boolean(b) => Ok(MapKey::Boolean(*b)),
+            Atomic::Boolean(b) => Ok(Self::Boolean(*b)),
             // binary types are stored as themselves
-            Atomic::Binary(t, b) => Ok(MapKey::Binary(*t, b.to_vec().into())),
+            Atomic::Binary(t, b) => Ok(Self::Binary(*t, b.to_vec().into())),
             // qnames are stored as themselves
-            Atomic::QName(q) => Ok(MapKey::QName(q.clone())),
+            Atomic::QName(q) => Ok(Self::QName(q.clone())),
         }
     }
 }

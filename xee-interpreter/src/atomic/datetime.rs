@@ -57,7 +57,7 @@ impl YearMonthDuration {
 
 impl From<YearMonthDuration> for Atomic {
     fn from(year_month_duration: YearMonthDuration) -> Self {
-        Atomic::YearMonthDuration(year_month_duration)
+        Self::YearMonthDuration(year_month_duration)
     }
 }
 
@@ -96,7 +96,7 @@ impl Duration {
 
 impl From<Duration> for Atomic {
     fn from(duration: Duration) -> Self {
-        Atomic::Duration(duration.into())
+        Self::Duration(duration.into())
     }
 }
 
@@ -106,8 +106,8 @@ impl TryFrom<Atomic> for Duration {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Duration(d) => Ok(d.as_ref().clone()),
-            Atomic::YearMonthDuration(d) => Ok(Duration::from_year_month(d)),
-            Atomic::DayTimeDuration(d) => Ok(Duration::from_day_time(*d)),
+            Atomic::YearMonthDuration(d) => Ok(Self::from_year_month(d)),
+            Atomic::DayTimeDuration(d) => Ok(Self::from_day_time(*d)),
             _ => Err(error::Error::XPTY0004),
         }
     }
@@ -139,19 +139,19 @@ impl From<NaiveDateTimeWithOffset> for chrono::DateTime<chrono::FixedOffset> {
         let offset = naive_date_time_with_offset
             .offset
             .unwrap_or_else(|| chrono::offset::Utc.fix());
-        chrono::DateTime::from_naive_utc_and_offset(naive_date_time_with_offset.date_time, offset)
+        Self::from_naive_utc_and_offset(naive_date_time_with_offset.date_time, offset)
     }
 }
 
 impl From<chrono::DateTime<chrono::FixedOffset>> for NaiveDateTimeWithOffset {
     fn from(date_time: chrono::DateTime<chrono::FixedOffset>) -> Self {
-        NaiveDateTimeWithOffset::new(date_time.naive_local(), Some(*date_time.offset()))
+        Self::new(date_time.naive_local(), Some(*date_time.offset()))
     }
 }
 
 impl From<NaiveDateTimeWithOffset> for Atomic {
     fn from(date_time: NaiveDateTimeWithOffset) -> Self {
-        Atomic::DateTime(date_time.into())
+        Self::DateTime(date_time.into())
     }
 }
 
@@ -229,7 +229,7 @@ impl ToDateTimeStamp for NaiveTimeWithOffset {
 
 impl From<NaiveTimeWithOffset> for Atomic {
     fn from(time: NaiveTimeWithOffset) -> Self {
-        Atomic::Time(time.into())
+        Self::Time(time.into())
     }
 }
 
@@ -273,7 +273,7 @@ impl ToDateTimeStamp for NaiveDateWithOffset {
 
 impl From<NaiveDateWithOffset> for Atomic {
     fn from(date: NaiveDateWithOffset) -> Self {
-        Atomic::Date(date.into())
+        Self::Date(date.into())
     }
 }
 
@@ -300,7 +300,7 @@ impl GYearMonth {
 
 impl From<GYearMonth> for Atomic {
     fn from(g_year_month: GYearMonth) -> Self {
-        Atomic::GYearMonth(g_year_month.into())
+        Self::GYearMonth(g_year_month.into())
     }
 }
 
@@ -322,7 +322,7 @@ impl GYear {
 
 impl From<GYear> for Atomic {
     fn from(g_year: GYear) -> Self {
-        Atomic::GYear(g_year.into())
+        Self::GYear(g_year.into())
     }
 }
 
@@ -345,7 +345,7 @@ impl GMonthDay {
 
 impl From<GMonthDay> for Atomic {
     fn from(g_month_day: GMonthDay) -> Self {
-        Atomic::GMonthDay(g_month_day.into())
+        Self::GMonthDay(g_month_day.into())
     }
 }
 
@@ -367,7 +367,7 @@ impl GDay {
 
 impl From<GDay> for Atomic {
     fn from(g_day: GDay) -> Self {
-        Atomic::GDay(g_day.into())
+        Self::GDay(g_day.into())
     }
 }
 
@@ -389,19 +389,19 @@ impl GMonth {
 
 impl From<GMonth> for Atomic {
     fn from(g_month: GMonth) -> Self {
-        Atomic::GMonth(g_month.into())
+        Self::GMonth(g_month.into())
     }
 }
 
 impl From<chrono::Duration> for Atomic {
     fn from(duration: chrono::Duration) -> Self {
-        Atomic::DayTimeDuration(duration.into())
+        Self::DayTimeDuration(duration.into())
     }
 }
 
 impl From<chrono::DateTime<chrono::FixedOffset>> for Atomic {
     fn from(date_time: chrono::DateTime<chrono::FixedOffset>) -> Self {
-        Atomic::DateTimeStamp(date_time.into())
+        Self::DateTimeStamp(date_time.into())
     }
 }
 

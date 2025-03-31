@@ -58,81 +58,81 @@ static NC_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 impl atomic::Atomic {
-    pub(crate) fn cast_to_string(self) -> atomic::Atomic {
-        atomic::Atomic::String(atomic::StringType::String, self.into_canonical().into())
+    pub(crate) fn cast_to_string(self) -> Self {
+        Self::String(atomic::StringType::String, self.into_canonical().into())
     }
 
-    pub(crate) fn cast_to_untyped_atomic(self) -> atomic::Atomic {
-        atomic::Atomic::Untyped(self.into_canonical().into())
+    pub(crate) fn cast_to_untyped_atomic(self) -> Self {
+        Self::Untyped(self.into_canonical().into())
     }
 
-    pub(crate) fn cast_to_any_uri(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_any_uri(self) -> error::Result<Self> {
         // https://www.w3.org/TR/xpath-functions-31/#casting-to-anyuri
         match self {
-            atomic::Atomic::String(_, s) => Ok(atomic::Atomic::String(
+            Self::String(_, s) => Ok(Self::String(
                 StringType::AnyURI,
                 whitespace_collapse(&s).into(),
             )),
-            atomic::Atomic::Untyped(s) => Ok(atomic::Atomic::String(StringType::AnyURI, s.clone())),
+            Self::Untyped(s) => Ok(Self::String(StringType::AnyURI, s.clone())),
             _ => Err(error::Error::XPTY0004),
         }
     }
 
-    pub(crate) fn cast_to_normalized_string(self) -> atomic::Atomic {
+    pub(crate) fn cast_to_normalized_string(self) -> Self {
         let s = whitespace_replace(&self.into_canonical());
-        atomic::Atomic::String(atomic::StringType::NormalizedString, s.into())
+        Self::String(atomic::StringType::NormalizedString, s.into())
     }
 
-    pub(crate) fn cast_to_token(self) -> atomic::Atomic {
+    pub(crate) fn cast_to_token(self) -> Self {
         let s = whitespace_collapse(&self.into_canonical());
-        atomic::Atomic::String(atomic::StringType::Token, s.into())
+        Self::String(atomic::StringType::Token, s.into())
     }
 
     fn cast_to_regex(
         self,
         string_type: atomic::StringType,
         regex: &LazyLock<Regex>,
-    ) -> error::Result<atomic::Atomic> {
+    ) -> error::Result<Self> {
         let s = whitespace_collapse(&self.into_canonical());
         if regex.is_match(&s) {
-            Ok(atomic::Atomic::String(string_type, s.into()))
+            Ok(Self::String(string_type, s.into()))
         } else {
             Err(error::Error::FORG0001)
         }
     }
 
-    pub(crate) fn cast_to_language(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_language(self) -> error::Result<Self> {
         self.cast_to_regex(atomic::StringType::Language, &LANGUAGE_REGEX)
     }
 
-    pub(crate) fn cast_to_nmtoken(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_nmtoken(self) -> error::Result<Self> {
         self.cast_to_regex(atomic::StringType::NMTOKEN, &NMTOKEN_REGEX)
     }
 
-    pub(crate) fn cast_to_name(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_name(self) -> error::Result<Self> {
         self.cast_to_regex(atomic::StringType::Name, &NAME_REGEX)
     }
 
     fn cast_to_ncname_helper(
         self,
         string_type: atomic::StringType,
-    ) -> error::Result<atomic::Atomic> {
+    ) -> error::Result<Self> {
         self.cast_to_regex(string_type, &NC_NAME_REGEX)
     }
 
-    pub(crate) fn cast_to_ncname(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_ncname(self) -> error::Result<Self> {
         self.cast_to_ncname_helper(atomic::StringType::NCName)
     }
 
-    pub(crate) fn cast_to_id(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_id(self) -> error::Result<Self> {
         self.cast_to_ncname_helper(atomic::StringType::ID)
     }
 
-    pub(crate) fn cast_to_idref(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_idref(self) -> error::Result<Self> {
         self.cast_to_ncname_helper(atomic::StringType::IDREF)
     }
 
-    pub(crate) fn cast_to_entity(self) -> error::Result<atomic::Atomic> {
+    pub(crate) fn cast_to_entity(self) -> error::Result<Self> {
         // https://www.w3.org/TR/xpath-functions-31/#casting-to-ENTITY
         // we don't need to check whether it matches unparsed entities
         self.cast_to_ncname_helper(atomic::StringType::ENTITY)
@@ -141,10 +141,10 @@ impl atomic::Atomic {
     pub(crate) fn cast_to_qname(
         self,
         static_context: &context::StaticContext,
-    ) -> error::Result<atomic::Atomic> {
+    ) -> error::Result<Self> {
         match self {
-            atomic::Atomic::QName(_) => Ok(self.clone()),
-            atomic::Atomic::String(_, s) | atomic::Atomic::Untyped(s) => {
+            Self::QName(_) => Ok(self.clone()),
+            Self::String(_, s) | Self::Untyped(s) => {
                 // https://www.w3.org/TR/xpath-functions-31/#constructor-qname-notation
                 let namespaces = static_context.namespaces();
                 let name = parse_name(&s, namespaces);
@@ -156,7 +156,7 @@ impl atomic::Atomic {
                             // legal for xs:QName
                             Err(error::Error::FORG0001)
                         } else {
-                            Ok(atomic::Atomic::QName(
+                            Ok(Self::QName(
                                 name.with_default_namespace(namespaces.default_element_namespace())
                                     .into(),
                             ))

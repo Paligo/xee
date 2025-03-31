@@ -232,7 +232,7 @@ where
         document: &mut Documents,
         context: &context::DynamicContext,
     ) -> Result<V> {
-        OneQuery::execute_with_context(self, document, context)
+        Self::execute_with_context(self, document, context)
     }
 }
 
@@ -270,7 +270,7 @@ impl<V> RecurseQuery<V, V> for OneRecurseQuery {
         context: &context::DynamicContext,
         recurse: &Recurse<V>,
     ) -> Result<V> {
-        OneRecurseQuery::execute_with_context(self, document, context, recurse)
+        Self::execute_with_context(self, document, context, recurse)
     }
 }
 
@@ -361,7 +361,7 @@ impl<V> RecurseQuery<Option<V>, V> for OptionRecurseQuery {
         context: &context::DynamicContext,
         recurse: &Recurse<V>,
     ) -> Result<Option<V>> {
-        OptionRecurseQuery::execute_with_context(self, document, context, recurse)
+        Self::execute_with_context(self, document, context, recurse)
     }
 }
 
@@ -457,7 +457,7 @@ impl<V> RecurseQuery<Vec<V>, V> for ManyRecurseQuery {
         context: &context::DynamicContext,
         recurse: &Recurse<V>,
     ) -> Result<Vec<V>> {
-        ManyRecurseQuery::execute_with_context(self, document, context, recurse)
+        Self::execute_with_context(self, document, context, recurse)
     }
 }
 

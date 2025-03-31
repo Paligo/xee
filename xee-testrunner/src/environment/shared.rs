@@ -38,7 +38,7 @@ impl<E: Environment> ContextLoadable<Path> for SharedEnvironments<E> {
     fn load_with_context(
         queries: &Queries,
         path: &Path,
-    ) -> Result<impl Query<SharedEnvironments<E>>> {
+    ) -> Result<impl Query<Self>> {
         let name_query = queries.one("@name/string()", convert_string)?;
         let environment_spec_query = E::load(queries, path)?;
         let environments_query = queries.many("environment", move |session, item| {
@@ -48,7 +48,7 @@ impl<E: Environment> ContextLoadable<Path> for SharedEnvironments<E> {
         })?;
         let shared_environments_query = queries.one(".", move |session, item| {
             let environments = environments_query.execute(session, item)?;
-            Ok(SharedEnvironments::new(environments.into_iter().collect()))
+            Ok(Self::new(environments.into_iter().collect()))
         })?;
         Ok(shared_environments_query)
     }

@@ -26,15 +26,15 @@ impl std::error::Error for DocumentsError {}
 impl std::fmt::Display for DocumentsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DocumentsError::DuplicateUri(uri) => write!(f, "Duplicate URI: {}", uri),
-            DocumentsError::Parse(e) => write!(f, "Parse error: {}", e),
+            Self::DuplicateUri(uri) => write!(f, "Duplicate URI: {}", uri),
+            Self::Parse(e) => write!(f, "Parse error: {}", e),
         }
     }
 }
 
 impl From<xot::ParseError> for DocumentsError {
     fn from(e: xot::ParseError) -> Self {
-        DocumentsError::Parse(e)
+        Self::Parse(e)
     }
 }
 

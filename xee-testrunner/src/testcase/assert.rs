@@ -723,22 +723,22 @@ impl TestCaseResult {
         result: &error::ValueResult<Sequence>,
     ) -> TestOutcome {
         match self {
-            TestCaseResult::AnyOf(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AllOf(a) => a.assert_result(context, documents, result),
-            TestCaseResult::Not(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertEq(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertDeepEq(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertTrue(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertFalse(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertCount(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertStringValue(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertXml(a) => a.assert_result(context, documents, result),
-            TestCaseResult::Assert(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertPermutation(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertError(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertEmpty(a) => a.assert_result(context, documents, result),
-            TestCaseResult::AssertType(a) => a.assert_result(context, documents, result),
-            TestCaseResult::Unsupported => TestOutcome::Unsupported,
+            Self::AnyOf(a) => a.assert_result(context, documents, result),
+            Self::AllOf(a) => a.assert_result(context, documents, result),
+            Self::Not(a) => a.assert_result(context, documents, result),
+            Self::AssertEq(a) => a.assert_result(context, documents, result),
+            Self::AssertDeepEq(a) => a.assert_result(context, documents, result),
+            Self::AssertTrue(a) => a.assert_result(context, documents, result),
+            Self::AssertFalse(a) => a.assert_result(context, documents, result),
+            Self::AssertCount(a) => a.assert_result(context, documents, result),
+            Self::AssertStringValue(a) => a.assert_result(context, documents, result),
+            Self::AssertXml(a) => a.assert_result(context, documents, result),
+            Self::Assert(a) => a.assert_result(context, documents, result),
+            Self::AssertPermutation(a) => a.assert_result(context, documents, result),
+            Self::AssertError(a) => a.assert_result(context, documents, result),
+            Self::AssertEmpty(a) => a.assert_result(context, documents, result),
+            Self::AssertType(a) => a.assert_result(context, documents, result),
+            Self::Unsupported => TestOutcome::Unsupported,
             _ => {
                 panic!("unimplemented test case result {:?}", self);
             }
@@ -756,7 +756,7 @@ impl Loadable for TestCaseResult {
     fn load(queries: &Queries) -> anyhow::Result<impl Query<Self>> {
         let code_query = queries.one("@code/string()", convert_string)?;
         let error_query = queries.one(".", move |documents, item| {
-            Ok(TestCaseResult::AssertError(AssertError::new(
+            Ok(Self::AssertError(AssertError::new(
                 code_query.execute(documents, item)?,
             )))
         })?;
@@ -764,22 +764,22 @@ impl Loadable for TestCaseResult {
             let count: String = item.to_atomic()?.try_into()?;
             // XXX unwrap is a hack
             let count = count.parse::<usize>().unwrap();
-            Ok(TestCaseResult::AssertCount(AssertCount::new(count)))
+            Ok(Self::AssertCount(AssertCount::new(count)))
         })?;
 
         let assert_xml_query = queries.one("string()", |_, item| {
             let xml: String = item.to_atomic()?.try_into()?;
-            Ok(TestCaseResult::AssertXml(AssertXml::new(xml)))
+            Ok(Self::AssertXml(AssertXml::new(xml)))
         })?;
 
         let assert_eq_query = queries.one("string()", |_, item| {
             let eq: String = item.to_atomic()?.try_into()?;
-            Ok(TestCaseResult::AssertEq(AssertEq::new(eq)))
+            Ok(Self::AssertEq(AssertEq::new(eq)))
         })?;
 
         let assert_deep_eq_query = queries.one("string()", |_, item| {
             let eq: String = item.to_atomic()?.try_into()?;
-            Ok(TestCaseResult::AssertDeepEq(AssertDeepEq::new(eq)))
+            Ok(Self::AssertDeepEq(AssertDeepEq::new(eq)))
         })?;
 
         let string_value_contents = queries.one("string()", convert_string)?;
@@ -790,7 +790,7 @@ impl Loadable for TestCaseResult {
             let normalize_space = normalize_space_query
                 .execute(documents, item)?
                 .unwrap_or(false);
-            Ok(TestCaseResult::AssertStringValue(AssertStringValue::new(
+            Ok(Self::AssertStringValue(AssertStringValue::new(
                 string_value,
                 normalize_space,
             )))
@@ -798,17 +798,17 @@ impl Loadable for TestCaseResult {
 
         let assert_type_query = queries.one("string()", |_, item| {
             let string_value: String = item.to_atomic()?.try_into()?;
-            Ok(TestCaseResult::AssertType(AssertType::new(string_value)))
+            Ok(Self::AssertType(AssertType::new(string_value)))
         })?;
 
         let assert_query = queries.one("string()", |_, item| {
             let xpath: String = item.to_atomic()?.try_into()?;
-            Ok(TestCaseResult::Assert(Assert::new(xpath)))
+            Ok(Self::Assert(Assert::new(xpath)))
         })?;
 
         let assert_permutation_query = queries.one("string()", |_, item| {
             let xpath: String = item.to_atomic()?.try_into()?;
-            Ok(TestCaseResult::AssertPermutation(AssertPermutation::new(
+            Ok(Self::AssertPermutation(AssertPermutation::new(
                 xpath,
             )))
         })?;
@@ -825,24 +825,24 @@ impl Loadable for TestCaseResult {
         let result_query =
             queries.one("result/*", move |documents: &mut Documents, item: &Item| {
                 let f =
-                    |documents: &mut Documents, item: &Item, recurse: &Recurse<TestCaseResult>| {
+                    |documents: &mut Documents, item: &Item, recurse: &Recurse<Self>| {
                         let local_name = local_name_query.execute(documents, item)?;
                         let r = match local_name.as_ref() {
                             "any-of" => {
                                 let contents = any_all_recurse.execute(documents, item, recurse)?;
-                                TestCaseResult::AnyOf(AssertAnyOf::new(contents))
+                                Self::AnyOf(AssertAnyOf::new(contents))
                             }
                             "all-of" => {
                                 let contents = any_all_recurse.execute(documents, item, recurse)?;
-                                TestCaseResult::AllOf(AssertAllOf::new(contents))
+                                Self::AllOf(AssertAllOf::new(contents))
                             }
                             "not" => {
                                 let contents = not_recurse.execute(documents, item, recurse)?;
-                                TestCaseResult::Not(AssertNot::new(contents))
+                                Self::Not(AssertNot::new(contents))
                             }
                             "error" => error_query.execute(documents, item)?,
-                            "assert-true" => TestCaseResult::AssertTrue(AssertTrue::new()),
-                            "assert-false" => TestCaseResult::AssertFalse(AssertFalse::new()),
+                            "assert-true" => Self::AssertTrue(AssertTrue::new()),
+                            "assert-false" => Self::AssertFalse(AssertFalse::new()),
                             "assert-count" => assert_count_query.execute(documents, item)?,
                             "assert-xml" => assert_xml_query.execute(documents, item)?,
                             "assert-eq" => assert_eq_query.execute(documents, item)?,
@@ -854,9 +854,9 @@ impl Loadable for TestCaseResult {
                             "assert-permutation" => {
                                 assert_permutation_query.execute(documents, item)?
                             }
-                            "assert-empty" => TestCaseResult::AssertEmpty(AssertEmpty::new()),
+                            "assert-empty" => Self::AssertEmpty(AssertEmpty::new()),
                             "assert-type" => assert_type_query.execute(documents, item)?,
-                            _ => TestCaseResult::Unsupported,
+                            _ => Self::Unsupported,
                         };
                         Ok(r)
                     };
@@ -902,7 +902,7 @@ pub enum Failure {
 impl fmt::Display for Failure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Failure::AnyOf(_, outcomes) => {
+            Self::AnyOf(_, outcomes) => {
                 writeln!(f, "any of:")?;
                 for outcome in outcomes {
                     match outcome {
@@ -916,76 +916,76 @@ impl fmt::Display for Failure {
                 }
                 Ok(())
             }
-            Failure::Not(_a, _outcome) => {
+            Self::Not(_a, _outcome) => {
                 writeln!(f, "not:")?;
                 // writeln!(f, "  {}", outcome)?;
                 Ok(())
             }
-            Failure::Eq(a, value) => {
+            Self::Eq(a, value) => {
                 writeln!(f, "eq:")?;
                 writeln!(f, "  expected: {:?}", a.0)?;
                 writeln!(f, "  actual: {:?}", value)?;
                 Ok(())
             }
-            Failure::DeepEq(a, value) => {
+            Self::DeepEq(a, value) => {
                 writeln!(f, "deep-eq:")?;
                 writeln!(f, "  expected: {:?}", a.0)?;
                 writeln!(f, "  actual: {:?}", value)?;
                 Ok(())
             }
-            Failure::True(_a, value) => {
+            Self::True(_a, value) => {
                 writeln!(f, "true:")?;
                 writeln!(f, "  expected: true")?;
                 writeln!(f, "  actual: {:?}", value)?;
                 Ok(())
             }
-            Failure::False(_a, value) => {
+            Self::False(_a, value) => {
                 writeln!(f, "false:")?;
                 writeln!(f, "  expected: false")?;
                 writeln!(f, "  actual: {:?}", value)?;
                 Ok(())
             }
-            Failure::Count(a, failure) => {
+            Self::Count(a, failure) => {
                 writeln!(f, "count:")?;
                 writeln!(f, "  expected: {:?}", a.0)?;
                 writeln!(f, "  actual: {:?}", failure)?;
                 Ok(())
             }
-            Failure::StringValue(a, failure) => {
+            Self::StringValue(a, failure) => {
                 writeln!(f, "string-value:")?;
                 writeln!(f, "  expected: {:?}", a.0)?;
                 writeln!(f, "  actual: {:?}", failure)?;
                 Ok(())
             }
-            Failure::Xml(a, failure) => {
+            Self::Xml(a, failure) => {
                 writeln!(f, "xml:")?;
                 writeln!(f, "  expected: {:?}", a.0)?;
                 writeln!(f, "  actual: {:?}", failure)?;
                 Ok(())
             }
-            Failure::Assert(_a, failure) => {
+            Self::Assert(_a, failure) => {
                 writeln!(f, "assert:")?;
                 writeln!(f, "  actual: {:?}", failure)?;
                 Ok(())
             }
-            Failure::Permutation(a, failure) => {
+            Self::Permutation(a, failure) => {
                 writeln!(f, "permutation:")?;
                 writeln!(f, "  expected: {:?}", a.0)?;
                 writeln!(f, "  actual: {:?}", failure)?;
                 Ok(())
             }
-            Failure::Empty(_a, value) => {
+            Self::Empty(_a, value) => {
                 writeln!(f, "empty:")?;
                 writeln!(f, "  actual: {:?}", value)?;
                 Ok(())
             }
-            Failure::Type(_a, value) => {
+            Self::Type(_a, value) => {
                 writeln!(f, "type:")?;
                 writeln!(f, "  expected type: {:?}", _a.0)?;
                 writeln!(f, "  value of wrong type: {:?}", value)?;
                 Ok(())
             }
-            Failure::Error(a, value) => {
+            Self::Error(a, value) => {
                 writeln!(f, "error:")?;
                 writeln!(f, "  expected: {:?}", a.0)?;
                 writeln!(f, "  actual: {:?}", value)?;

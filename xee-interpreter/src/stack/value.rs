@@ -16,7 +16,7 @@ static_assertions::assert_eq_size!(Value, [u8; 24]);
 
 impl Value {
     pub(crate) fn is_absent(&self) -> bool {
-        matches!(self, Value::Absent)
+        matches!(self, Self::Absent)
     }
 }
 
@@ -48,6 +48,6 @@ where
 {
     fn from(t: T) -> Self {
         let sequence: sequence::Sequence = t.into();
-        Value::Sequence(sequence)
+        Self::Sequence(sequence)
     }
 }

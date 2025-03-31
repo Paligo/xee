@@ -148,7 +148,7 @@ impl Source {
             let mut sources = Vec::new();
             if let Some(role) = role {
                 if role == "." {
-                    sources.push(Source {
+                    sources.push(Self {
                         metadata: metadata.clone(),
                         role: SourceRole::Context,
                         content: content.clone(),
@@ -156,7 +156,7 @@ impl Source {
                         validation: None,
                     })
                 } else {
-                    sources.push(Source {
+                    sources.push(Self {
                         metadata: metadata.clone(),
                         role: SourceRole::Var(role),
                         content: content.clone(),
@@ -165,7 +165,7 @@ impl Source {
                     });
                 }
             } else {
-                sources.push(Source {
+                sources.push(Self {
                     metadata,
                     role: SourceRole::Doc(uri.clone()),
                     content,

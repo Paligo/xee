@@ -81,7 +81,7 @@ impl Environment for XPathEnvironmentSpec {
             Ok(Namespace { prefix, uri })
         })?;
         let xpath_environment_spec_query = queries.one(".", move |session, item| {
-            Ok(XPathEnvironmentSpec {
+            Ok(Self {
                 environment_spec: environment_spec_query.execute(session, item)?,
                 namespaces: namespaces_query.execute(session, item)?,
                 // TODO

@@ -180,7 +180,7 @@ impl Runnable<XPathEnvironmentSpec> for XPathTestCase {
         let test_query = queries.one("test/string()", convert_string)?;
         let test_case_query = TestCase::load_with_context(queries, path)?;
         let test_case_query = test_case_query.map(move |test_case, session, context| {
-            Ok(XPathTestCase {
+            Ok(Self {
                 test_case,
                 test: test_query.execute_with_context(session, context)?,
             })
@@ -200,7 +200,7 @@ impl ContextLoadable<Path> for XPathTestCase {
         let test_query = queries.one("test/string()", convert_string)?;
         let test_case_query = TestCase::load_with_context(queries, path)?;
         let test_case_query = test_case_query.map(move |test_case, session, context| {
-            Ok(XPathTestCase {
+            Ok(Self {
                 test_case,
                 test: test_query.execute_with_context(session, context)?,
             })

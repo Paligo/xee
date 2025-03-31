@@ -39,7 +39,7 @@ pub struct ContextInfo {
 
 impl From<sequence::Item> for ContextInfo {
     fn from(item: sequence::Item) -> Self {
-        ContextInfo {
+        Self {
             item: item.into(),
             position: ibig!(1).into(),
             size: ibig!(1).into(),

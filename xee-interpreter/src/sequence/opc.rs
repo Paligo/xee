@@ -19,14 +19,14 @@ impl QNameOrString {
     // plain string, helps matching method later
     pub(crate) fn local_name(&self) -> Option<&str> {
         match self {
-            QNameOrString::QName(name) => {
+            Self::QName(name) => {
                 if name.namespace().is_empty() {
                     Some(name.local_name())
                 } else {
                     None
                 }
             }
-            QNameOrString::String(string) => Some(string),
+            Self::String(string) => Some(string),
         }
     }
 }

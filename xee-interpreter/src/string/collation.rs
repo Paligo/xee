@@ -31,7 +31,7 @@ pub(crate) struct CollatorQuery {
 
 impl From<CollatorQuery> for collator::CollatorOptions {
     fn from(query: CollatorQuery) -> Self {
-        let mut options = collator::CollatorOptions::new();
+        let mut options = Self::new();
         options.strength = Some(query.strength);
         options.alternate_handling = Some(query.alternate);
         options.case_first = Some(query.case_first);
@@ -137,7 +137,7 @@ impl CollatorQuery {
             return Err(error::Error::FOCH0002);
         }
 
-        Ok(CollatorQuery {
+        Ok(Self {
             fallback,
             lang: lang.map(|s| s.to_string()),
             strength: unwrap_or_fail(strength, Strength::Tertiary, fallback)?,
@@ -188,14 +188,14 @@ impl Collation {
         }
         let path = uri.path_str();
         Ok(match path {
-            "/2005/xpath-functions/collation/codepoint" => Collation::CodePoint,
+            "/2005/xpath-functions/collation/codepoint" => Self::CodePoint,
             "/2013/collation/UCA" => {
                 let collator_query = CollatorQuery::from_url(&uri)?;
-                Collation::Uca(Box::new(Self::uca_collator(collator_query)?))
+                Self::Uca(Box::new(Self::uca_collator(collator_query)?))
             }
-            "/2005/xpath-functions/collation/html-ascii-case-insensitive" => Collation::HtmlAscii,
+            "/2005/xpath-functions/collation/html-ascii-case-insensitive" => Self::HtmlAscii,
             // TODO: a bit of a hack, we support the qt3 caseblind collation too so that the test suite will work
-            "/2010/09/qt-fots-catalog/collation/caseblind" => Collation::HtmlAscii,
+            "/2010/09/qt-fots-catalog/collation/caseblind" => Self::HtmlAscii,
             _ => return Err(error::Error::FOCH0002),
         })
     }
@@ -227,9 +227,9 @@ impl Collation {
 
     pub(crate) fn compare(&self, a: &str, b: &str) -> Ordering {
         match self {
-            Collation::CodePoint => a.cmp(b),
-            Collation::Uca(collator) => collator.compare(a, b),
-            Collation::HtmlAscii => a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()),
+            Self::CodePoint => a.cmp(b),
+            Self::Uca(collator) => collator.compare(a, b),
+            Self::HtmlAscii => a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()),
         }
     }
 }

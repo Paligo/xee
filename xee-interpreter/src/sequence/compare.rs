@@ -61,7 +61,7 @@ impl Sequence {
 
     pub(crate) fn fallible_compare(
         &self,
-        other: &Sequence,
+        other: &Self,
         collation: &Collation,
         implicit_offset: chrono::FixedOffset,
     ) -> error::Result<Ordering> {
@@ -95,7 +95,7 @@ impl Sequence {
     /// or whether the comparison failed.
     pub(crate) fn compare(
         &self,
-        other: &Sequence,
+        other: &Self,
         collation: &Collation,
         implicit_offset: chrono::FixedOffset,
     ) -> Ordering {

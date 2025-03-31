@@ -262,7 +262,7 @@ impl Item {
         self,
         item_type: &ast::ItemType,
         cast_or_promote_atomic: &impl Fn(atomic::Atomic, Xs) -> error::Result<atomic::Atomic>,
-        check_function: &impl Fn(&ast::FunctionTest, &Item) -> error::Result<()>,
+        check_function: &impl Fn(&ast::FunctionTest, &Self) -> error::Result<()>,
         xot: &Xot,
     ) -> error::Result<()> {
         match item_type {
@@ -322,15 +322,15 @@ impl Item {
 
     fn kind_test_matching(&self, kind_test: &ast::KindTest, xot: &Xot) -> error::Result<()> {
         match self {
-            Item::Node(node) => {
+            Self::Node(node) => {
                 if xml::kind_test(kind_test, xot, *node) {
                     Ok(())
                 } else {
                     Err(error::Error::XPTY0004)
                 }
             }
-            Item::Atomic(_) => Err(error::Error::XPTY0004),
-            Item::Function(_) => Err(error::Error::XPTY0004),
+            Self::Atomic(_) => Err(error::Error::XPTY0004),
+            Self::Function(_) => Err(error::Error::XPTY0004),
         }
     }
 
@@ -421,7 +421,7 @@ impl atomic::Atomic {
     fn atomic_type_matching(
         self,
         xs: Xs,
-        cast_or_promote_atomic: &impl Fn(atomic::Atomic, Xs) -> error::Result<atomic::Atomic>,
+        cast_or_promote_atomic: &impl Fn(Self, Xs) -> error::Result<Self>,
     ) -> error::Result<Self> {
         let atom = cast_or_promote_atomic(self, xs)?;
         let schema_type = atom.schema_type();

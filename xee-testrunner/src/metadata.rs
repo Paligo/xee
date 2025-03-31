@@ -31,7 +31,7 @@ impl Loadable for Metadata {
         builder
     }
 
-    fn load(queries: &Queries) -> Result<impl Query<Metadata>> {
+    fn load(queries: &Queries) -> Result<impl Query<Self>> {
         let description_query = queries.option("description/string()", convert_string)?;
         let by_query = queries.one("@by/string()", convert_string)?;
         let on_query = queries.one("@on/string()", convert_string)?;
@@ -65,7 +65,7 @@ impl Loadable for Metadata {
             let description = description_query.execute(session, item)?;
             let created = created_query.execute(session, item)?;
             let modified = modified_query.execute(session, item)?;
-            Ok(Metadata {
+            Ok(Self {
                 description,
                 created,
                 modified,

@@ -69,11 +69,11 @@ where
     fn merge(self, other: Self) -> Self {
         match (self, other) {
             (
-                ParserError::ExpectedFound { span: span_a },
-                ParserError::ExpectedFound { span: _ },
-            ) => ParserError::ExpectedFound { span: span_a },
-            (ParserError::ExpectedFound { .. }, a) => a,
-            (a, ParserError::ExpectedFound { .. }) => a,
+                Self::ExpectedFound { span: span_a },
+                Self::ExpectedFound { span: _ },
+            ) => Self::ExpectedFound { span: span_a },
+            (Self::ExpectedFound { .. }, a) => a,
+            (a, Self::ExpectedFound { .. }) => a,
             (a, _) => a,
         }
     }

@@ -96,7 +96,7 @@ impl Bindings {
     }
 
     /// Concatenate one bindings object with another, creating a new one.
-    pub fn concat(&self, bindings: Bindings) -> Self {
+    pub fn concat(&self, bindings: Self) -> Self {
         let mut result = self.clone();
         result.bindings.extend(bindings.bindings);
         result

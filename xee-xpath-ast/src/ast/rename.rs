@@ -11,7 +11,7 @@ struct UniqueNameGenerator {
 
 impl UniqueNameGenerator {
     fn new() -> Self {
-        UniqueNameGenerator {
+        Self {
             names: HashSet::new(),
         }
     }
@@ -33,7 +33,7 @@ struct Names {
 
 impl Names {
     fn new() -> Self {
-        Names {
+        Self {
             names: Vec::new(),
             generator: UniqueNameGenerator::new(),
         }
@@ -68,7 +68,7 @@ struct Renamer {
 
 impl Renamer {
     fn new() -> Self {
-        Renamer {
+        Self {
             names: Names::new(),
         }
     }

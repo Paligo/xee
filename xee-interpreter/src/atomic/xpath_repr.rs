@@ -6,7 +6,7 @@ impl Atomic {
     /// XPath representation of the atomic value.
     pub fn xpath_representation(&self) -> String {
         match self {
-            Atomic::String(string_type, v) => match string_type {
+            Self::String(string_type, v) => match string_type {
                 StringType::String => string_literal(v),
                 _ => {
                     let schema_type = string_type.schema_type();
@@ -14,7 +14,7 @@ impl Atomic {
                 }
             },
 
-            Atomic::Boolean(v) => {
+            Self::Boolean(v) => {
                 if *v {
                     "true()".to_string()
                 } else {
@@ -22,14 +22,14 @@ impl Atomic {
                 }
             }
             // for any numeric type the canonical notation is enough
-            Atomic::Decimal(_) | Atomic::Integer(_, _) | Atomic::Float(_) | Atomic::Double(_) => {
+            Self::Decimal(_) | Self::Integer(_, _) | Self::Float(_) | Self::Double(_) => {
                 self.string_value()
             }
 
             // QName is not represented by casting, as according to 3.14.2
             // in the XPath 3.1 spec casting to xs:QName can cause surprises
             // and it's preferable to use the fn:QName function
-            Atomic::QName(v) => {
+            Self::QName(v) => {
                 format!(
                     r#"fn:QName({}, {})"#,
                     string_literal(v.namespace()),

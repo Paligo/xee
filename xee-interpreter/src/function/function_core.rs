@@ -10,7 +10,7 @@ pub struct InlineFunctionId(pub(crate) usize);
 
 impl InlineFunctionId {
     pub fn new(id: usize) -> Self {
-        InlineFunctionId(id)
+        Self(id)
     }
 
     pub fn get(&self) -> usize {
@@ -56,7 +56,7 @@ impl From<StaticFunctionData> for Function {
 
 impl StaticFunctionData {
     pub(crate) fn new(id: StaticFunctionId, closure_vars: Vec<stack::Value>) -> Self {
-        StaticFunctionData {
+        Self {
             id,
             closure_vars: closure_vars.into(),
         }
@@ -77,7 +77,7 @@ impl From<InlineFunctionData> for Function {
 
 impl InlineFunctionData {
     pub(crate) fn new(id: InlineFunctionId, closure_vars: Vec<stack::Value>) -> Self {
-        InlineFunctionData {
+        Self {
             id,
             closure_vars: closure_vars.into(),
         }

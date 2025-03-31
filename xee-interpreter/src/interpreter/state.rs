@@ -77,7 +77,7 @@ impl BuildStackEntry {
 
 impl From<BuildStackEntry> for sequence::Sequence {
     fn from(build: BuildStackEntry) -> Self {
-        sequence::Sequence::new(build.item.build_stack)
+        Self::new(build.item.build_stack)
     }
 }
 

@@ -12,8 +12,8 @@ pub enum SequenceType {
 impl SequenceType {
     pub fn display_representation(&self) -> String {
         match self {
-            SequenceType::Empty => "empty-sequence()".to_string(),
-            SequenceType::Item(item) => item.display_representation(),
+            Self::Empty => "empty-sequence()".to_string(),
+            Self::Item(item) => item.display_representation(),
         }
     }
 }
@@ -52,12 +52,12 @@ pub enum ItemType {
 impl ItemType {
     fn display_representation(&self) -> String {
         match self {
-            ItemType::Item => "item()".to_string(),
-            ItemType::AtomicOrUnionType(xs) => format!("xs:{}", xs.local_name()),
-            ItemType::KindTest(kind_test) => kind_test.display_representation(),
-            ItemType::FunctionTest(function_test) => function_test.display_representation(),
-            ItemType::MapTest(map_test) => map_test.display_representation(),
-            ItemType::ArrayTest(array_test) => array_test.display_representation(),
+            Self::Item => "item()".to_string(),
+            Self::AtomicOrUnionType(xs) => format!("xs:{}", xs.local_name()),
+            Self::KindTest(kind_test) => kind_test.display_representation(),
+            Self::FunctionTest(function_test) => function_test.display_representation(),
+            Self::MapTest(map_test) => map_test.display_representation(),
+            Self::ArrayTest(array_test) => array_test.display_representation(),
         }
     }
 }
@@ -89,7 +89,7 @@ pub enum KindTest {
 impl KindTest {
     fn display_representation(&self) -> String {
         match self {
-            KindTest::Document(document_test) => {
+            Self::Document(document_test) => {
                 format!(
                     "document-node({})",
                     document_test
@@ -97,7 +97,7 @@ impl KindTest {
                         .map_or("".to_string(), |dt| dt.display_representation())
                 )
             }
-            KindTest::Element(element_test) => {
+            Self::Element(element_test) => {
                 format!(
                     "element({})",
                     element_test
@@ -105,7 +105,7 @@ impl KindTest {
                         .map_or("".to_string(), |et| et.display_representation())
                 )
             }
-            KindTest::Attribute(attribute_test) => {
+            Self::Attribute(attribute_test) => {
                 format!(
                     "attribute({})",
                     attribute_test
@@ -113,19 +113,19 @@ impl KindTest {
                         .map_or("".to_string(), |at| at.display_representation())
                 )
             }
-            KindTest::SchemaElement(schema_element_test) => {
+            Self::SchemaElement(schema_element_test) => {
                 format!(
                     "schema-element({})",
                     schema_element_test.display_representation()
                 )
             }
-            KindTest::SchemaAttribute(schema_attribute_test) => {
+            Self::SchemaAttribute(schema_attribute_test) => {
                 format!(
                     "schema-attribute({})",
                     schema_attribute_test.display_representation()
                 )
             }
-            KindTest::PI(pi_test) => {
+            Self::PI(pi_test) => {
                 format!(
                     "processing-instruction({})",
                     pi_test
@@ -133,10 +133,10 @@ impl KindTest {
                         .map_or("".to_string(), |pt| pt.display_representation())
                 )
             }
-            KindTest::Comment => "comment()".to_string(),
-            KindTest::Text => "text()".to_string(),
-            KindTest::NamespaceNode => "namespace-node()".to_string(),
-            KindTest::Any => "node()".to_string(),
+            Self::Comment => "comment()".to_string(),
+            Self::Text => "text()".to_string(),
+            Self::NamespaceNode => "namespace-node()".to_string(),
+            Self::Any => "node()".to_string(),
         }
     }
 }
@@ -151,7 +151,7 @@ pub enum DocumentTest {
 impl DocumentTest {
     fn display_representation(&self) -> String {
         match self {
-            DocumentTest::Element(element_test) => {
+            Self::Element(element_test) => {
                 format!(
                     "element({})",
                     element_test
@@ -159,7 +159,7 @@ impl DocumentTest {
                         .map_or("".to_string(), |et| et.display_representation())
                 )
             }
-            DocumentTest::SchemaElement(schema_element_test) => {
+            Self::SchemaElement(schema_element_test) => {
                 format!(
                     "schema-element({})",
                     schema_element_test.display_representation()
@@ -248,8 +248,8 @@ pub enum FunctionTest {
 impl FunctionTest {
     fn display_representation(&self) -> String {
         match self {
-            FunctionTest::AnyFunctionTest => "function(*)".to_string(),
-            FunctionTest::TypedFunctionTest(tft) => tft.display_representation(),
+            Self::AnyFunctionTest => "function(*)".to_string(),
+            Self::TypedFunctionTest(tft) => tft.display_representation(),
         }
     }
 }
@@ -284,8 +284,8 @@ pub enum MapTest {
 impl MapTest {
     fn display_representation(&self) -> String {
         match self {
-            MapTest::AnyMapTest => "map(*)".to_string(),
-            MapTest::TypedMapTest(tmt) => tmt.display_representation(),
+            Self::AnyMapTest => "map(*)".to_string(),
+            Self::TypedMapTest(tmt) => tmt.display_representation(),
         }
     }
 }
@@ -317,8 +317,8 @@ pub enum ArrayTest {
 impl ArrayTest {
     fn display_representation(&self) -> String {
         match self {
-            ArrayTest::AnyArrayTest => "array(*)".to_string(),
-            ArrayTest::TypedArrayTest(tat) => tat.display_representation(),
+            Self::AnyArrayTest => "array(*)".to_string(),
+            Self::TypedArrayTest(tat) => tat.display_representation(),
         }
     }
 }
@@ -345,8 +345,8 @@ pub enum PITest {
 impl PITest {
     fn display_representation(&self) -> String {
         match self {
-            PITest::Name(name) => name.to_string(),
-            PITest::StringLiteral(string_literal) => {
+            Self::Name(name) => name.to_string(),
+            Self::StringLiteral(string_literal) => {
                 format!(r#""{}""#, string_literal)
             }
         }

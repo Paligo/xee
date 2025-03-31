@@ -50,30 +50,30 @@ impl Sequence {
     /// Check whether the sequence is empty
     pub fn is_empty(&self) -> bool {
         match self {
-            Sequence::Empty(inner) => inner.is_empty(),
-            Sequence::One(inner) => inner.is_empty(),
-            Sequence::Many(inner) => inner.is_empty(),
-            Sequence::Range(inner) => inner.is_empty(),
+            Self::Empty(inner) => inner.is_empty(),
+            Self::One(inner) => inner.is_empty(),
+            Self::Many(inner) => inner.is_empty(),
+            Self::Range(inner) => inner.is_empty(),
         }
     }
 
     /// Get the sequence length
     pub fn len(&self) -> usize {
         match self {
-            Sequence::Empty(inner) => inner.len(),
-            Sequence::One(inner) => inner.len(),
-            Sequence::Many(inner) => inner.len(),
-            Sequence::Range(inner) => inner.len(),
+            Self::Empty(inner) => inner.len(),
+            Self::One(inner) => inner.len(),
+            Self::Many(inner) => inner.len(),
+            Self::Range(inner) => inner.len(),
         }
     }
 
     /// Get an item in the index, if it exists
     pub fn get(&self, index: usize) -> Option<Item> {
         match self {
-            Sequence::Empty(inner) => inner.get(index),
-            Sequence::One(inner) => inner.get(index),
-            Sequence::Many(inner) => inner.get(index),
-            Sequence::Range(inner) => inner.get(index),
+            Self::Empty(inner) => inner.get(index),
+            Self::One(inner) => inner.get(index),
+            Self::Many(inner) => inner.get(index),
+            Self::Range(inner) => inner.get(index),
         }
     }
 
@@ -82,10 +82,10 @@ impl Sequence {
     /// Otherwise you get a type error.
     pub fn one(self) -> error::Result<Item> {
         match self {
-            Sequence::Empty(inner) => inner.one(),
-            Sequence::One(inner) => inner.one(),
-            Sequence::Many(inner) => inner.one(),
-            Sequence::Range(inner) => inner.one(),
+            Self::Empty(inner) => inner.one(),
+            Self::One(inner) => inner.one(),
+            Self::Many(inner) => inner.one(),
+            Self::Range(inner) => inner.one(),
         }
     }
 
@@ -94,40 +94,40 @@ impl Sequence {
     /// If it contains more than one item, you get a type error.
     pub fn option(self) -> error::Result<Option<Item>> {
         match self {
-            Sequence::Empty(inner) => inner.option(),
-            Sequence::One(inner) => inner.option(),
-            Sequence::Many(inner) => inner.option(),
-            Sequence::Range(inner) => inner.option(),
+            Self::Empty(inner) => inner.option(),
+            Self::One(inner) => inner.option(),
+            Self::Many(inner) => inner.option(),
+            Self::Range(inner) => inner.option(),
         }
     }
 
     /// Get the items from the sequence as an iterator
     pub fn iter(&self) -> BoxedItemIter {
         match self {
-            Sequence::Empty(inner) => Box::new(inner.iter()),
-            Sequence::One(inner) => Box::new(inner.iter()),
-            Sequence::Many(inner) => Box::new(inner.iter()),
-            Sequence::Range(inner) => Box::new(inner.iter()),
+            Self::Empty(inner) => Box::new(inner.iter()),
+            Self::One(inner) => Box::new(inner.iter()),
+            Self::Many(inner) => Box::new(inner.iter()),
+            Self::Range(inner) => Box::new(inner.iter()),
         }
     }
 
     /// Effective boolean value
     pub fn effective_boolean_value(&self) -> error::Result<bool> {
         match self {
-            Sequence::Empty(inner) => inner.effective_boolean_value(),
-            Sequence::One(inner) => inner.effective_boolean_value(),
-            Sequence::Many(inner) => inner.effective_boolean_value(),
-            Sequence::Range(inner) => inner.effective_boolean_value(),
+            Self::Empty(inner) => inner.effective_boolean_value(),
+            Self::One(inner) => inner.effective_boolean_value(),
+            Self::Many(inner) => inner.effective_boolean_value(),
+            Self::Range(inner) => inner.effective_boolean_value(),
         }
     }
 
     /// String value
     pub fn string_value(&self, xot: &xot::Xot) -> error::Result<String> {
         match self {
-            Sequence::Empty(inner) => inner.string_value(xot),
-            Sequence::One(inner) => inner.string_value(xot),
-            Sequence::Many(inner) => inner.string_value(xot),
-            Sequence::Range(inner) => inner.string_value(xot),
+            Self::Empty(inner) => inner.string_value(xot),
+            Self::One(inner) => inner.string_value(xot),
+            Self::Many(inner) => inner.string_value(xot),
+            Self::Range(inner) => inner.string_value(xot),
         }
     }
 
@@ -136,10 +136,10 @@ impl Sequence {
     /// An error is returned for items that are not a node.
     pub fn nodes<'a>(&'a self) -> Box<dyn Iterator<Item = error::Result<xot::Node>> + 'a> {
         match self {
-            Sequence::Empty(inner) => Box::new(inner.nodes()),
-            Sequence::One(inner) => Box::new(inner.nodes()),
-            Sequence::Many(inner) => Box::new(inner.nodes()),
-            Sequence::Range(inner) => Box::new(inner.nodes()),
+            Self::Empty(inner) => Box::new(inner.nodes()),
+            Self::One(inner) => Box::new(inner.nodes()),
+            Self::Many(inner) => Box::new(inner.nodes()),
+            Self::Range(inner) => Box::new(inner.nodes()),
         }
     }
 
@@ -149,10 +149,10 @@ impl Sequence {
         xot: &'a xot::Xot,
     ) -> Box<dyn Iterator<Item = error::Result<atomic::Atomic>> + 'a> {
         match self {
-            Sequence::Empty(inner) => Box::new(inner.atomized(xot)),
-            Sequence::One(inner) => Box::new(inner.atomized(xot)),
-            Sequence::Many(inner) => Box::new(inner.atomized(xot)),
-            Sequence::Range(inner) => Box::new(inner.atomized(xot)),
+            Self::Empty(inner) => Box::new(inner.atomized(xot)),
+            Self::One(inner) => Box::new(inner.atomized(xot)),
+            Self::Many(inner) => Box::new(inner.atomized(xot)),
+            Self::Range(inner) => Box::new(inner.atomized(xot)),
         }
     }
 
@@ -161,10 +161,10 @@ impl Sequence {
     /// If there are less or more, you get a type error.
     pub fn atomized_one(&self, xot: &xot::Xot) -> error::Result<atomic::Atomic> {
         match self {
-            Sequence::Empty(inner) => inner.atomized_one(xot),
-            Sequence::One(inner) => inner.atomized_one(xot),
-            Sequence::Many(inner) => inner.atomized_one(xot),
-            Sequence::Range(inner) => inner.atomized_one(xot),
+            Self::Empty(inner) => inner.atomized_one(xot),
+            Self::One(inner) => inner.atomized_one(xot),
+            Self::Many(inner) => inner.atomized_one(xot),
+            Self::Range(inner) => inner.atomized_one(xot),
         }
     }
 
@@ -173,10 +173,10 @@ impl Sequence {
     /// If there are more than one, you get a type error.
     pub fn atomized_option(&self, xot: &xot::Xot) -> error::Result<Option<atomic::Atomic>> {
         match self {
-            Sequence::Empty(inner) => inner.atomized_option(xot),
-            Sequence::One(inner) => inner.atomized_option(xot),
-            Sequence::Many(inner) => inner.atomized_option(xot),
-            Sequence::Range(inner) => inner.atomized_option(xot),
+            Self::Empty(inner) => inner.atomized_option(xot),
+            Self::One(inner) => inner.atomized_option(xot),
+            Self::Many(inner) => inner.atomized_option(xot),
+            Self::Range(inner) => inner.atomized_option(xot),
         }
     }
 
@@ -187,10 +187,10 @@ impl Sequence {
         extract: impl Fn(atomic::Atomic) -> error::Result<T> + 'a,
     ) -> Box<dyn Iterator<Item = error::Result<T>> + 'a> {
         match self {
-            Sequence::Empty(inner) => Box::new(inner.unboxed_atomized(xot, extract)),
-            Sequence::One(inner) => Box::new(inner.unboxed_atomized(xot, extract)),
-            Sequence::Many(inner) => Box::new(inner.unboxed_atomized(xot, extract)),
-            Sequence::Range(inner) => Box::new(inner.unboxed_atomized(xot, extract)),
+            Self::Empty(inner) => Box::new(inner.unboxed_atomized(xot, extract)),
+            Self::One(inner) => Box::new(inner.unboxed_atomized(xot, extract)),
+            Self::Many(inner) => Box::new(inner.unboxed_atomized(xot, extract)),
+            Self::Range(inner) => Box::new(inner.unboxed_atomized(xot, extract)),
         }
     }
 
@@ -199,10 +199,10 @@ impl Sequence {
     /// An error is returned for items that are not a map.
     pub fn map_iter<'a>(&'a self) -> Box<dyn Iterator<Item = error::Result<function::Map>> + 'a> {
         match self {
-            Sequence::Empty(inner) => Box::new(inner.map_iter()),
-            Sequence::One(inner) => Box::new(inner.map_iter()),
-            Sequence::Many(inner) => Box::new(inner.map_iter()),
-            Sequence::Range(inner) => Box::new(inner.map_iter()),
+            Self::Empty(inner) => Box::new(inner.map_iter()),
+            Self::One(inner) => Box::new(inner.map_iter()),
+            Self::Many(inner) => Box::new(inner.map_iter()),
+            Self::Range(inner) => Box::new(inner.map_iter()),
         }
     }
 
@@ -213,10 +213,10 @@ impl Sequence {
         &'a self,
     ) -> Box<dyn Iterator<Item = error::Result<function::Array>> + 'a> {
         match self {
-            Sequence::Empty(inner) => Box::new(inner.array_iter()),
-            Sequence::One(inner) => Box::new(inner.array_iter()),
-            Sequence::Many(inner) => Box::new(inner.array_iter()),
-            Sequence::Range(inner) => Box::new(inner.array_iter()),
+            Self::Empty(inner) => Box::new(inner.array_iter()),
+            Self::One(inner) => Box::new(inner.array_iter()),
+            Self::Many(inner) => Box::new(inner.array_iter()),
+            Self::Range(inner) => Box::new(inner.array_iter()),
         }
     }
 
@@ -228,20 +228,20 @@ impl Sequence {
         xot: &'a xot::Xot,
     ) -> error::Result<Box<dyn Iterator<Item = error::Result<xot::Node>> + 'a>> {
         match self {
-            Sequence::Empty(inner) => Ok(Box::new(inner.elements(xot)?)),
-            Sequence::One(inner) => Ok(Box::new(inner.elements(xot)?)),
-            Sequence::Many(inner) => Ok(Box::new(inner.elements(xot)?)),
-            Sequence::Range(inner) => Ok(Box::new(inner.elements(xot)?)),
+            Self::Empty(inner) => Ok(Box::new(inner.elements(xot)?)),
+            Self::One(inner) => Ok(Box::new(inner.elements(xot)?)),
+            Self::Many(inner) => Ok(Box::new(inner.elements(xot)?)),
+            Self::Range(inner) => Ok(Box::new(inner.elements(xot)?)),
         }
     }
 
     /// Create an XPath array from this sequence.
     pub fn to_array(&self) -> error::Result<function::Array> {
         match self {
-            Sequence::Empty(inner) => inner.to_array(),
-            Sequence::One(inner) => inner.to_array(),
-            Sequence::Many(inner) => inner.to_array(),
-            Sequence::Range(inner) => inner.to_array(),
+            Self::Empty(inner) => inner.to_array(),
+            Self::One(inner) => inner.to_array(),
+            Self::Many(inner) => inner.to_array(),
+            Self::Range(inner) => inner.to_array(),
         }
     }
 
@@ -256,28 +256,28 @@ impl Sequence {
         O: AtomicCompare,
     {
         match (self, other) {
-            (Sequence::Empty(_a), Sequence::Empty(_b)) => Ok(false),
-            (Sequence::Empty(_a), Sequence::One(_b)) => Ok(false),
-            (Sequence::Empty(_a), Sequence::Many(_b)) => Ok(false),
-            (Sequence::Empty(_a), Sequence::Range(_b)) => Ok(false),
-            (Sequence::One(_a), Sequence::Empty(_b)) => Ok(false),
-            (Sequence::One(a), Sequence::One(b)) => a.general_comparison(b, op, context, xot),
-            (Sequence::One(a), Sequence::Many(b)) => a.general_comparison(b, op, context, xot),
-            (Sequence::One(a), Sequence::Range(b)) => {
+            (Self::Empty(_a), Self::Empty(_b)) => Ok(false),
+            (Self::Empty(_a), Self::One(_b)) => Ok(false),
+            (Self::Empty(_a), Self::Many(_b)) => Ok(false),
+            (Self::Empty(_a), Self::Range(_b)) => Ok(false),
+            (Self::One(_a), Self::Empty(_b)) => Ok(false),
+            (Self::One(a), Self::One(b)) => a.general_comparison(b, op, context, xot),
+            (Self::One(a), Self::Many(b)) => a.general_comparison(b, op, context, xot),
+            (Self::One(a), Self::Range(b)) => {
                 if let Item::Atomic(atomic::Atomic::Integer(_, i)) = a.item() {
                     Ok(b.general_comparison_integer(i, O::value()))
                 } else {
                     a.general_comparison(b, op, context, xot)
                 }
             }
-            (Sequence::Many(_a), Sequence::Empty(_b)) => Ok(false),
-            (Sequence::Many(a), Sequence::One(b)) => a.general_comparison(b, op, context, xot),
-            (Sequence::Many(a), Sequence::Many(b)) => a.general_comparison(b, op, context, xot),
-            (Sequence::Many(a), Sequence::Range(b)) => a.general_comparison(b, op, context, xot),
-            (Sequence::Range(_a), Sequence::Empty(_b)) => Ok(false),
-            (Sequence::Range(a), Sequence::One(b)) => a.general_comparison(b, op, context, xot),
-            (Sequence::Range(a), Sequence::Many(b)) => a.general_comparison(b, op, context, xot),
-            (Sequence::Range(a), Sequence::Range(b)) => a.general_comparison(b, op, context, xot),
+            (Self::Many(_a), Self::Empty(_b)) => Ok(false),
+            (Self::Many(a), Self::One(b)) => a.general_comparison(b, op, context, xot),
+            (Self::Many(a), Self::Many(b)) => a.general_comparison(b, op, context, xot),
+            (Self::Many(a), Self::Range(b)) => a.general_comparison(b, op, context, xot),
+            (Self::Range(_a), Self::Empty(_b)) => Ok(false),
+            (Self::Range(a), Self::One(b)) => a.general_comparison(b, op, context, xot),
+            (Self::Range(a), Self::Many(b)) => a.general_comparison(b, op, context, xot),
+            (Self::Range(a), Self::Range(b)) => a.general_comparison(b, op, context, xot),
         }
     }
 
@@ -293,52 +293,52 @@ impl Sequence {
         O: AtomicCompare,
     {
         match (self, other) {
-            (Sequence::Empty(a), Sequence::Empty(b)) => {
+            (Self::Empty(a), Self::Empty(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Empty(a), Sequence::One(b)) => {
+            (Self::Empty(a), Self::One(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Empty(a), Sequence::Many(b)) => {
+            (Self::Empty(a), Self::Many(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Empty(a), Sequence::Range(b)) => {
+            (Self::Empty(a), Self::Range(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::One(a), Sequence::Empty(b)) => {
+            (Self::One(a), Self::Empty(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::One(a), Sequence::One(b)) => {
+            (Self::One(a), Self::One(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::One(a), Sequence::Many(b)) => {
+            (Self::One(a), Self::Many(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::One(a), Sequence::Range(b)) => {
+            (Self::One(a), Self::Range(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Many(a), Sequence::Empty(b)) => {
+            (Self::Many(a), Self::Empty(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Many(a), Sequence::One(b)) => {
+            (Self::Many(a), Self::One(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Many(a), Sequence::Many(b)) => {
+            (Self::Many(a), Self::Many(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Many(a), Sequence::Range(b)) => {
+            (Self::Many(a), Self::Range(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Range(a), Sequence::Empty(b)) => {
+            (Self::Range(a), Self::Empty(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Range(a), Sequence::One(b)) => {
+            (Self::Range(a), Self::One(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Range(a), Sequence::Many(b)) => {
+            (Self::Range(a), Self::Many(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
-            (Sequence::Range(a), Sequence::Range(b)) => {
+            (Self::Range(a), Self::Range(b)) => {
                 a.value_compare(b, op, collation, timezone, xot)
             }
         }
@@ -346,31 +346,31 @@ impl Sequence {
 
     pub(crate) fn one_node(&self) -> error::Result<xot::Node> {
         match self {
-            Sequence::Empty(inner) => inner.one_node(),
-            Sequence::One(inner) => inner.one_node(),
-            Sequence::Many(inner) => inner.one_node(),
-            Sequence::Range(inner) => inner.one_node(),
+            Self::Empty(inner) => inner.one_node(),
+            Self::One(inner) => inner.one_node(),
+            Self::Many(inner) => inner.one_node(),
+            Self::Range(inner) => inner.one_node(),
         }
     }
 
     pub(crate) fn is(&self, other: &Self) -> error::Result<bool> {
         match (self, other) {
-            (Sequence::Empty(a), Sequence::Empty(b)) => a.is(b),
-            (Sequence::Empty(a), Sequence::One(b)) => a.is(b),
-            (Sequence::Empty(a), Sequence::Many(b)) => a.is(b),
-            (Sequence::Empty(a), Sequence::Range(b)) => a.is(b),
-            (Sequence::One(a), Sequence::Empty(b)) => a.is(b),
-            (Sequence::One(a), Sequence::One(b)) => a.is(b),
-            (Sequence::One(a), Sequence::Many(b)) => a.is(b),
-            (Sequence::One(a), Sequence::Range(b)) => a.is(b),
-            (Sequence::Many(a), Sequence::Empty(b)) => a.is(b),
-            (Sequence::Many(a), Sequence::One(b)) => a.is(b),
-            (Sequence::Many(a), Sequence::Many(b)) => a.is(b),
-            (Sequence::Many(a), Sequence::Range(b)) => a.is(b),
-            (Sequence::Range(a), Sequence::Empty(b)) => a.is(b),
-            (Sequence::Range(a), Sequence::One(b)) => a.is(b),
-            (Sequence::Range(a), Sequence::Many(b)) => a.is(b),
-            (Sequence::Range(a), Sequence::Range(b)) => a.is(b),
+            (Self::Empty(a), Self::Empty(b)) => a.is(b),
+            (Self::Empty(a), Self::One(b)) => a.is(b),
+            (Self::Empty(a), Self::Many(b)) => a.is(b),
+            (Self::Empty(a), Self::Range(b)) => a.is(b),
+            (Self::One(a), Self::Empty(b)) => a.is(b),
+            (Self::One(a), Self::One(b)) => a.is(b),
+            (Self::One(a), Self::Many(b)) => a.is(b),
+            (Self::One(a), Self::Range(b)) => a.is(b),
+            (Self::Many(a), Self::Empty(b)) => a.is(b),
+            (Self::Many(a), Self::One(b)) => a.is(b),
+            (Self::Many(a), Self::Many(b)) => a.is(b),
+            (Self::Many(a), Self::Range(b)) => a.is(b),
+            (Self::Range(a), Self::Empty(b)) => a.is(b),
+            (Self::Range(a), Self::One(b)) => a.is(b),
+            (Self::Range(a), Self::Many(b)) => a.is(b),
+            (Self::Range(a), Self::Range(b)) => a.is(b),
         }
     }
 
@@ -380,22 +380,22 @@ impl Sequence {
         annotations: &xml::Annotations,
     ) -> error::Result<bool> {
         match (self, other) {
-            (Sequence::Empty(a), Sequence::Empty(b)) => a.precedes(b, annotations),
-            (Sequence::Empty(a), Sequence::One(b)) => a.precedes(b, annotations),
-            (Sequence::Empty(a), Sequence::Many(b)) => a.precedes(b, annotations),
-            (Sequence::Empty(a), Sequence::Range(b)) => a.precedes(b, annotations),
-            (Sequence::One(a), Sequence::Empty(b)) => a.precedes(b, annotations),
-            (Sequence::One(a), Sequence::One(b)) => a.precedes(b, annotations),
-            (Sequence::One(a), Sequence::Many(b)) => a.precedes(b, annotations),
-            (Sequence::One(a), Sequence::Range(b)) => a.precedes(b, annotations),
-            (Sequence::Many(a), Sequence::Empty(b)) => a.precedes(b, annotations),
-            (Sequence::Many(a), Sequence::One(b)) => a.precedes(b, annotations),
-            (Sequence::Many(a), Sequence::Many(b)) => a.precedes(b, annotations),
-            (Sequence::Many(a), Sequence::Range(b)) => a.precedes(b, annotations),
-            (Sequence::Range(a), Sequence::Empty(b)) => a.precedes(b, annotations),
-            (Sequence::Range(a), Sequence::One(b)) => a.precedes(b, annotations),
-            (Sequence::Range(a), Sequence::Many(b)) => a.precedes(b, annotations),
-            (Sequence::Range(a), Sequence::Range(b)) => a.precedes(b, annotations),
+            (Self::Empty(a), Self::Empty(b)) => a.precedes(b, annotations),
+            (Self::Empty(a), Self::One(b)) => a.precedes(b, annotations),
+            (Self::Empty(a), Self::Many(b)) => a.precedes(b, annotations),
+            (Self::Empty(a), Self::Range(b)) => a.precedes(b, annotations),
+            (Self::One(a), Self::Empty(b)) => a.precedes(b, annotations),
+            (Self::One(a), Self::One(b)) => a.precedes(b, annotations),
+            (Self::One(a), Self::Many(b)) => a.precedes(b, annotations),
+            (Self::One(a), Self::Range(b)) => a.precedes(b, annotations),
+            (Self::Many(a), Self::Empty(b)) => a.precedes(b, annotations),
+            (Self::Many(a), Self::One(b)) => a.precedes(b, annotations),
+            (Self::Many(a), Self::Many(b)) => a.precedes(b, annotations),
+            (Self::Many(a), Self::Range(b)) => a.precedes(b, annotations),
+            (Self::Range(a), Self::Empty(b)) => a.precedes(b, annotations),
+            (Self::Range(a), Self::One(b)) => a.precedes(b, annotations),
+            (Self::Range(a), Self::Many(b)) => a.precedes(b, annotations),
+            (Self::Range(a), Self::Range(b)) => a.precedes(b, annotations),
         }
     }
 
@@ -405,22 +405,22 @@ impl Sequence {
         annotations: &xml::Annotations,
     ) -> error::Result<bool> {
         match (self, other) {
-            (Sequence::Empty(a), Sequence::Empty(b)) => a.follows(b, annotations),
-            (Sequence::Empty(a), Sequence::One(b)) => a.follows(b, annotations),
-            (Sequence::Empty(a), Sequence::Many(b)) => a.follows(b, annotations),
-            (Sequence::Empty(a), Sequence::Range(b)) => a.follows(b, annotations),
-            (Sequence::One(a), Sequence::Empty(b)) => a.follows(b, annotations),
-            (Sequence::One(a), Sequence::One(b)) => a.follows(b, annotations),
-            (Sequence::One(a), Sequence::Many(b)) => a.follows(b, annotations),
-            (Sequence::One(a), Sequence::Range(b)) => a.follows(b, annotations),
-            (Sequence::Many(a), Sequence::Empty(b)) => a.follows(b, annotations),
-            (Sequence::Many(a), Sequence::One(b)) => a.follows(b, annotations),
-            (Sequence::Many(a), Sequence::Many(b)) => a.follows(b, annotations),
-            (Sequence::Many(a), Sequence::Range(b)) => a.follows(b, annotations),
-            (Sequence::Range(a), Sequence::Empty(b)) => a.follows(b, annotations),
-            (Sequence::Range(a), Sequence::One(b)) => a.follows(b, annotations),
-            (Sequence::Range(a), Sequence::Many(b)) => a.follows(b, annotations),
-            (Sequence::Range(a), Sequence::Range(b)) => a.follows(b, annotations),
+            (Self::Empty(a), Self::Empty(b)) => a.follows(b, annotations),
+            (Self::Empty(a), Self::One(b)) => a.follows(b, annotations),
+            (Self::Empty(a), Self::Many(b)) => a.follows(b, annotations),
+            (Self::Empty(a), Self::Range(b)) => a.follows(b, annotations),
+            (Self::One(a), Self::Empty(b)) => a.follows(b, annotations),
+            (Self::One(a), Self::One(b)) => a.follows(b, annotations),
+            (Self::One(a), Self::Many(b)) => a.follows(b, annotations),
+            (Self::One(a), Self::Range(b)) => a.follows(b, annotations),
+            (Self::Many(a), Self::Empty(b)) => a.follows(b, annotations),
+            (Self::Many(a), Self::One(b)) => a.follows(b, annotations),
+            (Self::Many(a), Self::Many(b)) => a.follows(b, annotations),
+            (Self::Many(a), Self::Range(b)) => a.follows(b, annotations),
+            (Self::Range(a), Self::Empty(b)) => a.follows(b, annotations),
+            (Self::Range(a), Self::One(b)) => a.follows(b, annotations),
+            (Self::Range(a), Self::Many(b)) => a.follows(b, annotations),
+            (Self::Range(a), Self::Range(b)) => a.follows(b, annotations),
         }
     }
 }

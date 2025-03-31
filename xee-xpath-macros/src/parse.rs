@@ -67,26 +67,26 @@ impl Parse for XPathFnOption {
         let lookahead = input.lookahead1();
         Ok(if lookahead.peek(kw::context_first) {
             let _eat: kw::context_first = input.parse()?;
-            XPathFnOption::Kind("context_first".to_string())
+            Self::Kind("context_first".to_string())
         } else if lookahead.peek(kw::context_last) {
             let _eat: kw::context_last = input.parse()?;
-            XPathFnOption::Kind("context_last".to_string())
+            Self::Kind("context_last".to_string())
         } else if lookahead.peek(kw::context_last_optional) {
             let _eat: kw::context_last_optional = input.parse()?;
-            XPathFnOption::Kind("context_last_optional".to_string())
+            Self::Kind("context_last_optional".to_string())
         } else if lookahead.peek(kw::position) {
             let _eat: kw::position = input.parse()?;
-            XPathFnOption::Kind("position".to_string())
+            Self::Kind("position".to_string())
         } else if lookahead.peek(kw::size) {
             let _eat: kw::size = input.parse()?;
-            XPathFnOption::Kind("size".to_string())
+            Self::Kind("size".to_string())
         } else if lookahead.peek(kw::collation) {
             let _eat: kw::collation = input.parse()?;
-            XPathFnOption::Kind("collation".to_string())
+            Self::Kind("collation".to_string())
         } else if lookahead.peek(LitStr) {
             let string_literal: LitStr = input.parse()?;
             let signature = string_literal.value();
-            XPathFnOption::Signature(signature)
+            Self::Signature(signature)
         } else {
             bail_spanned!(
                 input.span() => "Expected a string literal or a context keyword"

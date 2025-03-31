@@ -88,7 +88,7 @@ impl<E: Environment, R: Runnable<E>> ContextLoadable<Path> for TestSet<E, R> {
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<TestSet<E, R>>> {
+    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
         let name_query = queries.one("@name/string()", convert_string)?;
         let descriptions_query = queries.many("description/string()", convert_string)?;
 
@@ -104,7 +104,7 @@ impl<E: Environment, R: Runnable<E>> ContextLoadable<Path> for TestSet<E, R> {
             let dependencies = dependency_query.execute(session, item)?;
             let shared_environments = shared_environments_query.execute(session, item)?;
             let test_cases = test_cases_query.execute(session, item)?;
-            Ok(TestSet {
+            Ok(Self {
                 full_path: path.to_path_buf(),
                 name,
                 descriptions,

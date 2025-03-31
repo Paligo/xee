@@ -16,102 +16,102 @@ impl SequenceConstructorName {
         attributes: &Attributes,
     ) -> Result<ast::SequenceConstructorItem, ElementError> {
         match self {
-            SequenceConstructorName::ApplyImports => {
+            Self::ApplyImports => {
                 ast::ApplyImports::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::AnalyzeString => {
+            Self::AnalyzeString => {
                 ast::AnalyzeString::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::ApplyTemplates => {
+            Self::ApplyTemplates => {
                 ast::ApplyTemplates::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Assert => {
+            Self::Assert => {
                 ast::Assert::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Attribute => {
+            Self::Attribute => {
                 ast::Attribute::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Break => {
+            Self::Break => {
                 ast::Break::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::CallTemplate => {
+            Self::CallTemplate => {
                 ast::CallTemplate::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Choose => {
+            Self::Choose => {
                 ast::Choose::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Comment => {
+            Self::Comment => {
                 ast::Comment::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Copy => ast::Copy::parse_sequence_constructor_item(attributes),
-            SequenceConstructorName::CopyOf => {
+            Self::Copy => ast::Copy::parse_sequence_constructor_item(attributes),
+            Self::CopyOf => {
                 ast::CopyOf::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Document => {
+            Self::Document => {
                 ast::Document::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Element => {
+            Self::Element => {
                 ast::Element::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Evaluate => {
+            Self::Evaluate => {
                 ast::Evaluate::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Fallback => {
+            Self::Fallback => {
                 ast::Fallback::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::ForEach => {
+            Self::ForEach => {
                 ast::ForEach::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::ForEachGroup => {
+            Self::ForEachGroup => {
                 ast::ForEachGroup::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Fork => ast::Fork::parse_sequence_constructor_item(attributes),
-            SequenceConstructorName::If => ast::If::parse_sequence_constructor_item(attributes),
-            SequenceConstructorName::Map => ast::Map::parse_sequence_constructor_item(attributes),
-            SequenceConstructorName::MapEntry => {
+            Self::Fork => ast::Fork::parse_sequence_constructor_item(attributes),
+            Self::If => ast::If::parse_sequence_constructor_item(attributes),
+            Self::Map => ast::Map::parse_sequence_constructor_item(attributes),
+            Self::MapEntry => {
                 ast::MapEntry::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Merge => {
+            Self::Merge => {
                 ast::Merge::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Message => {
+            Self::Message => {
                 ast::Message::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Namespace => {
+            Self::Namespace => {
                 ast::Namespace::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::NextIteration => {
+            Self::NextIteration => {
                 ast::NextIteration::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::NextMatch => {
+            Self::NextMatch => {
                 ast::NextMatch::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Number => {
+            Self::Number => {
                 ast::Number::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::OnEmpty => {
+            Self::OnEmpty => {
                 ast::OnEmpty::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::OnNonEmpty => {
+            Self::OnNonEmpty => {
                 ast::OnNonEmpty::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::ProcessingInstruction => {
+            Self::ProcessingInstruction => {
                 ast::ProcessingInstruction::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Sequence => {
+            Self::Sequence => {
                 ast::Sequence::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::SourceDocument => {
+            Self::SourceDocument => {
                 ast::SourceDocument::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Text => ast::Text::parse_sequence_constructor_item(attributes),
-            SequenceConstructorName::ValueOf => {
+            Self::Text => ast::Text::parse_sequence_constructor_item(attributes),
+            Self::ValueOf => {
                 ast::ValueOf::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::Variable => {
+            Self::Variable => {
                 ast::Variable::parse_sequence_constructor_item(attributes)
             }
-            SequenceConstructorName::WherePopulated => {
+            Self::WherePopulated => {
                 ast::WherePopulated::parse_sequence_constructor_item(attributes)
             }
 
@@ -121,11 +121,11 @@ impl SequenceConstructorName {
         }
     }
 
-    fn names(xot: &mut Xot, xsl_ns: xot::NamespaceId) -> BTreeMap<NameId, SequenceConstructorName> {
+    fn names(xot: &mut Xot, xsl_ns: xot::NamespaceId) -> BTreeMap<NameId, Self> {
         let mut sequence_constructor_names = BTreeMap::new();
         for variant_name in Self::VARIANTS {
             let name = xot.add_name_ns(variant_name, xsl_ns);
-            let constructor = SequenceConstructorName::from_str(variant_name).unwrap();
+            let constructor = Self::from_str(variant_name).unwrap();
             sequence_constructor_names.insert(name, constructor);
         }
         sequence_constructor_names
@@ -135,19 +135,19 @@ impl SequenceConstructorName {
 impl DeclarationName {
     pub(crate) fn parse(&self, attributes: &Attributes) -> Result<ast::Declaration, ElementError> {
         match self {
-            DeclarationName::Accumulator => ast::Accumulator::parse_declaration(attributes),
-            DeclarationName::Template => ast::Template::parse_declaration(attributes),
+            Self::Accumulator => ast::Accumulator::parse_declaration(attributes),
+            Self::Template => ast::Template::parse_declaration(attributes),
             _ => {
                 unimplemented!()
             }
         }
     }
 
-    fn names(xot: &mut Xot, xsl_ns: xot::NamespaceId) -> BTreeMap<NameId, DeclarationName> {
+    fn names(xot: &mut Xot, xsl_ns: xot::NamespaceId) -> BTreeMap<NameId, Self> {
         let mut declaration_names = BTreeMap::new();
         for variant_name in Self::VARIANTS {
             let name = xot.add_name_ns(variant_name, xsl_ns);
-            let constructor = DeclarationName::from_str(variant_name).unwrap();
+            let constructor = Self::from_str(variant_name).unwrap();
             declaration_names.insert(name, constructor);
         }
         declaration_names
@@ -170,11 +170,11 @@ impl OverrideContentName {
         }
     }
 
-    fn names(xot: &mut Xot, xsl_ns: xot::NamespaceId) -> BTreeMap<NameId, OverrideContentName> {
+    fn names(xot: &mut Xot, xsl_ns: xot::NamespaceId) -> BTreeMap<NameId, Self> {
         let mut override_content_names = BTreeMap::new();
         for variant_name in Self::VARIANTS {
             let name = xot.add_name_ns(variant_name, xsl_ns);
-            let constructor = OverrideContentName::from_str(variant_name).unwrap();
+            let constructor = Self::from_str(variant_name).unwrap();
             override_content_names.insert(name, constructor);
         }
         override_content_names

@@ -18,7 +18,7 @@ pub struct Name(pub(crate) String);
 
 impl Name {
     pub fn new(name: String) -> Self {
-        Name(name)
+        Self(name)
     }
 }
 

@@ -34,15 +34,15 @@ pub(crate) enum FunctionKind {
 }
 
 impl FunctionKind {
-    pub(crate) fn parse(s: &str) -> Option<FunctionKind> {
+    pub(crate) fn parse(s: &str) -> Option<Self> {
         match s {
             "" => None,
-            "context_first" => Some(FunctionKind::ItemFirst),
-            "context_last" => Some(FunctionKind::ItemLast),
-            "context_last_optional" => Some(FunctionKind::ItemLastOptional),
-            "position" => Some(FunctionKind::Position),
-            "size" => Some(FunctionKind::Size),
-            "collation" => Some(FunctionKind::Collation),
+            "context_first" => Some(Self::ItemFirst),
+            "context_last" => Some(Self::ItemLast),
+            "context_last_optional" => Some(Self::ItemLastOptional),
+            "position" => Some(Self::Position),
+            "size" => Some(Self::Size),
+            "collation" => Some(Self::Collation),
             _ => panic!("Unknown function kind {}", s),
         }
     }
@@ -132,12 +132,12 @@ pub enum FunctionRule {
 impl From<FunctionKind> for FunctionRule {
     fn from(function_kind: FunctionKind) -> Self {
         match function_kind {
-            FunctionKind::ItemFirst => FunctionRule::ItemFirst,
-            FunctionKind::ItemLast => FunctionRule::ItemLast,
-            FunctionKind::ItemLastOptional => FunctionRule::ItemLastOptional,
-            FunctionKind::Position => FunctionRule::PositionFirst,
-            FunctionKind::Size => FunctionRule::SizeFirst,
-            FunctionKind::Collation => FunctionRule::Collation,
+            FunctionKind::ItemFirst => Self::ItemFirst,
+            FunctionKind::ItemLast => Self::ItemLast,
+            FunctionKind::ItemLastOptional => Self::ItemLastOptional,
+            FunctionKind::Position => Self::PositionFirst,
+            FunctionKind::Size => Self::SizeFirst,
+            FunctionKind::Collation => Self::Collation,
         }
     }
 }

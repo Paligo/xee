@@ -65,7 +65,7 @@ impl<E: Environment, R: Runnable<E>> ContextLoadable<Path> for Catalog<E, R> {
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Catalog<E, R>>> {
+    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
         let test_suite_query = queries.one("@test-suite/string()", convert_string)?;
         let version_query = queries.one("@version/string()", convert_string)?;
 
@@ -84,7 +84,7 @@ impl<E: Environment, R: Runnable<E>> ContextLoadable<Path> for Catalog<E, R> {
             let shared_environments = shared_environments_query.execute(session, item)?;
             let test_sets = test_set_query.execute(session, item)?;
             let file_paths = test_sets.iter().map(|t| t.file.clone()).collect();
-            Ok(Catalog {
+            Ok(Self {
                 full_path: path.to_path_buf(),
                 test_suite,
                 version,

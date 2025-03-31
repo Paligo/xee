@@ -14,13 +14,13 @@ pub enum ValueTemplateItem<'a> {
 impl<'a> From<ValueTemplateItem<'a>> for ast::ValueTemplateItem {
     fn from(item: ValueTemplateItem<'a>) -> Self {
         match item {
-            ValueTemplateItem::String { text, span } => ast::ValueTemplateItem::String {
+            ValueTemplateItem::String { text, span } => Self::String {
                 text: text.to_string(),
                 span,
             },
-            ValueTemplateItem::Curly { c } => ast::ValueTemplateItem::Curly { c },
+            ValueTemplateItem::Curly { c } => Self::Curly { c },
             ValueTemplateItem::Value { xpath, span } => {
-                ast::ValueTemplateItem::Value { xpath, span }
+                Self::Value { xpath, span }
             }
         }
     }

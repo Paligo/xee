@@ -59,7 +59,7 @@ impl SequenceCore<'_, std::iter::Empty<Item>> for Empty {
 impl<'a, I> SequenceExt<'a, I> for Empty
 where
     I: Iterator<Item = Item> + 'a,
-    Empty: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
     fn atomized(
         &'a self,
@@ -82,14 +82,14 @@ where
 impl<'a, I> SequenceCompare<'a, I> for Empty
 where
     I: Iterator<Item = Item> + 'a,
-    Empty: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
 }
 
 impl<'a, I> SequenceOrder<'a, I> for Empty
 where
     I: Iterator<Item = Item>,
-    Empty: SequenceCore<'a, I>,
+    Self: SequenceCore<'a, I>,
 {
     fn one_node(&self) -> error::Result<xot::Node> {
         Err(error::Error::XPTY0004)

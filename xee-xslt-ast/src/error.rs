@@ -21,13 +21,13 @@ pub enum AttributeError {
 
 impl From<xee_xpath_ast::ParserError> for AttributeError {
     fn from(e: xee_xpath_ast::ParserError) -> Self {
-        AttributeError::XPathParser(e)
+        Self::XPathParser(e)
     }
 }
 
 impl From<value_template::Error> for AttributeError {
     fn from(e: value_template::Error) -> Self {
-        AttributeError::ValueTemplate(e)
+        Self::ValueTemplate(e)
     }
 }
 
@@ -55,18 +55,18 @@ impl From<AttributeError> for ElementError {
 
 impl From<xee_xpath_compiler::error::SpannedError> for ElementError {
     fn from(e: xee_xpath_compiler::error::SpannedError) -> Self {
-        ElementError::XPathRunTime(e)
+        Self::XPathRunTime(e)
     }
 }
 
 impl From<value_template::Error> for ElementError {
     fn from(e: value_template::Error) -> Self {
-        ElementError::ValueTemplate(e)
+        Self::ValueTemplate(e)
     }
 }
 
 impl From<xot::Error> for ElementError {
     fn from(_e: xot::Error) -> Self {
-        ElementError::Internal
+        Self::Internal
     }
 }

@@ -51,7 +51,7 @@ impl<'a, I> AtomizedIter<'a, I>
 where
     I: Iterator<Item = Item>,
 {
-    pub(crate) fn new(xot: &'a Xot, iter: I) -> AtomizedIter<'a, I> {
+    pub(crate) fn new(xot: &'a Xot, iter: I) -> Self {
         AtomizedIter {
             xot,
             iter,

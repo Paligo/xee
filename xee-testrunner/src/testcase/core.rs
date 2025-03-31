@@ -179,7 +179,7 @@ impl<E: Environment> ContextLoadable<Path> for TestCase<E> {
         let result_query = TestCaseResult::load(queries)?;
         let dependency_query = Dependency::load(queries)?;
         let test_case_query = queries.one(".", move |session, item| {
-            let test_case = TestCase {
+            let test_case = Self {
                 name: name_query.execute(session, item)?,
                 metadata: metadata_query.execute(session, item)?,
                 environments: local_environment_query.execute(session, item)?,

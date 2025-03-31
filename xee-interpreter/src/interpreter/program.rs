@@ -18,7 +18,7 @@ pub struct Program {
 
 impl Program {
     pub fn new(static_context: context::StaticContext, span: Span) -> Self {
-        Program {
+        Self {
             span,
             functions: Vec::new(),
             declarations: Declarations::new(),
@@ -105,7 +105,7 @@ impl<'a, 'b> FunctionInfo<'a, 'b> {
     pub(crate) fn new(
         function: &'b function::Function,
         program: &'a Program,
-    ) -> FunctionInfo<'a, 'b> {
+    ) -> Self {
         FunctionInfo { function, program }
     }
 

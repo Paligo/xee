@@ -29,7 +29,7 @@ impl Item {
     /// Try to get the atomic value of the item.
     pub fn to_atomic(&self) -> error::Result<atomic::Atomic> {
         match self {
-            Item::Atomic(a) => Ok(a.clone()),
+            Self::Atomic(a) => Ok(a.clone()),
             _ => Err(error::Error::XPTY0004),
         }
     }
@@ -37,7 +37,7 @@ impl Item {
     /// Try to get the node value of the item.
     pub fn to_node(&self) -> error::Result<xot::Node> {
         match self {
-            Item::Node(n) => Ok(*n),
+            Self::Node(n) => Ok(*n),
             _ => Err(error::Error::XPTY0004),
         }
     }
@@ -45,14 +45,14 @@ impl Item {
     /// Try to get the function value of the item.
     pub fn to_function(&self) -> error::Result<function::Function> {
         match self {
-            Item::Function(f) => Ok(f.clone()),
+            Self::Function(f) => Ok(f.clone()),
             _ => Err(error::Error::XPTY0004),
         }
     }
 
     /// Try to get the value as an XPath Map.
     pub fn to_map(&self) -> error::Result<function::Map> {
-        if let Item::Function(function::Function::Map(map)) = self {
+        if let Self::Function(function::Function::Map(map)) = self {
             Ok(map.clone())
         } else {
             Err(error::Error::XPTY0004)
@@ -61,7 +61,7 @@ impl Item {
 
     /// Try to get the value as an XPath Array.
     pub fn to_array(&self) -> error::Result<function::Array> {
-        if let Item::Function(function::Function::Array(array)) = self {
+        if let Self::Function(function::Function::Array(array)) = self {
             Ok(array.clone())
         } else {
             Err(error::Error::XPTY0004)
@@ -83,12 +83,12 @@ impl Item {
     /// - Functions are always errors.
     pub fn effective_boolean_value(&self) -> error::Result<bool> {
         match self {
-            Item::Atomic(a) => a.effective_boolean_value(),
+            Self::Atomic(a) => a.effective_boolean_value(),
             // If its operand is a sequence whose first item is a node, fn:boolean returns true;
             // this is the case when a single node is on the stack, just like if it
             // were in a sequence.
-            Item::Node(_) => Ok(true),
-            Item::Function(_) => Err(error::Error::FORG0006),
+            Self::Node(_) => Ok(true),
+            Self::Function(_) => Err(error::Error::FORG0006),
         }
     }
 
@@ -98,7 +98,7 @@ impl Item {
         V: TryFrom<atomic::Atomic, Error = error::Error>,
     {
         match self {
-            Item::Atomic(a) => a.clone().try_into(),
+            Self::Atomic(a) => a.clone().try_into(),
             // atomic::Atomic::try_from(a.clone()),
             _ => Err(error::Error::XPTY0004),
         }
@@ -115,9 +115,9 @@ impl Item {
     /// - For a function, it errors.
     pub fn string_value(&self, xot: &Xot) -> error::Result<String> {
         match self {
-            Item::Atomic(atomic) => Ok(atomic.string_value()),
-            Item::Node(node) => Ok(xot.string_value(*node)),
-            Item::Function(_) => Err(error::Error::FOTY0014),
+            Self::Atomic(atomic) => Ok(atomic.string_value()),
+            Self::Node(node) => Ok(xot.string_value(*node)),
+            Self::Function(_) => Err(error::Error::FOTY0014),
         }
     }
 
@@ -131,16 +131,16 @@ impl Item {
         context: &context::DynamicContext,
     ) -> error::Result<String> {
         match self {
-            Item::Atomic(atomic) => Ok(atomic.xpath_representation()),
-            Item::Node(node) => node_display_representation(*node, xot),
-            Item::Function(function) => Ok(function.display_representation(xot, context)),
+            Self::Atomic(atomic) => Ok(atomic.xpath_representation()),
+            Self::Node(node) => node_display_representation(*node, xot),
+            Self::Function(function) => Ok(function.display_representation(xot, context)),
         }
     }
 
     /// Check whether this item is represents an XPath Map.
     pub(crate) fn is_map(&self) -> bool {
         match self {
-            Item::Function(function) => matches!(function, function::Function::Map(_)),
+            Self::Function(function) => matches!(function, function::Function::Map(_)),
             _ => false,
         }
     }
@@ -148,7 +148,7 @@ impl Item {
     /// Check whether this item is represents an XPath Array.
     pub(crate) fn is_array(&self) -> bool {
         match self {
-            Item::Function(function) => matches!(function, function::Function::Array(_)),
+            Self::Function(function) => matches!(function, function::Function::Array(_)),
             _ => false,
         }
     }
@@ -199,7 +199,7 @@ where
 impl TryFrom<Item> for atomic::Atomic {
     type Error = error::Error;
 
-    fn try_from(item: Item) -> error::Result<atomic::Atomic> {
+    fn try_from(item: Item) -> error::Result<Self> {
         match item {
             Item::Atomic(a) => Ok(a),
             _ => Err(error::Error::XPTY0004),
@@ -210,7 +210,7 @@ impl TryFrom<Item> for atomic::Atomic {
 impl TryFrom<&Item> for atomic::Atomic {
     type Error = error::Error;
 
-    fn try_from(item: &Item) -> error::Result<atomic::Atomic> {
+    fn try_from(item: &Item) -> error::Result<Self> {
         match item {
             Item::Atomic(a) => Ok(a.clone()),
             _ => Err(error::Error::XPTY0004),

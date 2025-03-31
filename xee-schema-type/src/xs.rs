@@ -89,7 +89,7 @@ impl RustInfo {
 impl Xs {
     pub fn by_name(namespace: &str, local_name: &str) -> Option<Self> {
         if namespace == XS_NAMESPACE {
-            Xs::by_local_name(local_name)
+            Self::by_local_name(local_name)
         } else {
             None
         }
@@ -215,7 +215,7 @@ impl Xs {
         }
     }
 
-    pub fn parent(&self) -> Option<Xs> {
+    pub fn parent(&self) -> Option<Self> {
         use Xs::*;
         match self {
             AnyType => None,
@@ -273,7 +273,7 @@ impl Xs {
     }
 
     #[inline]
-    pub fn derives_from(&self, other: Xs) -> bool {
+    pub fn derives_from(&self, other: Self) -> bool {
         if self == &other {
             return true;
         }
@@ -288,13 +288,13 @@ impl Xs {
     }
 
     #[inline]
-    pub fn matches(&self, other: Xs) -> bool {
-        if other != Xs::Numeric {
+    pub fn matches(&self, other: Self) -> bool {
+        if other != Self::Numeric {
             return self == &other;
         }
-        self.derives_from(Xs::Double)
-            || self.derives_from(Xs::Float)
-            || self.derives_from(Xs::Decimal)
+        self.derives_from(Self::Double)
+            || self.derives_from(Self::Float)
+            || self.derives_from(Self::Decimal)
     }
 
     pub fn rust_info(&self) -> Option<RustInfo> {

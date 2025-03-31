@@ -11,7 +11,7 @@ pub struct ModeId(usize);
 
 impl ModeId {
     pub fn new(id: usize) -> Self {
-        ModeId(id)
+        Self(id)
     }
 
     pub fn get(&self) -> usize {

@@ -253,7 +253,7 @@ impl ContextLoadable<Path> for EnvironmentSpec {
             let params = params_query.execute(documents, item)?;
             let static_base_uri = static_base_uri_query.execute(documents, item)?;
             let collections = collections_query.execute(documents, item)?;
-            let environment_spec = EnvironmentSpec {
+            let environment_spec = Self {
                 base_dir: path.to_path_buf(),
                 sources,
                 params,

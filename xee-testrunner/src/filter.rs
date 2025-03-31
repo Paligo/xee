@@ -93,7 +93,7 @@ impl ExcludedNamesFilter {
             filter_data.parse()
         } else {
             // we don't have a test filter file yet
-            Ok(ExcludedNamesFilter::new())
+            Ok(Self::new())
         }
     }
 

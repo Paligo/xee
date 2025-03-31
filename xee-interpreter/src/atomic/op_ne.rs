@@ -21,7 +21,7 @@ impl AtomicCompare for OpNe {
     }
 
     fn arguments_inverted() -> impl AtomicCompare {
-        super::OpNe
+        Self
     }
 
     fn value() -> AtomicCompareValue {

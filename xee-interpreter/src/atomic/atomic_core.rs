@@ -114,17 +114,17 @@ impl Atomic {
     /// All other types are not convertible to a boolean.
     pub(crate) fn effective_boolean_value(&self) -> error::Result<bool> {
         match self {
-            Atomic::Boolean(b) => Ok(*b),
+            Self::Boolean(b) => Ok(*b),
             // https://www.w3.org/TR/xpath-31/#id-ebv
             // point 4
-            Atomic::String(_, s) => Ok(!s.is_empty()),
-            Atomic::Untyped(s) => Ok(!s.is_empty()),
+            Self::String(_, s) => Ok(!s.is_empty()),
+            Self::Untyped(s) => Ok(!s.is_empty()),
             // point 5
-            Atomic::Integer(_, i) => Ok(!i.is_zero()),
-            Atomic::Decimal(d) => Ok(!d.is_zero()),
+            Self::Integer(_, i) => Ok(!i.is_zero()),
+            Self::Decimal(d) => Ok(!d.is_zero()),
             // NaN also counts as false
-            Atomic::Float(f) => Ok(!f.is_zero() && !f.is_nan()),
-            Atomic::Double(d) => Ok(!d.is_zero() && !d.is_nan()),
+            Self::Float(f) => Ok(!f.is_zero() && !f.is_nan()),
+            Self::Double(d) => Ok(!d.is_zero() && !d.is_nan()),
             // point 6
             _ => Err(error::Error::FORG0006),
         }
@@ -134,7 +134,7 @@ impl Atomic {
     // but inconsistent with the to_string Rust convention
     pub(crate) fn to_str(&self) -> error::Result<&str> {
         match self {
-            Atomic::String(_, s) => Ok(s),
+            Self::String(_, s) => Ok(s),
             _ => Err(error::Error::XPTY0004),
         }
     }
@@ -157,8 +157,8 @@ impl Atomic {
     /// Only xs:float and xs:double can be NaN.
     pub fn is_nan(&self) -> bool {
         match self {
-            Atomic::Float(f) => f.is_nan(),
-            Atomic::Double(d) => d.is_nan(),
+            Self::Float(f) => f.is_nan(),
+            Self::Double(d) => d.is_nan(),
             _ => false,
         }
     }
@@ -168,8 +168,8 @@ impl Atomic {
     /// Only xs:float and xs:double can be infinite.
     pub fn is_infinite(&self) -> bool {
         match self {
-            Atomic::Float(f) => f.is_infinite(),
-            Atomic::Double(d) => d.is_infinite(),
+            Self::Float(f) => f.is_infinite(),
+            Self::Double(d) => d.is_infinite(),
             _ => false,
         }
     }
@@ -179,10 +179,10 @@ impl Atomic {
     /// Only numeric types can be zero.
     pub fn is_zero(&self) -> bool {
         match self {
-            Atomic::Float(f) => f.is_zero(),
-            Atomic::Double(d) => d.is_zero(),
-            Atomic::Decimal(d) => d.is_zero(),
-            Atomic::Integer(_, i) => i.is_zero(),
+            Self::Float(f) => f.is_zero(),
+            Self::Double(d) => d.is_zero(),
+            Self::Decimal(d) => d.is_zero(),
+            Self::Integer(_, i) => i.is_zero(),
             _ => false,
         }
     }
@@ -194,43 +194,43 @@ impl Atomic {
     pub fn is_numeric(&self) -> bool {
         matches!(
             self,
-            Atomic::Float(_) | Atomic::Double(_) | Atomic::Decimal(_) | Atomic::Integer(_, _)
+            Self::Float(_) | Self::Double(_) | Self::Decimal(_) | Self::Integer(_, _)
         )
     }
 
     pub(crate) fn is_addable(&self) -> bool {
         matches!(
             self,
-            Atomic::Float(_)
-                | Atomic::Double(_)
-                | Atomic::Decimal(_)
-                | Atomic::Integer(_, _)
-                | Atomic::DayTimeDuration(_)
-                | Atomic::YearMonthDuration(_)
+            Self::Float(_)
+                | Self::Double(_)
+                | Self::Decimal(_)
+                | Self::Integer(_, _)
+                | Self::DayTimeDuration(_)
+                | Self::YearMonthDuration(_)
         )
     }
 
     pub(crate) fn is_comparable(&self) -> bool {
         matches!(
             self,
-            Atomic::String(_, _)
-                | Atomic::Float(_)
-                | Atomic::Double(_)
-                | Atomic::Decimal(_)
-                | Atomic::Integer(_, _)
-                | Atomic::YearMonthDuration(_)
-                | Atomic::DayTimeDuration(_)
-                | Atomic::DateTime(_)
-                | Atomic::DateTimeStamp(_)
-                | Atomic::Time(_)
-                | Atomic::Date(_)
-                | Atomic::Boolean(_)
-                | Atomic::Binary(_, _)
+            Self::String(_, _)
+                | Self::Float(_)
+                | Self::Double(_)
+                | Self::Decimal(_)
+                | Self::Integer(_, _)
+                | Self::YearMonthDuration(_)
+                | Self::DayTimeDuration(_)
+                | Self::DateTime(_)
+                | Self::DateTimeStamp(_)
+                | Self::Time(_)
+                | Self::Date(_)
+                | Self::Boolean(_)
+                | Self::Binary(_, _)
         )
     }
 
     pub(crate) fn is_true(&self) -> bool {
-        if let Atomic::Boolean(b) = self {
+        if let Self::Boolean(b) = self {
             *b
         } else {
             false
@@ -238,32 +238,32 @@ impl Atomic {
     }
 
     pub(crate) fn is_untyped(&self) -> bool {
-        matches!(self, Atomic::Untyped(_))
+        matches!(self, Self::Untyped(_))
     }
 
     pub(crate) fn schema_type(&self) -> Xs {
         match self {
-            Atomic::String(string_type, _) => string_type.schema_type(),
-            Atomic::Untyped(_) => Xs::UntypedAtomic,
-            Atomic::Boolean(_) => Xs::Boolean,
-            Atomic::Decimal(_) => Xs::Decimal,
-            Atomic::Integer(integer_type, _) => integer_type.schema_type(),
-            Atomic::Float(_) => Xs::Float,
-            Atomic::Double(_) => Xs::Double,
-            Atomic::QName(_) => Xs::QName,
-            Atomic::Binary(binary_type, _) => binary_type.schema_type(),
-            Atomic::Duration(_) => Xs::Duration,
-            Atomic::YearMonthDuration(_) => Xs::YearMonthDuration,
-            Atomic::DayTimeDuration(_) => Xs::DayTimeDuration,
-            Atomic::Time(_) => Xs::Time,
-            Atomic::Date(_) => Xs::Date,
-            Atomic::DateTime(_) => Xs::DateTime,
-            Atomic::DateTimeStamp(_) => Xs::DateTimeStamp,
-            Atomic::GYearMonth(_) => Xs::GYearMonth,
-            Atomic::GYear(_) => Xs::GYear,
-            Atomic::GMonthDay(_) => Xs::GMonthDay,
-            Atomic::GMonth(_) => Xs::GMonth,
-            Atomic::GDay(_) => Xs::GDay,
+            Self::String(string_type, _) => string_type.schema_type(),
+            Self::Untyped(_) => Xs::UntypedAtomic,
+            Self::Boolean(_) => Xs::Boolean,
+            Self::Decimal(_) => Xs::Decimal,
+            Self::Integer(integer_type, _) => integer_type.schema_type(),
+            Self::Float(_) => Xs::Float,
+            Self::Double(_) => Xs::Double,
+            Self::QName(_) => Xs::QName,
+            Self::Binary(binary_type, _) => binary_type.schema_type(),
+            Self::Duration(_) => Xs::Duration,
+            Self::YearMonthDuration(_) => Xs::YearMonthDuration,
+            Self::DayTimeDuration(_) => Xs::DayTimeDuration,
+            Self::Time(_) => Xs::Time,
+            Self::Date(_) => Xs::Date,
+            Self::DateTime(_) => Xs::DateTime,
+            Self::DateTimeStamp(_) => Xs::DateTimeStamp,
+            Self::GYearMonth(_) => Xs::GYearMonth,
+            Self::GYear(_) => Xs::GYear,
+            Self::GMonthDay(_) => Xs::GMonthDay,
+            Self::GMonth(_) => Xs::GMonth,
+            Self::GDay(_) => Xs::GDay,
         }
     }
 
@@ -275,19 +275,19 @@ impl Atomic {
         }
     }
 
-    pub(crate) fn derives_from(&self, other: &Atomic) -> bool {
+    pub(crate) fn derives_from(&self, other: &Self) -> bool {
         self.schema_type().derives_from(other.schema_type())
     }
 
-    pub(crate) fn has_same_schema_type(&self, other: &Atomic) -> bool {
+    pub(crate) fn has_same_schema_type(&self, other: &Self) -> bool {
         self.schema_type() == other.schema_type()
     }
 
-    pub(crate) fn plus(self) -> error::Result<Atomic> {
+    pub(crate) fn plus(self) -> error::Result<Self> {
         op_unary::unary_plus(self)
     }
 
-    pub(crate) fn minus(self) -> error::Result<Atomic> {
+    pub(crate) fn minus(self) -> error::Result<Self> {
         op_unary::unary_minus(self)
     }
 
@@ -300,14 +300,14 @@ impl Atomic {
     ///
     /// Simple equal uses a comparison with the codepoint collation, and UTC as
     /// the timezone.
-    pub fn simple_equal(&self, other: &Atomic) -> bool {
+    pub fn simple_equal(&self, other: &Self) -> bool {
         self.equal(other, &Collation::CodePoint, chrono::offset::Utc.fix())
     }
 
     /// Compare atoms using XPath rules, with explicit collation and offset.
     pub fn equal(
         &self,
-        other: &Atomic,
+        other: &Self,
         collation: &Collation,
         default_offset: chrono::FixedOffset,
     ) -> bool {
@@ -326,7 +326,7 @@ impl Atomic {
     /// This is like equal, but NaN compare equal as well
     pub(crate) fn deep_equal(
         &self,
-        other: &Atomic,
+        other: &Self,
         collation: &Collation,
         default_offset: chrono::FixedOffset,
     ) -> bool {
@@ -338,7 +338,7 @@ impl Atomic {
 
     pub(crate) fn fallible_compare(
         &self,
-        other: &Atomic,
+        other: &Self,
         collation: &Collation,
         default_offset: chrono::FixedOffset,
     ) -> error::Result<Ordering> {
@@ -376,7 +376,7 @@ impl Atomic {
     /// comparison doesn't fail.
     pub(crate) fn compare(
         &self,
-        other: &Atomic,
+        other: &Self,
         collation: &Collation,
         default_offset: chrono::FixedOffset,
     ) -> Ordering {
@@ -400,19 +400,19 @@ impl fmt::Display for Atomic {
 
 impl From<String> for Atomic {
     fn from(s: String) -> Self {
-        Atomic::String(StringType::String, s.into())
+        Self::String(StringType::String, s.into())
     }
 }
 
 impl From<&str> for Atomic {
     fn from(s: &str) -> Self {
-        Atomic::String(StringType::String, s.into())
+        Self::String(StringType::String, s.into())
     }
 }
 
 impl From<&String> for Atomic {
     fn from(s: &String) -> Self {
-        Atomic::String(StringType::String, s.clone().into())
+        Self::String(StringType::String, s.clone().into())
     }
 }
 
@@ -431,7 +431,7 @@ impl TryFrom<Atomic> for String {
 
 impl From<bool> for Atomic {
     fn from(b: bool) -> Self {
-        Atomic::Boolean(b)
+        Self::Boolean(b)
     }
 }
 
@@ -450,7 +450,7 @@ impl TryFrom<Atomic> for bool {
 
 impl From<Decimal> for Atomic {
     fn from(d: Decimal) -> Self {
-        Atomic::Decimal(d.into())
+        Self::Decimal(d.into())
     }
 }
 
@@ -469,19 +469,19 @@ impl TryFrom<Atomic> for Decimal {
 
 impl From<IriString> for Atomic {
     fn from(u: IriString) -> Self {
-        Atomic::String(StringType::AnyURI, u.to_string().into())
+        Self::String(StringType::AnyURI, u.to_string().into())
     }
 }
 
 impl From<IriReferenceString> for Atomic {
     fn from(u: IriReferenceString) -> Self {
-        Atomic::String(StringType::AnyURI, u.to_string().into())
+        Self::String(StringType::AnyURI, u.to_string().into())
     }
 }
 
 impl From<&IriReferenceStr> for Atomic {
     fn from(u: &IriReferenceStr) -> Self {
-        Atomic::String(StringType::AnyURI, u.to_string().into())
+        Self::String(StringType::AnyURI, u.to_string().into())
     }
 }
 
@@ -502,13 +502,13 @@ impl TryFrom<Atomic> for IriReferenceString {
 
 impl From<IBig> for Atomic {
     fn from(i: IBig) -> Self {
-        Atomic::Integer(IntegerType::Integer, i.into())
+        Self::Integer(IntegerType::Integer, i.into())
     }
 }
 
 impl From<Rc<IBig>> for Atomic {
     fn from(i: Rc<IBig>) -> Self {
-        Atomic::Integer(IntegerType::Integer, i)
+        Self::Integer(IntegerType::Integer, i)
     }
 }
 
@@ -537,7 +537,7 @@ impl TryFrom<Atomic> for IBig {
 impl From<i64> for Atomic {
     fn from(i: i64) -> Self {
         let i: IBig = i.into();
-        Atomic::Integer(IntegerType::Long, i.into())
+        Self::Integer(IntegerType::Long, i.into())
     }
 }
 
@@ -555,7 +555,7 @@ impl TryFrom<Atomic> for i64 {
 impl From<i32> for Atomic {
     fn from(i: i32) -> Self {
         let i: IBig = i.into();
-        Atomic::Integer(IntegerType::Int, i.into())
+        Self::Integer(IntegerType::Int, i.into())
     }
 }
 
@@ -573,7 +573,7 @@ impl TryFrom<Atomic> for i32 {
 impl From<i16> for Atomic {
     fn from(i: i16) -> Self {
         let i: IBig = i.into();
-        Atomic::Integer(IntegerType::Short, i.into())
+        Self::Integer(IntegerType::Short, i.into())
     }
 }
 
@@ -591,7 +591,7 @@ impl TryFrom<Atomic> for i16 {
 impl From<i8> for Atomic {
     fn from(i: i8) -> Self {
         let i: IBig = i.into();
-        Atomic::Integer(IntegerType::Byte, i.into())
+        Self::Integer(IntegerType::Byte, i.into())
     }
 }
 
@@ -609,7 +609,7 @@ impl TryFrom<Atomic> for i8 {
 impl From<u64> for Atomic {
     fn from(i: u64) -> Self {
         let i: IBig = i.into();
-        Atomic::Integer(IntegerType::UnsignedLong, i.into())
+        Self::Integer(IntegerType::UnsignedLong, i.into())
     }
 }
 
@@ -627,7 +627,7 @@ impl TryFrom<Atomic> for u64 {
 impl From<u32> for Atomic {
     fn from(i: u32) -> Self {
         let i: IBig = i.into();
-        Atomic::Integer(IntegerType::UnsignedInt, i.into())
+        Self::Integer(IntegerType::UnsignedInt, i.into())
     }
 }
 
@@ -645,7 +645,7 @@ impl TryFrom<Atomic> for u32 {
 impl From<u16> for Atomic {
     fn from(i: u16) -> Self {
         let i: IBig = i.into();
-        Atomic::Integer(IntegerType::UnsignedShort, i.into())
+        Self::Integer(IntegerType::UnsignedShort, i.into())
     }
 }
 
@@ -663,7 +663,7 @@ impl TryFrom<Atomic> for u16 {
 impl From<u8> for Atomic {
     fn from(i: u8) -> Self {
         let i: IBig = i.into();
-        Atomic::Integer(IntegerType::UnsignedByte, i.into())
+        Self::Integer(IntegerType::UnsignedByte, i.into())
     }
 }
 
@@ -682,13 +682,13 @@ impl TryFrom<Atomic> for u8 {
 
 impl From<f32> for Atomic {
     fn from(f: f32) -> Self {
-        Atomic::Float(OrderedFloat(f))
+        Self::Float(OrderedFloat(f))
     }
 }
 
 impl From<OrderedFloat<f32>> for Atomic {
     fn from(f: OrderedFloat<f32>) -> Self {
-        Atomic::Float(f)
+        Self::Float(f)
     }
 }
 
@@ -700,7 +700,7 @@ impl TryFrom<Atomic> for f32 {
             Atomic::Float(f) => Ok(f.into_inner()),
             // type promotion
             Atomic::Decimal(_) | Atomic::Integer(_, _) => {
-                let f: f32 = a.cast_to_float()?.try_into()?;
+                let f: Self = a.cast_to_float()?.try_into()?;
                 Ok(f)
             }
             _ => Err(error::Error::XPTY0004),
@@ -710,13 +710,13 @@ impl TryFrom<Atomic> for f32 {
 
 impl From<f64> for Atomic {
     fn from(f: f64) -> Self {
-        Atomic::Double(OrderedFloat(f))
+        Self::Double(OrderedFloat(f))
     }
 }
 
 impl From<OrderedFloat<f64>> for Atomic {
     fn from(f: OrderedFloat<f64>) -> Self {
-        Atomic::Double(f)
+        Self::Double(f)
     }
 }
 
@@ -727,9 +727,9 @@ impl TryFrom<Atomic> for f64 {
         match a {
             Atomic::Double(f) => Ok(f.into_inner()),
             // type promotion
-            Atomic::Float(f) => Ok(f.into_inner() as f64),
+            Atomic::Float(f) => Ok(f.into_inner() as Self),
             Atomic::Decimal(_) | Atomic::Integer(_, _) => {
-                let f: f64 = a.cast_to_double()?.try_into()?;
+                let f: Self = a.cast_to_double()?.try_into()?;
                 Ok(f)
             }
             _ => Err(error::Error::XPTY0004),
@@ -739,7 +739,7 @@ impl TryFrom<Atomic> for f64 {
 
 impl From<Name> for Atomic {
     fn from(n: Name) -> Self {
-        Atomic::QName(n.into())
+        Self::QName(n.into())
     }
 }
 

@@ -56,7 +56,7 @@ impl Signature {
     pub(crate) fn alternative_signatures(
         &self,
         function_kind: FunctionKind,
-    ) -> Vec<(Signature, Option<FunctionKind>)> {
+    ) -> Vec<(Self, Option<FunctionKind>)> {
         match function_kind {
             FunctionKind::ItemFirst => vec![
                 (
