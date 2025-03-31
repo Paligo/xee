@@ -126,7 +126,7 @@ impl<'a, 'b> FunctionInfo<'a, 'b> {
         match self.function {
             function::Function::Static(data) => {
                 let static_function = self.program.static_function(data.id);
-                Some(static_function.name().clone())
+                static_function.name().cloned()
             }
             _ => None,
         }

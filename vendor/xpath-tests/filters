@@ -909,9 +909,6 @@ fn-function-lookup-750
 fn-function-lookup-751
 fn-function-lookup-754
 fn-function-lookup-755
-fn-function-lookup-756
-fn-function-lookup-757
-fn-function-lookup-758
 fn-function-lookup-759
 fn-function-lookup-761
 fn-function-lookup-762
@@ -1239,47 +1236,6 @@ parse-xml-fragment-015
 = fn-prefix-from-QName
 fn-prefix-from-qname-8
 = fn-random-number-generator
-fn-random-number-generator-1
-fn-random-number-generator-10
-fn-random-number-generator-11
-fn-random-number-generator-12
-fn-random-number-generator-13
-fn-random-number-generator-14
-fn-random-number-generator-15
-fn-random-number-generator-16
-fn-random-number-generator-17
-fn-random-number-generator-18
-fn-random-number-generator-19
-fn-random-number-generator-2
-fn-random-number-generator-20
-fn-random-number-generator-23
-fn-random-number-generator-24
-fn-random-number-generator-25
-fn-random-number-generator-26
-fn-random-number-generator-27
-fn-random-number-generator-28
-fn-random-number-generator-29
-fn-random-number-generator-3
-fn-random-number-generator-30
-fn-random-number-generator-32
-fn-random-number-generator-33
-fn-random-number-generator-34
-fn-random-number-generator-35
-fn-random-number-generator-36
-fn-random-number-generator-37
-fn-random-number-generator-38
-fn-random-number-generator-39
-fn-random-number-generator-4
-fn-random-number-generator-40
-fn-random-number-generator-41
-fn-random-number-generator-42
-fn-random-number-generator-43
-fn-random-number-generator-44
-fn-random-number-generator-5
-fn-random-number-generator-6
-fn-random-number-generator-7
-fn-random-number-generator-8
-fn-random-number-generator-9
 = fn-remove
 = fn-replace
 = fn-resolve-QName

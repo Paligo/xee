@@ -100,6 +100,14 @@ impl Signature {
                 ),
                 (self.clone(), None),
             ],
+            FunctionKind::AnonymousClosure => vec![(
+                Self {
+                    parameter_types: self.parameter_types[..self.parameter_types.len() - 1]
+                        .to_vec(),
+                    return_type: self.return_type.clone(),
+                },
+                Some(function_kind),
+            )],
         }
     }
 

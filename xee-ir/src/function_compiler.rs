@@ -403,7 +403,7 @@ impl<'a> FunctionCompiler<'a> {
                 let context_names = context_names.ok_or(Error::XPDY0002.with_span(span))?;
                 self.compile_variable(&context_names.last, span)?
             }
-            Some(FunctionRule::Collation) | None => {}
+            Some(FunctionRule::Collation) | Some(FunctionRule::AnonymousClosure) | None => {}
         }
         self.builder.emit(
             Instruction::StaticClosure(static_function_id.as_u16()),

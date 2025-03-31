@@ -21,6 +21,7 @@ mod kw {
     syn::custom_keyword!(position);
     syn::custom_keyword!(size);
     syn::custom_keyword!(collation);
+    syn::custom_keyword!(anonymous_closure);
 }
 
 impl Parse for XPathFnOptions {
@@ -83,6 +84,9 @@ impl Parse for XPathFnOption {
         } else if lookahead.peek(kw::collation) {
             let _eat: kw::collation = input.parse()?;
             XPathFnOption::Kind("collation".to_string())
+        } else if lookahead.peek(kw::anonymous_closure) {
+            let _eat: kw::anonymous_closure = input.parse()?;
+            XPathFnOption::Kind("anonymous_closure".to_string())
         } else if lookahead.peek(LitStr) {
             let string_literal: LitStr = input.parse()?;
             let signature = string_literal.value();

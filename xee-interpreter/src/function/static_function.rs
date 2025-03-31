@@ -31,6 +31,9 @@ pub(crate) enum FunctionKind {
     // generate a function with one less arity that takes the collation
     // as the last argument
     Collation,
+    // this function is anonymous and takes a closure value as the
+    // last argument
+    AnonymousClosure,
 }
 
 impl FunctionKind {
@@ -43,6 +46,7 @@ impl FunctionKind {
             "position" => Some(FunctionKind::Position),
             "size" => Some(FunctionKind::Size),
             "collation" => Some(FunctionKind::Collation),
+            "anonymous_closure" => Some(FunctionKind::AnonymousClosure),
             _ => panic!("Unknown function kind {}", s),
         }
     }
@@ -127,6 +131,7 @@ pub enum FunctionRule {
     PositionFirst,
     SizeFirst,
     Collation,
+    AnonymousClosure,
 }
 
 impl From<FunctionKind> for FunctionRule {
@@ -138,6 +143,7 @@ impl From<FunctionKind> for FunctionRule {
             FunctionKind::Position => FunctionRule::PositionFirst,
             FunctionKind::Size => FunctionRule::SizeFirst,
             FunctionKind::Collation => FunctionRule::Collation,
+            FunctionKind::AnonymousClosure => FunctionRule::AnonymousClosure,
         }
     }
 }
@@ -205,7 +211,7 @@ impl StaticFunction {
                     new_arguments.push(closure_values[0].clone().try_into()?);
                     (self.func)(context, interpreter, &new_arguments)
                 }
-                FunctionRule::ItemLastOptional => {
+                FunctionRule::ItemLastOptional | FunctionRule::AnonymousClosure => {
                     let mut new_arguments = arguments;
                     let value: sequence::Sequence =
                         if !closure_values.is_empty() && !closure_values[0].is_absent() {
@@ -228,8 +234,11 @@ impl StaticFunction {
         }
     }
 
-    pub(crate) fn name(&self) -> &Name {
-        &self.name
+    pub(crate) fn name(&self) -> Option<&Name> {
+        match self.function_rule {
+            Some(FunctionRule::AnonymousClosure) => None,
+            _ => Some(&self.name),
+        }
     }
 
     pub(crate) fn arity(&self) -> usize {
@@ -260,12 +269,14 @@ fn into_sequences(values: &[stack::Value]) -> error::Result<Vec<sequence::Sequen
 #[derive(Debug)]
 pub struct StaticFunctions {
     by_name: HashMap<(Name, u8), function::StaticFunctionId>,
+    by_internal_name: HashMap<(Name, u8), function::StaticFunctionId>,
     by_index: Vec<StaticFunction>,
 }
 
 impl StaticFunctions {
     pub(crate) fn new() -> Self {
         let mut by_name = HashMap::new();
+        let mut by_internal_name = HashMap::new();
         let descriptions = static_function_descriptions();
         let mut by_index = Vec::new();
         for description in descriptions {
@@ -273,17 +284,34 @@ impl StaticFunctions {
         }
 
         for (i, static_function) in by_index.iter().enumerate() {
-            by_name.insert(
+            let map = match static_function.function_rule {
+                Some(FunctionRule::AnonymousClosure) => &mut by_internal_name,
+                _ => &mut by_name,
+            };
+            map.insert(
                 (static_function.name.clone(), static_function.arity as u8),
                 function::StaticFunctionId(i),
             );
         }
-        Self { by_name, by_index }
+        Self {
+            by_name,
+            by_internal_name,
+            by_index,
+        }
     }
 
     pub fn get_by_name(&self, name: &Name, arity: u8) -> Option<function::StaticFunctionId> {
         // TODO annoying clone
         self.by_name.get(&(name.clone(), arity)).copied()
+    }
+
+    pub fn get_by_internal_name(
+        &self,
+        name: &Name,
+        arity: u8,
+    ) -> Option<function::StaticFunctionId> {
+        // TODO annoying clone
+        self.by_internal_name.get(&(name.clone(), arity)).copied()
     }
 
     pub fn get_by_index(&self, static_function_id: function::StaticFunctionId) -> &StaticFunction {

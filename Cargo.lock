@@ -1898,6 +1898,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rand_xoshiro"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f97cdb2a36ed4183de61b2f824cc45c9f1037f28afe0a322e9fff4c108b5aaa"
+dependencies = [
+ "rand_core",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2944,6 +2953,8 @@ dependencies = [
  "num-traits",
  "ordered-float",
  "percent-encoding",
+ "rand",
+ "rand_xoshiro",
  "regexml",
  "rust_decimal",
  "rust_decimal_macros",

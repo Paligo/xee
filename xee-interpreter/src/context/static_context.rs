@@ -139,4 +139,13 @@ impl StaticContext {
     ) -> Option<function::StaticFunctionId> {
         self.functions.get_by_name(name, arity)
     }
+
+    /// Get an internal static function by name and arity
+    pub fn function_id_by_internal_name(
+        &self,
+        name: &xot::xmlname::OwnedName,
+        arity: u8,
+    ) -> Option<function::StaticFunctionId> {
+        self.functions.get_by_internal_name(name, arity)
+    }
 }
