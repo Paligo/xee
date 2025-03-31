@@ -6,7 +6,7 @@ use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::{
-    catalog::Catalog, environment::XPathEnvironmentSpec, ns::XPATH_TEST_NS, runcontext::RunContext,
+    catalog::Catalog, language::XPathLanguage, ns::XPATH_TEST_NS, runcontext::RunContext,
     testset::TestSet,
 };
 
@@ -18,15 +18,15 @@ use super::{
 
 #[derive(Debug)]
 pub(crate) struct XPathTestCase {
-    pub(crate) test_case: TestCase<XPathEnvironmentSpec>,
+    pub(crate) test_case: TestCase<XPathLanguage>,
     pub(crate) test: String,
 }
 
 impl XPathTestCase {
     fn namespaces<'a>(
         &'a self,
-        catalog: &'a Catalog<XPathEnvironmentSpec, Self>,
-        test_set: &'a TestSet<XPathEnvironmentSpec, Self>,
+        catalog: &'a Catalog<XPathLanguage>,
+        test_set: &'a TestSet<XPathLanguage>,
     ) -> anyhow::Result<Vec<(&'a str, &'a str)>> {
         let environments = self
             .test_case
@@ -41,16 +41,16 @@ impl XPathTestCase {
     }
 }
 
-impl Runnable<XPathEnvironmentSpec> for XPathTestCase {
-    fn test_case(&self) -> &TestCase<XPathEnvironmentSpec> {
+impl Runnable<XPathLanguage> for XPathTestCase {
+    fn test_case(&self) -> &TestCase<XPathLanguage> {
         &self.test_case
     }
 
     fn run(
         &self,
         run_context: &mut RunContext,
-        catalog: &Catalog<XPathEnvironmentSpec, Self>,
-        test_set: &TestSet<XPathEnvironmentSpec, Self>,
+        catalog: &Catalog<XPathLanguage>,
+        test_set: &TestSet<XPathLanguage>,
     ) -> TestOutcome {
         // first construct static context
         let mut static_context_builder = context::StaticContextBuilder::default();

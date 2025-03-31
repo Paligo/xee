@@ -7,19 +7,19 @@ use crossterm::{
 
 use crate::{
     catalog::Catalog,
-    environment::Environment,
-    testcase::{Runnable, TestCase, TestOutcome, UnexpectedError},
+    language::Language,
+    testcase::{TestCase, TestOutcome, UnexpectedError},
     testset::TestSet,
 };
 
-pub(crate) trait Renderer<E: Environment, R: Runnable<E>> {
+pub(crate) trait Renderer<L: Language> {
     fn render_test_set(
         &self,
         stdout: &mut Stdout,
-        catalog: &Catalog<E, R>,
-        test_set: &TestSet<E, R>,
+        catalog: &Catalog<L>,
+        test_set: &TestSet<L>,
     ) -> std::io::Result<()>;
-    fn render_test_case(&self, stdout: &mut Stdout, test_case: &TestCase<E>)
+    fn render_test_case(&self, stdout: &mut Stdout, test_case: &TestCase<L>)
         -> std::io::Result<()>;
     fn render_test_outcome(
         &self,
@@ -29,7 +29,7 @@ pub(crate) trait Renderer<E: Environment, R: Runnable<E>> {
     fn render_test_set_summary(
         &self,
         stdout: &mut Stdout,
-        test_set: &TestSet<E, R>,
+        test_set: &TestSet<L>,
     ) -> std::io::Result<()>;
 }
 
@@ -41,12 +41,12 @@ impl VerboseRenderer {
     }
 }
 
-impl<E: Environment, R: Runnable<E>> Renderer<E, R> for VerboseRenderer {
+impl<L: Language> Renderer<L> for VerboseRenderer {
     fn render_test_set(
         &self,
         _stdout: &mut Stdout,
-        catalog: &Catalog<E, R>,
-        test_set: &TestSet<E, R>,
+        catalog: &Catalog<L>,
+        test_set: &TestSet<L>,
     ) -> std::io::Result<()> {
         println!("{}", test_set.file_path(catalog).display());
         println!("{}", test_set.name);
@@ -59,7 +59,7 @@ impl<E: Environment, R: Runnable<E>> Renderer<E, R> for VerboseRenderer {
     fn render_test_case(
         &self,
         _stdout: &mut Stdout,
-        test_case: &TestCase<E>,
+        test_case: &TestCase<L>,
     ) -> std::io::Result<()> {
         print!("{} ... ", test_case.name);
         Ok(())
@@ -145,7 +145,7 @@ impl<E: Environment, R: Runnable<E>> Renderer<E, R> for VerboseRenderer {
     fn render_test_set_summary(
         &self,
         _stdout: &mut Stdout,
-        _test_set: &TestSet<E, R>,
+        _test_set: &TestSet<L>,
     ) -> std::io::Result<()> {
         println!();
         Ok(())
@@ -160,12 +160,12 @@ impl CharacterRenderer {
     }
 }
 
-impl<E: Environment, R: Runnable<E>> Renderer<E, R> for CharacterRenderer {
+impl<L: Language> Renderer<L> for CharacterRenderer {
     fn render_test_set(
         &self,
         _stdout: &mut Stdout,
-        catalog: &Catalog<E, R>,
-        test_set: &TestSet<E, R>,
+        catalog: &Catalog<L>,
+        test_set: &TestSet<L>,
     ) -> std::io::Result<()> {
         print!("{} ", test_set.file_path(catalog).display());
         Ok(())
@@ -174,7 +174,7 @@ impl<E: Environment, R: Runnable<E>> Renderer<E, R> for CharacterRenderer {
     fn render_test_case(
         &self,
         _stdout: &mut Stdout,
-        _test_case: &TestCase<E>,
+        _test_case: &TestCase<L>,
     ) -> std::io::Result<()> {
         Ok(())
     }
@@ -211,7 +211,7 @@ impl<E: Environment, R: Runnable<E>> Renderer<E, R> for CharacterRenderer {
     fn render_test_set_summary(
         &self,
         _stdout: &mut Stdout,
-        _test_set: &TestSet<E, R>,
+        _test_set: &TestSet<L>,
     ) -> std::io::Result<()> {
         println!();
         Ok(())

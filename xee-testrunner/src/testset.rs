@@ -12,8 +12,9 @@ use xee_xpath_load::{convert_string, ContextLoadable};
 use crate::{
     catalog::Catalog,
     dependency::{Dependencies, Dependency},
-    environment::{Environment, SharedEnvironments},
+    environment::SharedEnvironments,
     filter::TestFilter,
+    language::Language,
     ns::XPATH_TEST_NS,
     outcomes::TestSetOutcomes,
     renderer::Renderer,
@@ -22,17 +23,17 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub(crate) struct TestSet<E: Environment, R: Runnable<E>> {
+pub(crate) struct TestSet<L: Language> {
     pub(crate) full_path: PathBuf,
     pub(crate) name: String,
     pub(crate) descriptions: Vec<String>,
     pub(crate) dependencies: Dependencies,
-    pub(crate) shared_environments: SharedEnvironments<E>,
-    pub(crate) test_cases: Vec<R>,
+    pub(crate) shared_environments: SharedEnvironments<L::Environment>,
+    pub(crate) test_cases: Vec<L::Runnable>,
 }
 
-impl<E: Environment, R: Runnable<E>> TestSet<E, R> {
-    pub(crate) fn file_path(&self, catalog: &Catalog<E, R>) -> &Path {
+impl<L: Language> TestSet<L> {
+    pub(crate) fn file_path(&self, catalog: &Catalog<L>) -> &Path {
         self.full_path.strip_prefix(catalog.base_dir()).unwrap()
     }
 
@@ -45,10 +46,10 @@ impl<E: Environment, R: Runnable<E>> TestSet<E, R> {
     pub(crate) fn run(
         &self,
         run_context: &mut RunContext,
-        catalog: &Catalog<E, R>,
-        test_filter: &impl TestFilter<E, R>,
+        catalog: &Catalog<L>,
+        test_filter: &impl TestFilter<L>,
         out: &mut Stdout,
-        renderer: &dyn Renderer<E, R>,
+        renderer: &dyn Renderer<L>,
     ) -> Result<TestSetOutcomes> {
         renderer.render_test_set(out, catalog, self)?;
 
@@ -81,20 +82,20 @@ impl<E: Environment, R: Runnable<E>> TestSet<E, R> {
     }
 }
 
-impl<E: Environment, R: Runnable<E>> ContextLoadable<Path> for TestSet<E, R> {
+impl<L: Language> ContextLoadable<Path> for TestSet<L> {
     fn static_context_builder<'n>() -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<TestSet<E, R>>> {
+    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<TestSet<L>>> {
         let name_query = queries.one("@name/string()", convert_string)?;
         let descriptions_query = queries.many("description/string()", convert_string)?;
 
         let shared_environments_query = SharedEnvironments::load_with_context(queries, path)?;
         let dependency_query = Dependency::load(queries)?;
-        let test_case_query = R::load(queries, path)?;
+        let test_case_query = L::Runnable::load(queries, path)?;
         let test_cases_query = queries.many("test-case", move |session, item| {
             test_case_query.execute(session, item)
         })?;
@@ -119,10 +120,7 @@ impl<E: Environment, R: Runnable<E>> ContextLoadable<Path> for TestSet<E, R> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        environment::{EnvironmentRef, XPathEnvironmentSpec},
-        testcase::XPathTestCase,
-    };
+    use crate::{environment::EnvironmentRef, language::XPathLanguage};
 
     use super::*;
 
@@ -164,9 +162,7 @@ mod tests {
 </test-set>"#;
 
         let path = PathBuf::from("bar/foo");
-        let test_set =
-            TestSet::<XPathEnvironmentSpec, XPathTestCase>::load_from_xml_with_context(xml, &path)
-                .unwrap();
+        let test_set = TestSet::<XPathLanguage>::load_from_xml_with_context(xml, &path).unwrap();
         assert_eq!(test_set.name, "testset-name");
         assert_eq!(test_set.test_cases.len(), 2);
         assert!(test_set

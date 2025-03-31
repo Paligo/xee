@@ -2,9 +2,8 @@ use xee_xpath::Documents;
 
 use crate::{
     dependency::KnownDependencies,
-    environment::Environment,
+    language::Language,
     renderer::{CharacterRenderer, Renderer, VerboseRenderer},
-    testcase::Runnable,
 };
 
 pub(crate) struct RunContext<'a> {
@@ -26,7 +25,7 @@ impl<'a> RunContext<'a> {
         }
     }
 
-    pub(crate) fn renderer<E: Environment, R: Runnable<E>>(&self) -> Box<dyn Renderer<E, R>> {
+    pub(crate) fn renderer<L: Language>(&self) -> Box<dyn Renderer<L>> {
         if self.verbose {
             Box::new(VerboseRenderer::new())
         } else {

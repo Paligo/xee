@@ -9,12 +9,11 @@ use xee_xpath_load::PathLoadable;
 
 use crate::catalog::Catalog;
 use crate::dependency::xpath_known_dependencies;
-use crate::environment::{Environment, XPathEnvironmentSpec};
 use crate::filter::{ExcludedNamesFilter, IncludeAllFilter, NameFilter, TestFilter};
+use crate::language::{Language, XPathLanguage};
 use crate::outcomes::{CatalogOutcomes, Outcomes, TestSetOutcomes};
 use crate::paths::{paths, PathInfo};
 use crate::runcontext::RunContext;
-use crate::testcase::{Runnable, XPathTestCase};
 use crate::testset::TestSet;
 
 #[derive(Parser)]
@@ -91,7 +90,7 @@ pub fn cli() -> Result<()> {
     let mut documents = Documents::new();
     let run_context = RunContext::new(&mut documents, xpath_known_dependencies(), cli.verbose);
 
-    let mut runner = Runner::<XPathEnvironmentSpec, XPathTestCase>::new(run_context, path_info);
+    let mut runner = Runner::<XPathLanguage>::new(run_context, path_info);
 
     match cli.command {
         Commands::Initialize { .. } => runner.initialize(),
@@ -101,20 +100,18 @@ pub fn cli() -> Result<()> {
     }
 }
 
-struct Runner<'a, E: Environment, R: Runnable<E>> {
+struct Runner<'a, L: Language> {
     run_context: RunContext<'a>,
     path_info: PathInfo,
-    _e: std::marker::PhantomData<E>,
-    _r: std::marker::PhantomData<R>,
+    _l: std::marker::PhantomData<L>,
 }
 
-impl<'a, E: Environment, R: Runnable<E>> Runner<'a, E, R> {
+impl<'a, L: Language> Runner<'a, L> {
     fn new(run_context: RunContext<'a>, path_info: PathInfo) -> Self {
         Self {
             run_context,
             path_info,
-            _e: std::marker::PhantomData,
-            _r: std::marker::PhantomData,
+            _l: std::marker::PhantomData,
         }
     }
 
@@ -203,22 +200,22 @@ impl<'a, E: Environment, R: Runnable<E>> Runner<'a, E, R> {
         Ok(())
     }
 
-    fn load_catalog(&mut self) -> Result<Catalog<E, R>> {
+    fn load_catalog(&mut self) -> Result<Catalog<L>> {
         Catalog::load_from_file(&self.path_info.catalog_path)
     }
 
-    fn load_test_set(&mut self) -> Result<TestSet<E, R>> {
+    fn load_test_set(&mut self) -> Result<TestSet<L>> {
         TestSet::load_from_file(&self.path_info.test_file())
     }
 
-    fn load_check_test_filter(&self) -> Result<impl TestFilter<E, R>> {
+    fn load_check_test_filter(&self) -> Result<impl TestFilter<L>> {
         ExcludedNamesFilter::load_from_file(&self.path_info.filter_path)
     }
 
     fn catalog_outcomes(
         &mut self,
-        catalog: &Catalog<E, R>,
-        test_filter: &impl TestFilter<E, R>,
+        catalog: &Catalog<L>,
+        test_filter: &impl TestFilter<L>,
     ) -> Result<CatalogOutcomes> {
         let mut out = std::io::stdout();
         let renderer = self.run_context.renderer();
@@ -232,8 +229,8 @@ impl<'a, E: Environment, R: Runnable<E>> Runner<'a, E, R> {
 
     fn test_set_outcomes(
         &mut self,
-        catalog: &Catalog<E, R>,
-        test_filter: &impl TestFilter<E, R>,
+        catalog: &Catalog<L>,
+        test_filter: &impl TestFilter<L>,
     ) -> Result<TestSetOutcomes> {
         let mut out = std::io::stdout();
         let renderer = self.run_context.renderer();

@@ -5,13 +5,13 @@ use std::str::FromStr;
 use anyhow::Error;
 use fxhash::{FxHashMap, FxHashSet};
 
-use crate::environment::Environment;
+use crate::language::Language;
 use crate::outcomes::{CatalogOutcomes, TestSetOutcomes};
-use crate::testcase::{Runnable, TestCase};
+use crate::testcase::TestCase;
 use crate::testset::TestSet;
 
-pub(crate) trait TestFilter<E: Environment, R: Runnable<E>> {
-    fn is_included(&self, test_set: &TestSet<E, R>, test_case: &TestCase<E>) -> bool;
+pub(crate) trait TestFilter<L: Language> {
+    fn is_included(&self, test_set: &TestSet<L>, test_case: &TestCase<L>) -> bool;
 }
 
 pub(crate) struct IncludeAllFilter {}
@@ -22,8 +22,8 @@ impl IncludeAllFilter {
     }
 }
 
-impl<E: Environment, R: Runnable<E>> TestFilter<E, R> for IncludeAllFilter {
-    fn is_included(&self, _test_set: &TestSet<E, R>, _test_case: &TestCase<E>) -> bool {
+impl<L: Language> TestFilter<L> for IncludeAllFilter {
+    fn is_included(&self, _test_set: &TestSet<L>, _test_case: &TestCase<L>) -> bool {
         true
     }
 }
@@ -38,8 +38,8 @@ impl NameFilter {
     }
 }
 
-impl<E: Environment, R: Runnable<E>> TestFilter<E, R> for NameFilter {
-    fn is_included(&self, _test_set: &TestSet<E, R>, test_case: &TestCase<E>) -> bool {
+impl<L: Language> TestFilter<L> for NameFilter {
+    fn is_included(&self, _test_set: &TestSet<L>, test_case: &TestCase<L>) -> bool {
         if let Some(name_filter) = &self.name_filter {
             test_case.name.contains(name_filter)
         } else {
@@ -53,8 +53,8 @@ pub(crate) struct ExcludedNamesFilter {
     comments: FxHashMap<String, FxHashMap<String, String>>,
 }
 
-impl<E: Environment, R: Runnable<E>> TestFilter<E, R> for ExcludedNamesFilter {
-    fn is_included(&self, test_set: &TestSet<E, R>, test_case: &TestCase<E>) -> bool {
+impl<L: Language> TestFilter<L> for ExcludedNamesFilter {
+    fn is_included(&self, test_set: &TestSet<L>, test_case: &TestCase<L>) -> bool {
         let test_set_name = &test_set.name;
         let test_case_name = &test_case.name;
         if let Some(excluded_names) = self.names.get(test_set_name) {

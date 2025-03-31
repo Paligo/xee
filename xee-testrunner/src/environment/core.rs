@@ -21,7 +21,7 @@ use super::{
 };
 
 // the abstract environment. Can be an XPath or XSLT environment.
-pub(crate) trait Environment: Sized {
+pub(crate) trait Environment: Sized + std::fmt::Debug {
     // create an empty environment
     fn empty() -> Self;
 

@@ -5,14 +5,14 @@ use std::path::{Path, PathBuf};
 use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable, PathLoadable};
 
-use crate::environment::{Environment, SharedEnvironments};
+use crate::environment::SharedEnvironments;
 use crate::filter::TestFilter;
 use crate::hashmap::FxIndexSet;
+use crate::language::Language;
 use crate::ns::XPATH_TEST_NS;
 use crate::outcomes::CatalogOutcomes;
 use crate::renderer::Renderer;
 use crate::runcontext::RunContext;
-use crate::testcase::Runnable;
 use crate::testset::TestSet;
 
 #[derive(Debug)]
@@ -23,8 +23,8 @@ pub(crate) struct TestSetRef {
 }
 
 #[derive(Debug)]
-pub(crate) struct Catalog<E: Environment, R: Runnable<E>> {
-    pub(crate) shared_environments: SharedEnvironments<E>,
+pub(crate) struct Catalog<L: Language> {
+    pub(crate) shared_environments: SharedEnvironments<L::Environment>,
     pub(crate) full_path: PathBuf,
     #[allow(dead_code)]
     pub(crate) test_suite: String,
@@ -32,10 +32,9 @@ pub(crate) struct Catalog<E: Environment, R: Runnable<E>> {
     pub(crate) version: String,
     // pub(crate) test_sets: Vec<TestSetRef>,
     pub(crate) file_paths: FxIndexSet<PathBuf>,
-    _runnable: std::marker::PhantomData<R>,
 }
 
-impl<E: Environment, R: Runnable<E>> Catalog<E, R> {
+impl<L: Language> Catalog<L> {
     pub(crate) fn base_dir(&self) -> &Path {
         self.full_path.parent().unwrap()
     }
@@ -43,9 +42,9 @@ impl<E: Environment, R: Runnable<E>> Catalog<E, R> {
     pub(crate) fn run(
         &self,
         run_context: &mut RunContext,
-        test_filter: &impl TestFilter<E, R>,
+        test_filter: &impl TestFilter<L>,
         out: &mut Stdout,
-        renderer: &dyn Renderer<E, R>,
+        renderer: &dyn Renderer<L>,
     ) -> Result<CatalogOutcomes> {
         let mut catalog_outcomes = CatalogOutcomes::new();
         for file_path in &self.file_paths {
@@ -58,14 +57,14 @@ impl<E: Environment, R: Runnable<E>> Catalog<E, R> {
     }
 }
 
-impl<E: Environment, R: Runnable<E>> ContextLoadable<Path> for Catalog<E, R> {
+impl<L: Language> ContextLoadable<Path> for Catalog<L> {
     fn static_context_builder<'n>() -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Catalog<E, R>>> {
+    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Catalog<L>>> {
         let test_suite_query = queries.one("@test-suite/string()", convert_string)?;
         let version_query = queries.one("@version/string()", convert_string)?;
 
@@ -91,7 +90,6 @@ impl<E: Environment, R: Runnable<E>> ContextLoadable<Path> for Catalog<E, R> {
                 shared_environments,
                 // test_sets,
                 file_paths,
-                _runnable: std::marker::PhantomData,
             })
         })?;
         Ok(catalog_query)

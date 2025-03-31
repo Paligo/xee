@@ -9,6 +9,7 @@ use crate::{
     catalog::Catalog,
     dependency::{Dependencies, Dependency},
     environment::{Environment, EnvironmentIterator, EnvironmentRef, TestCaseEnvironment},
+    language::Language,
     metadata::Metadata,
     ns::XPATH_TEST_NS,
     runcontext::RunContext,
@@ -17,46 +18,46 @@ use crate::{
 
 use super::{assert::TestCaseResult, outcome::TestOutcome};
 
-pub(crate) trait Runnable<E: Environment>: std::marker::Sized {
-    fn test_case(&self) -> &TestCase<E>;
+pub(crate) trait Runnable<L: Language>: std::marker::Sized {
+    fn test_case(&self) -> &TestCase<L>;
 
     fn run(
         &self,
         run_context: &mut RunContext,
-        catalog: &Catalog<E, Self>,
-        test_set: &TestSet<E, Self>,
+        catalog: &Catalog<L>,
+        test_set: &TestSet<L>,
     ) -> TestOutcome;
 
     fn load(queries: &Queries, path: &Path) -> anyhow::Result<impl Query<Self>>;
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct TestCase<E: Environment> {
+pub(crate) struct TestCase<L: Language> {
     pub(crate) name: String,
     pub(crate) metadata: Metadata,
     // environments can be a reference by name, or a locally defined environment
-    pub(crate) environments: Vec<TestCaseEnvironment<E>>,
+    pub(crate) environments: Vec<TestCaseEnvironment<L::Environment>>,
     pub(crate) dependencies: Dependencies,
     pub(crate) result: TestCaseResult,
     // pub(crate) modules: Vec<Module>,
 }
 
-impl<E: Environment> TestCase<E> {
-    pub(crate) fn environments<'a, R: Runnable<E>>(
+impl<L: Language> TestCase<L> {
+    pub(crate) fn environments<'a>(
         &'a self,
-        catalog: &'a Catalog<E, R>,
-        test_set: &'a TestSet<E, R>,
-    ) -> EnvironmentIterator<'a, E> {
+        catalog: &'a Catalog<L>,
+        test_set: &'a TestSet<L>,
+    ) -> EnvironmentIterator<'a, L::Environment> {
         EnvironmentIterator::new(
             vec![&catalog.shared_environments, &test_set.shared_environments],
             &self.environments,
         )
     }
 
-    pub(crate) fn static_base_uri<'a, R: Runnable<E>>(
+    pub(crate) fn static_base_uri<'a>(
         &'a self,
-        catalog: &'a Catalog<E, R>,
-        test_set: &'a TestSet<E, R>,
+        catalog: &'a Catalog<L>,
+        test_set: &'a TestSet<L>,
     ) -> anyhow::Result<Option<&'a str>> {
         let environments = self
             .environments(catalog, test_set)
@@ -70,11 +71,11 @@ impl<E: Environment> TestCase<E> {
         Ok(None)
     }
 
-    pub(crate) fn load_sources<R: Runnable<E>>(
+    pub(crate) fn load_sources(
         &self,
         run_context: &mut RunContext,
-        catalog: &Catalog<E, R>,
-        test_set: &TestSet<E, R>,
+        catalog: &Catalog<L>,
+        test_set: &TestSet<L>,
         base_uri: Option<&IriAbsoluteStr>,
     ) -> anyhow::Result<()> {
         let environments = self
@@ -88,11 +89,11 @@ impl<E: Environment> TestCase<E> {
         Ok(())
     }
 
-    pub(crate) fn load_collections<R: Runnable<E>>(
+    pub(crate) fn load_collections(
         &self,
         run_context: &mut RunContext,
-        catalog: &Catalog<E, R>,
-        test_test: &TestSet<E, R>,
+        catalog: &Catalog<L>,
+        test_test: &TestSet<L>,
         base_uri: Option<&IriAbsoluteStr>,
     ) -> anyhow::Result<HashMap<String, Sequence>> {
         let mut collections = HashMap::new();
@@ -109,11 +110,11 @@ impl<E: Environment> TestCase<E> {
         Ok(collections)
     }
 
-    pub(crate) fn context_item<R: Runnable<E>>(
+    pub(crate) fn context_item(
         &self,
         run_context: &mut RunContext,
-        catalog: &Catalog<E, R>,
-        test_set: &TestSet<E, R>,
+        catalog: &Catalog<L>,
+        test_set: &TestSet<L>,
         base_uri: Option<&IriAbsoluteStr>,
     ) -> anyhow::Result<Option<Item>> {
         let environments = self
@@ -130,11 +131,11 @@ impl<E: Environment> TestCase<E> {
         Ok(None)
     }
 
-    pub(crate) fn variables<R: Runnable<E>>(
+    pub(crate) fn variables(
         &self,
         run_context: &mut RunContext,
-        catalog: &Catalog<E, R>,
-        test_set: &TestSet<E, R>,
+        catalog: &Catalog<L>,
+        test_set: &TestSet<L>,
         base_uri: Option<&IriAbsoluteStr>,
     ) -> anyhow::Result<context::Variables> {
         let environments = self
@@ -152,7 +153,7 @@ impl<E: Environment> TestCase<E> {
     }
 }
 
-impl<E: Environment> ContextLoadable<Path> for TestCase<E> {
+impl<L: Language> ContextLoadable<Path> for TestCase<L> {
     fn static_context_builder<'n>() -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
@@ -164,7 +165,7 @@ impl<E: Environment> ContextLoadable<Path> for TestCase<E> {
         let metadata_query = Metadata::load(queries)?;
 
         let ref_query = queries.option("@ref/string()", convert_string)?;
-        let environment_query = E::load(queries, path)?;
+        let environment_query = L::Environment::load(queries, path)?;
         let local_environment_query = queries.many("environment", move |session, item| {
             let ref_ = ref_query.execute(session, item)?;
             if let Some(ref_) = ref_ {
@@ -204,7 +205,7 @@ mod tests {
     use std::path::PathBuf;
 
     use crate::{
-        environment::XPathEnvironmentSpec, metadata::Attribution, ns::XPATH_TEST_NS,
+        language::XPathLanguage, metadata::Attribution, ns::XPATH_TEST_NS,
         testcase::assert::AssertTrue,
     };
 
@@ -227,8 +228,7 @@ mod tests {
 
         let path = PathBuf::from("bar/foo");
 
-        let test_case =
-            TestCase::<XPathEnvironmentSpec>::load_from_xml_with_context(&xml, &path).unwrap();
+        let test_case = TestCase::<XPathLanguage>::load_from_xml_with_context(&xml, &path).unwrap();
         assert_eq!(
             test_case,
             TestCase {
