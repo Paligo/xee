@@ -17,7 +17,7 @@ use super::{
     collation::Collation,
     collection::Collection,
     resource::Resource,
-    source::{Source, SourceRole},
+    source::{Source, SourceRole, Sources},
 };
 
 // the abstract environment. Can be an XPath or XSLT environment.
@@ -193,7 +193,7 @@ impl ContextLoadable<Path> for EnvironmentSpec {
     }
 
     fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
-        let sources_query = Source::load(queries)?;
+        let sources_query = Sources::load_with_context(queries, path)?;
 
         let name_query = queries.one("@name/string()", convert_string)?;
         let select_query = queries.option("@select/string()", convert_string)?;
@@ -225,15 +225,14 @@ impl ContextLoadable<Path> for EnvironmentSpec {
         })?;
 
         let uri_query = queries.one("@uri/string()", convert_string)?;
-        let collection_sources_query = Source::load(queries)?;
+        let collection_sources_query = Sources::load_with_context(queries, path)?;
         let collections_query = queries.many("collection", move |documents, item| {
             let uri = uri_query.execute(documents, item)?;
             let sources = collection_sources_query.execute(documents, item)?;
-            // we need to flatten sources
-            let sources = sources.into_iter().flatten().collect::<Vec<Source>>();
+
             let collection = Collection {
                 uri,
-                sources,
+                sources: sources.sources,
                 queries: Vec::new(),
                 resources: Vec::new(),
             };
@@ -248,14 +247,12 @@ impl ContextLoadable<Path> for EnvironmentSpec {
             queries.option("static-base-uri/@uri/string()", convert_string)?;
         let environment_query = queries.one(".", move |documents, item| {
             let sources = sources_query.execute(documents, item)?;
-            // we need to flatten sources
-            let sources = sources.into_iter().flatten().collect::<Vec<Source>>();
             let params = params_query.execute(documents, item)?;
             let static_base_uri = static_base_uri_query.execute(documents, item)?;
             let collections = collections_query.execute(documents, item)?;
             let environment_spec = EnvironmentSpec {
                 base_dir: path.to_path_buf(),
-                sources,
+                sources: sources.sources,
                 params,
                 static_base_uri,
                 collections,

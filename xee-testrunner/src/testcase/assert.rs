@@ -1,13 +1,14 @@
 use ahash::AHashMap;
 use chrono::Offset;
 use std::fmt;
+use std::path::Path;
 use xee_xpath::context::{Collation, DynamicContext};
 use xot::xmlname::{NameStrInfo, OwnedName as Name};
 use xot::Xot;
 
 use xee_xpath::query::RecurseQuery;
 use xee_xpath::{context, error, Documents, Item, Queries, Query, Recurse, Sequence};
-use xee_xpath_load::{convert_boolean, convert_string, Loadable};
+use xee_xpath_load::{convert_boolean, convert_string, ContextLoadable};
 
 use crate::ns::XPATH_TEST_NS;
 
@@ -746,14 +747,14 @@ impl TestCaseResult {
     }
 }
 
-impl Loadable for TestCaseResult {
-    fn static_context_builder<'n>() -> context::StaticContextBuilder<'n> {
+impl ContextLoadable<Path> for TestCaseResult {
+    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load(queries: &Queries) -> anyhow::Result<impl Query<Self>> {
+    fn load_with_context(queries: &Queries, path: &Path) -> anyhow::Result<impl Query<Self>> {
         let code_query = queries.one("@code/string()", convert_string)?;
         let error_query = queries.one(".", move |documents, item| {
             Ok(TestCaseResult::AssertError(AssertError::new(
@@ -1044,7 +1045,7 @@ pub(crate) fn serialize(xot: &Xot, sequence: &Sequence) -> crate::error::Result<
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
+    use std::{path::PathBuf, vec};
 
     use super::*;
 
@@ -1056,7 +1057,8 @@ mod tests {
             r#"<doc xmlns="{}"><result><assert-eq>0</assert-eq></result></doc>"#,
             XPATH_TEST_NS
         );
-        let test_case_result = TestCaseResult::load_from_xml(&xml).unwrap();
+        let test_case_result =
+            TestCaseResult::load_from_xml_with_context(&xml, &PathBuf::new()).unwrap();
         assert_eq!(
             test_case_result,
             TestCaseResult::AssertEq(AssertEq::new("0".to_string()))
@@ -1077,7 +1079,8 @@ mod tests {
 </doc>"#,
             XPATH_TEST_NS
         );
-        let test_case_result = TestCaseResult::load_from_xml(&xml).unwrap();
+        let test_case_result =
+            TestCaseResult::load_from_xml_with_context(&xml, &PathBuf::new()).unwrap();
         assert_eq!(
             test_case_result,
             TestCaseResult::AnyOf(AssertAnyOf::new(vec![

@@ -1,7 +1,9 @@
+use std::path::Path;
+
 use anyhow::Result;
 
 use xee_xpath::{context, Queries, Query};
-use xee_xpath_load::{convert_string, Loadable};
+use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::ns::XPATH_TEST_NS;
 
@@ -24,14 +26,14 @@ pub(crate) struct Attribution {
     pub(crate) on: String, // should be a date
 }
 
-impl Loadable for Metadata {
-    fn static_context_builder<'n>() -> context::StaticContextBuilder<'n> {
+impl ContextLoadable<Path> for Metadata {
+    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load(queries: &Queries) -> Result<impl Query<Metadata>> {
+    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Metadata>> {
         let description_query = queries.option("description/string()", convert_string)?;
         let by_query = queries.one("@by/string()", convert_string)?;
         let on_query = queries.one("@on/string()", convert_string)?;
@@ -78,6 +80,8 @@ impl Loadable for Metadata {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
 
     #[test]
@@ -87,7 +91,7 @@ mod tests {
   <description>Description</description>
   <created by="Foo Barson" on="2024-01-01"/>
 </container>"#;
-        let metadata = Metadata::load_from_xml(xml).unwrap();
+        let metadata = Metadata::load_from_xml_with_context(xml, &PathBuf::new()).unwrap();
         assert_eq!(
             metadata,
             Metadata {

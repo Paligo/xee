@@ -4,10 +4,11 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 
-use xee_xpath::{Documents, Queries, Query};
-use xee_xpath_load::{convert_string, Loadable};
+use xee_xpath::{context, Documents, Queries, Query};
+use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::metadata::Metadata;
+use crate::ns::XPATH_TEST_NS;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Source {
@@ -108,13 +109,25 @@ impl Source {
             }
         }
     }
+}
 
-    pub(crate) fn load<'a>(queries: &'a Queries) -> Result<impl Query<Vec<Vec<Self>>> + 'a> {
+pub(crate) struct Sources {
+    pub(crate) sources: Vec<Source>,
+}
+
+impl ContextLoadable<Path> for Sources {
+    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
+        let mut builder = context::StaticContextBuilder::default();
+        builder.default_element_namespace(XPATH_TEST_NS);
+        builder
+    }
+
+    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
         let file_query = queries.option("@file/string()", convert_string)?;
         let content_query = queries.one("content/string()", convert_string)?;
         let role_query = queries.option("@role/string()", convert_string)?;
         let uri_query = queries.option("@uri/string()", convert_string)?;
-        let metadata_query = Metadata::load(queries)?;
+        let metadata_query = Metadata::load_with_context(queries, path)?;
 
         let sources_query = queries.many("source", move |session, item| {
             let content = if let Some(file) = file_query.execute(session, item)? {
@@ -143,40 +156,43 @@ impl Source {
             };
 
             let metadata = metadata_query.execute(session, item)?;
-            // we can return multiple sources if both role and uri are set
-            // we flatten it later
-            let mut sources = Vec::new();
-            if let Some(role) = role {
+
+            let source = if let Some(role) = role {
                 if role == "." {
-                    sources.push(Source {
+                    Source {
                         metadata: metadata.clone(),
                         role: SourceRole::Context,
                         content: content.clone(),
                         uri,
                         validation: None,
-                    })
+                    }
                 } else {
-                    sources.push(Source {
+                    Source {
                         metadata: metadata.clone(),
                         role: SourceRole::Var(role),
                         content: content.clone(),
                         uri,
                         validation: None,
-                    });
+                    }
                 }
             } else {
-                sources.push(Source {
+                Source {
                     metadata,
                     role: SourceRole::Doc(uri.clone()),
                     content,
                     uri,
                     // TODO
                     validation: None,
-                });
-            }
+                }
+            };
 
-            Ok(sources)
+            Ok(source)
         })?;
-        Ok(sources_query)
+
+        let all_sources_query = queries.one(".", move |documents, item| {
+            let sources = sources_query.execute(documents, item)?;
+            Ok(Sources { sources })
+        })?;
+        Ok(all_sources_query)
     }
 }

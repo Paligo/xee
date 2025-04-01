@@ -162,7 +162,7 @@ impl<L: Language> ContextLoadable<Path> for TestCase<L> {
 
     fn load_with_context(queries: &Queries, path: &Path) -> anyhow::Result<impl Query<Self>> {
         let name_query = queries.one("@name/string()", convert_string)?;
-        let metadata_query = Metadata::load(queries)?;
+        let metadata_query = Metadata::load_with_context(queries, path)?;
 
         let ref_query = queries.option("@ref/string()", convert_string)?;
         let environment_query = L::Environment::load(queries, path)?;
@@ -177,7 +177,7 @@ impl<L: Language> ContextLoadable<Path> for TestCase<L> {
             }
         })?;
 
-        let result_query = TestCaseResult::load(queries)?;
+        let result_query = TestCaseResult::load_with_context(queries, path)?;
         let dependency_query = Dependency::load(queries)?;
         let test_case_query = queries.one(".", move |session, item| {
             let test_case = TestCase {
