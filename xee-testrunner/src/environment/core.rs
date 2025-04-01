@@ -186,7 +186,7 @@ impl EnvironmentSpec {
 }
 
 impl ContextLoadable<Path> for EnvironmentSpec {
-    fn static_context_builder<'n>() -> context::StaticContextBuilder<'n> {
+    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder

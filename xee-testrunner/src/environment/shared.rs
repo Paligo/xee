@@ -29,7 +29,7 @@ impl<E: Environment> SharedEnvironments<E> {
 }
 
 impl<E: Environment> ContextLoadable<Path> for SharedEnvironments<E> {
-    fn static_context_builder<'n>() -> context::StaticContextBuilder<'n> {
+    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
