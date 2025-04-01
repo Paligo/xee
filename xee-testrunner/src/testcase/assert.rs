@@ -1,7 +1,6 @@
 use ahash::AHashMap;
 use chrono::Offset;
 use std::fmt;
-use std::path::Path;
 use xee_xpath::context::{Collation, DynamicContext};
 use xot::xmlname::{NameStrInfo, OwnedName as Name};
 use xot::Xot;
@@ -11,7 +10,6 @@ use xee_xpath::{context, error, Documents, Item, Queries, Query, Recurse, Sequen
 use xee_xpath_load::{convert_boolean, convert_string, ContextLoadable};
 
 use crate::catalog::LoadContext;
-use crate::ns::XPATH_TEST_NS;
 
 use super::outcome::{TestOutcome, UnexpectedError};
 
@@ -757,7 +755,7 @@ impl ContextLoadable<LoadContext> for TestCaseResult {
 
     fn load_with_context(
         queries: &Queries,
-        context: &LoadContext,
+        _context: &LoadContext,
     ) -> anyhow::Result<impl Query<Self>> {
         let code_query = queries.one("@code/string()", convert_string)?;
         let error_query = queries.one(".", move |documents, item| {

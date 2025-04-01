@@ -1,11 +1,9 @@
-use std::path::Path;
-
 use anyhow::Result;
 
 use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
-use crate::{catalog::LoadContext, hashmap::FxIndexSet, ns::XPATH_TEST_NS};
+use crate::{catalog::LoadContext, hashmap::FxIndexSet};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct DependencySpec {
@@ -199,7 +197,7 @@ impl ContextLoadable<LoadContext> for Dependencies {
         builder
     }
 
-    fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
+    fn load_with_context(queries: &Queries, _context: &LoadContext) -> Result<impl Query<Self>> {
         let dependency_query = Dependency::load(queries)?;
 
         Ok(dependency_query.map(|dependencies, _, _| {

@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use ahash::{HashMap, HashMapExt};
 use iri_string::types::IriAbsoluteStr;
 use xee_xpath::{context, Item, Queries, Query, Sequence};
@@ -11,7 +9,6 @@ use crate::{
     environment::{Environment, EnvironmentIterator, EnvironmentRef, TestCaseEnvironment},
     language::Language,
     metadata::Metadata,
-    ns::XPATH_TEST_NS,
     runcontext::RunContext,
     testset::TestSet,
 };

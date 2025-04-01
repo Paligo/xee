@@ -1,6 +1,5 @@
 use anyhow::Result;
 use iri_string::types::{IriAbsoluteString, IriString};
-use std::path::Path;
 
 use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
@@ -8,7 +7,6 @@ use xee_xpath_load::{convert_string, ContextLoadable};
 use crate::{
     catalog::{Catalog, LoadContext},
     language::XPathLanguage,
-    ns::XPATH_TEST_NS,
     runcontext::RunContext,
     testset::TestSet,
 };

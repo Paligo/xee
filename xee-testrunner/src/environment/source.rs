@@ -9,7 +9,6 @@ use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::catalog::LoadContext;
 use crate::metadata::Metadata;
-use crate::ns::XPATH_TEST_NS;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Source {

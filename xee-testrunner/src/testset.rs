@@ -15,7 +15,6 @@ use crate::{
     environment::SharedEnvironments,
     filter::TestFilter,
     language::Language,
-    ns::XPATH_TEST_NS,
     outcomes::TestSetOutcomes,
     renderer::Renderer,
     runcontext::RunContext,
@@ -123,7 +122,7 @@ impl<L: Language> ContextLoadable<LoadContext> for TestSet<L> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{environment::EnvironmentRef, language::XPathLanguage};
+    use crate::{environment::EnvironmentRef, language::XPathLanguage, ns::XPATH_TEST_NS};
 
     use super::*;
 

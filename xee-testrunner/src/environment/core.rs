@@ -1,6 +1,6 @@
 use std::{
     fmt::{self, Display, Formatter},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use ahash::{HashMap, HashMapExt};
@@ -11,7 +11,7 @@ use xot::xmlname::OwnedName as Name;
 use xee_xpath::{context, Documents, Item, Queries, Query, Sequence};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
-use crate::{catalog::LoadContext, ns::XPATH_TEST_NS};
+use crate::catalog::LoadContext;
 
 use super::{
     collation::Collation,
@@ -285,9 +285,8 @@ mod tests {
             XPATH_TEST_NS
         );
 
-        let path = Path::new("bar/foo");
         let context = LoadContext {
-            path: path.to_path_buf(),
+            path: PathBuf::from("bar/foo"),
             catalog_ns: XPATH_TEST_NS,
         };
         let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, &context).unwrap();
@@ -352,9 +351,8 @@ mod tests {
             XPATH_TEST_NS
         );
 
-        let path = Path::new("bar/foo");
         let context = LoadContext {
-            path: path.to_path_buf(),
+            path: PathBuf::from("bar/foo"),
             catalog_ns: XPATH_TEST_NS,
         };
         let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, &context).unwrap();

@@ -1,11 +1,9 @@
-use std::path::Path;
-
 use anyhow::Result;
 
 use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
-use crate::{catalog::LoadContext, ns::XPATH_TEST_NS};
+use crate::catalog::LoadContext;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Metadata {
@@ -33,7 +31,10 @@ impl ContextLoadable<LoadContext> for Metadata {
         builder
     }
 
-    fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Metadata>> {
+    fn load_with_context(
+        queries: &Queries,
+        _context: &LoadContext,
+    ) -> Result<impl Query<Metadata>> {
         let description_query = queries.option("description/string()", convert_string)?;
         let by_query = queries.one("@by/string()", convert_string)?;
         let on_query = queries.one("@on/string()", convert_string)?;
@@ -81,6 +82,8 @@ impl ContextLoadable<LoadContext> for Metadata {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+
+    use crate::ns::XPATH_TEST_NS;
 
     use super::*;
 

@@ -1,10 +1,9 @@
 use anyhow::Result;
-use std::path::Path;
 
 use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
-use crate::{catalog::LoadContext, hashmap::FxIndexMap, ns::XPATH_TEST_NS};
+use crate::{catalog::LoadContext, hashmap::FxIndexMap};
 
 use super::core::{Environment, EnvironmentRef};
 
