@@ -4,7 +4,7 @@ use std::path::Path;
 use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
-use crate::{hashmap::FxIndexMap, ns::XPATH_TEST_NS};
+use crate::{catalog::LoadContext, hashmap::FxIndexMap, ns::XPATH_TEST_NS};
 
 use super::core::{Environment, EnvironmentRef};
 
@@ -28,8 +28,8 @@ impl<E: Environment> SharedEnvironments<E> {
     }
 }
 
-impl<E: Environment> ContextLoadable<Path> for SharedEnvironments<E> {
-    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
+impl<E: Environment> ContextLoadable<LoadContext> for SharedEnvironments<E> {
+    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
@@ -37,10 +37,10 @@ impl<E: Environment> ContextLoadable<Path> for SharedEnvironments<E> {
 
     fn load_with_context(
         queries: &Queries,
-        path: &Path,
+        context: &LoadContext,
     ) -> Result<impl Query<SharedEnvironments<E>>> {
         let name_query = queries.one("@name/string()", convert_string)?;
-        let environment_spec_query = E::load(queries, path)?;
+        let environment_spec_query = E::load(queries, context)?;
         let environments_query = queries.many("environment", move |session, item| {
             let name = name_query.execute(session, item)?;
             let environment_spec = environment_spec_query.execute(session, item)?;

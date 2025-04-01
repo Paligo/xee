@@ -11,7 +11,7 @@ use xot::xmlname::OwnedName as Name;
 use xee_xpath::{context, Documents, Item, Queries, Query, Sequence};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
-use crate::ns::XPATH_TEST_NS;
+use crate::{catalog::LoadContext, ns::XPATH_TEST_NS};
 
 use super::{
     collation::Collation,
@@ -29,7 +29,7 @@ pub(crate) trait Environment: Sized + std::fmt::Debug {
     fn environment_spec(&self) -> &EnvironmentSpec;
 
     // a query to load it from XML
-    fn load(queries: &Queries, path: &Path) -> Result<impl Query<Self>>;
+    fn load(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>>;
 }
 
 // In a test case we can include an environment directly, or refer to an environment
@@ -185,15 +185,15 @@ impl EnvironmentSpec {
     }
 }
 
-impl ContextLoadable<Path> for EnvironmentSpec {
-    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
+impl ContextLoadable<LoadContext> for EnvironmentSpec {
+    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
-        let sources_query = Sources::load_with_context(queries, path)?;
+    fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
+        let sources_query = Sources::load_with_context(queries, context)?;
 
         let name_query = queries.one("@name/string()", convert_string)?;
         let select_query = queries.option("@select/string()", convert_string)?;
@@ -225,7 +225,7 @@ impl ContextLoadable<Path> for EnvironmentSpec {
         })?;
 
         let uri_query = queries.one("@uri/string()", convert_string)?;
-        let collection_sources_query = Sources::load_with_context(queries, path)?;
+        let collection_sources_query = Sources::load_with_context(queries, context)?;
         let collections_query = queries.many("collection", move |documents, item| {
             let uri = uri_query.execute(documents, item)?;
             let sources = collection_sources_query.execute(documents, item)?;
@@ -242,7 +242,7 @@ impl ContextLoadable<Path> for EnvironmentSpec {
 
         // the environment base_dir is the same as the catalog/test set path,
         // but without the file name
-        let path = path.parent().unwrap();
+        let path = context.path.parent().unwrap();
         let static_base_uri_query =
             queries.option("static-base-uri/@uri/string()", convert_string)?;
         let environment_query = queries.one(".", move |documents, item| {
@@ -286,7 +286,10 @@ mod tests {
         );
 
         let path = Path::new("bar/foo");
-        let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, path).unwrap();
+        let context = LoadContext {
+            path: path.to_path_buf(),
+        };
+        let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(
             environment_spec,
             EnvironmentSpec {
@@ -349,8 +352,10 @@ mod tests {
         );
 
         let path = Path::new("bar/foo");
-
-        let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, path).unwrap();
+        let context = LoadContext {
+            path: path.to_path_buf(),
+        };
+        let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(
             environment_spec,
             EnvironmentSpec {

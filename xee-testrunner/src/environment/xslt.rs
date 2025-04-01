@@ -1,8 +1,9 @@
 use anyhow::Result;
-use std::path::Path;
 
 use xee_xpath::{Queries, Query};
 use xee_xpath_load::ContextLoadable;
+
+use crate::catalog::LoadContext;
 
 use super::core::{Environment, EnvironmentSpec};
 
@@ -50,8 +51,8 @@ impl Environment for XsltEnvironmentSpec {
         &self.environment_spec
     }
 
-    fn load(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
-        let environment_spec_query = EnvironmentSpec::load_with_context(queries, path)?;
+    fn load(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
+        let environment_spec_query = EnvironmentSpec::load_with_context(queries, context)?;
         let xslt_environment_spec_query = queries.one(".", move |session, item| {
             Ok(XsltEnvironmentSpec {
                 environment_spec: environment_spec_query.execute(session, item)?,

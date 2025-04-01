@@ -5,7 +5,7 @@ use anyhow::Result;
 use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
-use crate::{hashmap::FxIndexSet, ns::XPATH_TEST_NS};
+use crate::{catalog::LoadContext, hashmap::FxIndexSet, ns::XPATH_TEST_NS};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct DependencySpec {
@@ -192,14 +192,14 @@ impl Dependencies {
     }
 }
 
-impl ContextLoadable<Path> for Dependencies {
-    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
+impl ContextLoadable<LoadContext> for Dependencies {
+    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
+    fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let dependency_query = Dependency::load(queries)?;
 
         Ok(dependency_query.map(|dependencies, _, _| {
@@ -228,8 +228,10 @@ mod tests {
 </doc>"#,
             XPATH_TEST_NS
         );
-
-        let dependencies = Dependencies::load_from_xml_with_context(&xml, &PathBuf::new()).unwrap();
+        let context = LoadContext {
+            path: PathBuf::new(),
+        };
+        let dependencies = Dependencies::load_from_xml_with_context(&xml, &context).unwrap();
 
         assert_eq!(
             dependencies,

@@ -71,14 +71,19 @@ impl<T: Loadable> ContextLoadable<()> for T {
     }
 }
 
-pub trait PathLoadable: ContextLoadable<Path> {
-    fn load_from_file(path: &Path) -> Result<Self> {
+pub trait ContextWithPath {
+    fn path(&self) -> &Path;
+}
+
+pub trait PathLoadable<C: ContextWithPath>: ContextLoadable<C> {
+    fn load_from_file(context: &C) -> Result<Self> {
+        let path = context.path();
         let xml_file = File::open(path)?;
         let mut buf_reader = BufReader::new(xml_file);
         let mut xml = String::new();
         buf_reader.read_to_string(&mut xml)?;
-        Self::load_from_xml_with_context(&xml, path)
+        Self::load_from_xml_with_context(&xml, context)
     }
 }
 
-impl<T: ContextLoadable<Path>> PathLoadable for T {}
+impl<C: ContextWithPath, T: ContextLoadable<C>> PathLoadable<C> for T {}

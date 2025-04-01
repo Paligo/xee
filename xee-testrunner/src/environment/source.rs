@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use xee_xpath::{context, Documents, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
+use crate::catalog::LoadContext;
 use crate::metadata::Metadata;
 use crate::ns::XPATH_TEST_NS;
 
@@ -115,19 +116,19 @@ pub(crate) struct Sources {
     pub(crate) sources: Vec<Source>,
 }
 
-impl ContextLoadable<Path> for Sources {
-    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
+impl ContextLoadable<LoadContext> for Sources {
+    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
+    fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let file_query = queries.option("@file/string()", convert_string)?;
         let content_query = queries.one("content/string()", convert_string)?;
         let role_query = queries.option("@role/string()", convert_string)?;
         let uri_query = queries.option("@uri/string()", convert_string)?;
-        let metadata_query = Metadata::load_with_context(queries, path)?;
+        let metadata_query = Metadata::load_with_context(queries, context)?;
 
         let sources_query = queries.many("source", move |session, item| {
             let content = if let Some(file) = file_query.execute(session, item)? {

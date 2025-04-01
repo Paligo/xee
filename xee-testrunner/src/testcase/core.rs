@@ -3,10 +3,10 @@ use std::path::Path;
 use ahash::{HashMap, HashMapExt};
 use iri_string::types::IriAbsoluteStr;
 use xee_xpath::{context, Item, Queries, Query, Sequence};
-use xee_xpath_load::{convert_string, ContextLoadable, Loadable};
+use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::{
-    catalog::Catalog,
+    catalog::{Catalog, LoadContext},
     dependency::{Dependencies, Dependency},
     environment::{Environment, EnvironmentIterator, EnvironmentRef, TestCaseEnvironment},
     language::Language,
@@ -28,7 +28,7 @@ pub(crate) trait Runnable<L: Language>: std::marker::Sized {
         test_set: &TestSet<L>,
     ) -> TestOutcome;
 
-    fn load(queries: &Queries, path: &Path) -> anyhow::Result<impl Query<Self>>;
+    fn load(queries: &Queries, context: &LoadContext) -> anyhow::Result<impl Query<Self>>;
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -153,19 +153,22 @@ impl<L: Language> TestCase<L> {
     }
 }
 
-impl<L: Language> ContextLoadable<Path> for TestCase<L> {
-    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
+impl<L: Language> ContextLoadable<LoadContext> for TestCase<L> {
+    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> anyhow::Result<impl Query<Self>> {
+    fn load_with_context(
+        queries: &Queries,
+        context: &LoadContext,
+    ) -> anyhow::Result<impl Query<Self>> {
         let name_query = queries.one("@name/string()", convert_string)?;
-        let metadata_query = Metadata::load_with_context(queries, path)?;
+        let metadata_query = Metadata::load_with_context(queries, context)?;
 
         let ref_query = queries.option("@ref/string()", convert_string)?;
-        let environment_query = L::Environment::load(queries, path)?;
+        let environment_query = L::Environment::load(queries, context)?;
         let local_environment_query = queries.many("environment", move |session, item| {
             let ref_ = ref_query.execute(session, item)?;
             if let Some(ref_) = ref_ {
@@ -177,7 +180,7 @@ impl<L: Language> ContextLoadable<Path> for TestCase<L> {
             }
         })?;
 
-        let result_query = TestCaseResult::load_with_context(queries, path)?;
+        let result_query = TestCaseResult::load_with_context(queries, context)?;
         let dependency_query = Dependency::load(queries)?;
         let test_case_query = queries.one(".", move |session, item| {
             let test_case = TestCase {
@@ -227,8 +230,9 @@ mod tests {
         );
 
         let path = PathBuf::from("bar/foo");
-
-        let test_case = TestCase::<XPathLanguage>::load_from_xml_with_context(&xml, &path).unwrap();
+        let context = LoadContext { path };
+        let test_case =
+            TestCase::<XPathLanguage>::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(
             test_case,
             TestCase {

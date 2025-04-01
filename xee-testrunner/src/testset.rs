@@ -10,7 +10,7 @@ use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::{
-    catalog::Catalog,
+    catalog::{Catalog, LoadContext},
     dependency::{Dependencies, Dependency},
     environment::SharedEnvironments,
     filter::TestFilter,
@@ -82,20 +82,23 @@ impl<L: Language> TestSet<L> {
     }
 }
 
-impl<L: Language> ContextLoadable<Path> for TestSet<L> {
-    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
+impl<L: Language> ContextLoadable<LoadContext> for TestSet<L> {
+    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<TestSet<L>>> {
+    fn load_with_context(
+        queries: &Queries,
+        context: &LoadContext,
+    ) -> Result<impl Query<TestSet<L>>> {
         let name_query = queries.one("@name/string()", convert_string)?;
         let descriptions_query = queries.many("description/string()", convert_string)?;
 
-        let shared_environments_query = SharedEnvironments::load_with_context(queries, path)?;
+        let shared_environments_query = SharedEnvironments::load_with_context(queries, context)?;
         let dependency_query = Dependency::load(queries)?;
-        let test_case_query = L::Runnable::load(queries, path)?;
+        let test_case_query = L::Runnable::load(queries, context)?;
         let test_cases_query = queries.many("test-case", move |session, item| {
             test_case_query.execute(session, item)
         })?;
@@ -106,7 +109,7 @@ impl<L: Language> ContextLoadable<Path> for TestSet<L> {
             let shared_environments = shared_environments_query.execute(session, item)?;
             let test_cases = test_cases_query.execute(session, item)?;
             Ok(TestSet {
-                full_path: path.to_path_buf(),
+                full_path: context.path.to_path_buf(),
                 name,
                 descriptions,
                 dependencies: Dependencies::new(dependencies.into_iter().flatten().collect()),
@@ -161,8 +164,10 @@ mod tests {
    </test-case>
 </test-set>"#;
 
-        let path = PathBuf::from("bar/foo");
-        let test_set = TestSet::<XPathLanguage>::load_from_xml_with_context(xml, &path).unwrap();
+        let context = LoadContext {
+            path: PathBuf::from("bar/foo"),
+        };
+        let test_set = TestSet::<XPathLanguage>::load_from_xml_with_context(xml, &context).unwrap();
         assert_eq!(test_set.name, "testset-name");
         assert_eq!(test_set.test_cases.len(), 2);
         assert!(test_set

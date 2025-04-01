@@ -4,6 +4,8 @@ use std::path::Path;
 use xee_xpath::{Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
+use crate::catalog::LoadContext;
+
 use super::{
     core::{Environment, EnvironmentSpec},
     decimal_format::DecimalFormat,
@@ -70,8 +72,8 @@ impl Environment for XPathEnvironmentSpec {
         &self.environment_spec
     }
 
-    fn load(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
-        let environment_spec_query = EnvironmentSpec::load_with_context(queries, path)?;
+    fn load(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
+        let environment_spec_query = EnvironmentSpec::load_with_context(queries, context)?;
         let prefix_query = queries.one("@prefix/string()", convert_string)?;
         let namespace_uri_query = queries.one("@uri/string()", convert_string)?;
 

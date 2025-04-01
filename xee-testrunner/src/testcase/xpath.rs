@@ -6,7 +6,10 @@ use xee_xpath::{context, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::{
-    catalog::Catalog, language::XPathLanguage, ns::XPATH_TEST_NS, runcontext::RunContext,
+    catalog::{Catalog, LoadContext},
+    language::XPathLanguage,
+    ns::XPATH_TEST_NS,
+    runcontext::RunContext,
     testset::TestSet,
 };
 
@@ -176,9 +179,9 @@ impl Runnable<XPathLanguage> for XPathTestCase {
         )
     }
 
-    fn load(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
+    fn load(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let test_query = queries.one("test/string()", convert_string)?;
-        let test_case_query = TestCase::load_with_context(queries, path)?;
+        let test_case_query = TestCase::load_with_context(queries, context)?;
         let test_case_query = test_case_query.map(move |test_case, session, context| {
             Ok(XPathTestCase {
                 test_case,
@@ -189,16 +192,16 @@ impl Runnable<XPathLanguage> for XPathTestCase {
     }
 }
 
-impl ContextLoadable<Path> for XPathTestCase {
-    fn static_context_builder<'n>(path: &Path) -> context::StaticContextBuilder<'n> {
+impl ContextLoadable<LoadContext> for XPathTestCase {
+    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(XPATH_TEST_NS);
         builder
     }
 
-    fn load_with_context(queries: &Queries, path: &Path) -> Result<impl Query<Self>> {
+    fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let test_query = queries.one("test/string()", convert_string)?;
-        let test_case_query = TestCase::load_with_context(queries, path)?;
+        let test_case_query = TestCase::load_with_context(queries, context)?;
         let test_case_query = test_case_query.map(move |test_case, session, context| {
             Ok(XPathTestCase {
                 test_case,

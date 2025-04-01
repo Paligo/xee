@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 use xee_xpath::Documents;
 use xee_xpath_load::PathLoadable;
 
-use crate::catalog::Catalog;
+use crate::catalog::{Catalog, LoadContext};
 use crate::dependency::xpath_known_dependencies;
 use crate::filter::{ExcludedNamesFilter, IncludeAllFilter, NameFilter, TestFilter};
 use crate::language::{Language, XPathLanguage};
@@ -201,11 +201,17 @@ impl<'a, L: Language> Runner<'a, L> {
     }
 
     fn load_catalog(&mut self) -> Result<Catalog<L>> {
-        Catalog::load_from_file(&self.path_info.catalog_path)
+        let context = LoadContext {
+            path: self.path_info.catalog_path.clone(),
+        };
+        Catalog::load_from_file(&context)
     }
 
     fn load_test_set(&mut self) -> Result<TestSet<L>> {
-        TestSet::load_from_file(&self.path_info.test_file())
+        let context = LoadContext {
+            path: self.path_info.test_file(),
+        };
+        TestSet::load_from_file(&context)
     }
 
     fn load_check_test_filter(&self) -> Result<impl TestFilter<L>> {
