@@ -27,9 +27,9 @@ pub(crate) struct Attribution {
 }
 
 impl ContextLoadable<LoadContext> for Metadata {
-    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
+    fn static_context_builder(context: &LoadContext) -> context::StaticContextBuilder {
         let mut builder = context::StaticContextBuilder::default();
-        builder.default_element_namespace(XPATH_TEST_NS);
+        builder.default_element_namespace(context.catalog_ns);
         builder
     }
 
@@ -93,6 +93,7 @@ mod tests {
 </container>"#;
         let context = LoadContext {
             path: PathBuf::new(),
+            catalog_ns: XPATH_TEST_NS,
         };
         let metadata = Metadata::load_from_xml_with_context(xml, &context).unwrap();
         assert_eq!(

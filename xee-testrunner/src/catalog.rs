@@ -9,7 +9,6 @@ use crate::environment::SharedEnvironments;
 use crate::filter::TestFilter;
 use crate::hashmap::FxIndexSet;
 use crate::language::Language;
-use crate::ns::XPATH_TEST_NS;
 use crate::outcomes::CatalogOutcomes;
 use crate::renderer::Renderer;
 use crate::runcontext::RunContext;
@@ -50,6 +49,7 @@ impl<L: Language> Catalog<L> {
         for file_path in &self.file_paths {
             let context = LoadContext {
                 path: self.base_dir().join(file_path),
+                catalog_ns: L::catalog_ns(),
             };
             let test_set = TestSet::load_from_file(&context)?;
             let test_set_outcomes = test_set.run(run_context, self, test_filter, out, renderer)?;
@@ -61,6 +61,7 @@ impl<L: Language> Catalog<L> {
 
 pub(crate) struct LoadContext {
     pub(crate) path: PathBuf,
+    pub(crate) catalog_ns: &'static str,
 }
 
 impl ContextWithPath for LoadContext {
@@ -70,9 +71,9 @@ impl ContextWithPath for LoadContext {
 }
 
 impl<L: Language> ContextLoadable<LoadContext> for Catalog<L> {
-    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
+    fn static_context_builder(context: &LoadContext) -> context::StaticContextBuilder {
         let mut builder = context::StaticContextBuilder::default();
-        builder.default_element_namespace(XPATH_TEST_NS);
+        builder.default_element_namespace(context.catalog_ns);
         builder
     }
 

@@ -154,9 +154,9 @@ impl<L: Language> TestCase<L> {
 }
 
 impl<L: Language> ContextLoadable<LoadContext> for TestCase<L> {
-    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
+    fn static_context_builder(context: &LoadContext) -> context::StaticContextBuilder {
         let mut builder = context::StaticContextBuilder::default();
-        builder.default_element_namespace(XPATH_TEST_NS);
+        builder.default_element_namespace(context.catalog_ns);
         builder
     }
 
@@ -230,7 +230,10 @@ mod tests {
         );
 
         let path = PathBuf::from("bar/foo");
-        let context = LoadContext { path };
+        let context = LoadContext {
+            path,
+            catalog_ns: XPATH_TEST_NS,
+        };
         let test_case =
             TestCase::<XPathLanguage>::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(

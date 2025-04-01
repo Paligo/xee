@@ -186,9 +186,9 @@ impl EnvironmentSpec {
 }
 
 impl ContextLoadable<LoadContext> for EnvironmentSpec {
-    fn static_context_builder<'n>(context: &LoadContext) -> context::StaticContextBuilder<'n> {
+    fn static_context_builder(context: &LoadContext) -> context::StaticContextBuilder {
         let mut builder = context::StaticContextBuilder::default();
-        builder.default_element_namespace(XPATH_TEST_NS);
+        builder.default_element_namespace(context.catalog_ns);
         builder
     }
 
@@ -288,6 +288,7 @@ mod tests {
         let path = Path::new("bar/foo");
         let context = LoadContext {
             path: path.to_path_buf(),
+            catalog_ns: XPATH_TEST_NS,
         };
         let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(
@@ -354,6 +355,7 @@ mod tests {
         let path = Path::new("bar/foo");
         let context = LoadContext {
             path: path.to_path_buf(),
+            catalog_ns: XPATH_TEST_NS,
         };
         let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(
