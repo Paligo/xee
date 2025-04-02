@@ -14,3 +14,4 @@ pub(crate) use core::{Environment, EnvironmentRef, TestCaseEnvironment};
 pub(crate) use iterator::EnvironmentIterator;
 pub(crate) use shared::SharedEnvironments;
 pub(crate) use xpath::XPathEnvironmentSpec;
+pub(crate) use xslt::XsltEnvironmentSpec;

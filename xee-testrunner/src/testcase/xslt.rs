@@ -17,13 +17,15 @@ use super::{
     outcome::TestOutcome,
 };
 
+// TODO: use XsltLanguage here
+
 #[derive(Debug)]
-pub(crate) struct XPathTestCase {
+pub(crate) struct XsltTestCase {
     pub(crate) test_case: TestCase<XPathLanguage>,
     pub(crate) test: String,
 }
 
-impl XPathTestCase {
+impl XsltTestCase {
     fn namespaces<'a>(
         &'a self,
         catalog: &'a Catalog<XPathLanguage>,
@@ -42,7 +44,7 @@ impl XPathTestCase {
     }
 }
 
-impl Runnable<XPathLanguage> for XPathTestCase {
+impl Runnable<XPathLanguage> for XsltTestCase {
     fn test_case(&self) -> &TestCase<XPathLanguage> {
         &self.test_case
     }
@@ -178,11 +180,11 @@ impl Runnable<XPathLanguage> for XPathTestCase {
     }
 
     fn load(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
-        XPathTestCase::load_with_context(queries, context)
+        XsltTestCase::load_with_context(queries, context)
     }
 }
 
-impl ContextLoadable<LoadContext> for XPathTestCase {
+impl ContextLoadable<LoadContext> for XsltTestCase {
     fn static_context_builder(context: &LoadContext) -> context::StaticContextBuilder {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(context.catalog_ns);
@@ -193,7 +195,7 @@ impl ContextLoadable<LoadContext> for XPathTestCase {
         let test_query = queries.one("test/string()", convert_string)?;
         let test_case_query = TestCase::load_with_context(queries, context)?;
         let test_case_query = test_case_query.map(move |test_case, session, context| {
-            Ok(XPathTestCase {
+            Ok(XsltTestCase {
                 test_case,
                 test: test_query.execute_with_context(session, context)?,
             })

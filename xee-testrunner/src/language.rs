@@ -1,6 +1,6 @@
 use crate::{
-    environment::{Environment, XPathEnvironmentSpec},
-    ns::XPATH_TEST_NS,
+    environment::{Environment, XPathEnvironmentSpec, XsltEnvironmentSpec},
+    ns::{XPATH_TEST_NS, XSLT_TEST_NS},
     testcase::{Runnable, XPathTestCase},
 };
 
@@ -22,3 +22,15 @@ impl Language for XPathLanguage {
         XPATH_TEST_NS
     }
 }
+
+// #[derive(Debug, PartialEq, Eq)]
+// pub(crate) struct XsltLanguage;
+
+// impl Language for XsltLanguage {
+//     type Environment = XsltEnvironmentSpec;
+//     type Runnable: XSLTTestCase;
+
+//     fn catalog_ns() -> &'static str {
+//         XSLT_TEST_NS
+//     }
+// }
