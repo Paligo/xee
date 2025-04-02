@@ -1,7 +1,7 @@
 use crate::{
     environment::{Environment, XPathEnvironmentSpec, XsltEnvironmentSpec},
     ns::{XPATH_TEST_NS, XSLT_TEST_NS},
-    testcase::{Runnable, XPathTestCase},
+    testcase::{Runnable, XPathTestCase, XsltTestCase},
 };
 
 pub(crate) trait Language: Sized {
@@ -23,14 +23,14 @@ impl Language for XPathLanguage {
     }
 }
 
-// #[derive(Debug, PartialEq, Eq)]
-// pub(crate) struct XsltLanguage;
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct XsltLanguage;
 
-// impl Language for XsltLanguage {
-//     type Environment = XsltEnvironmentSpec;
-//     type Runnable: XSLTTestCase;
+impl Language for XsltLanguage {
+    type Environment = XsltEnvironmentSpec;
+    type Runnable = XsltTestCase;
 
-//     fn catalog_ns() -> &'static str {
-//         XSLT_TEST_NS
-//     }
-// }
+    fn catalog_ns() -> &'static str {
+        XSLT_TEST_NS
+    }
+}

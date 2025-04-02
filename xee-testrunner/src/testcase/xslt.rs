@@ -6,7 +6,7 @@ use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::{
     catalog::{Catalog, LoadContext},
-    language::XPathLanguage,
+    language::XsltLanguage,
     runcontext::RunContext,
     testset::TestSet,
 };
@@ -17,43 +17,41 @@ use super::{
     outcome::TestOutcome,
 };
 
-// TODO: use XsltLanguage here
-
 #[derive(Debug)]
 pub(crate) struct XsltTestCase {
-    pub(crate) test_case: TestCase<XPathLanguage>,
+    pub(crate) test_case: TestCase<XsltLanguage>,
     pub(crate) test: String,
 }
 
 impl XsltTestCase {
-    fn namespaces<'a>(
-        &'a self,
-        catalog: &'a Catalog<XPathLanguage>,
-        test_set: &'a TestSet<XPathLanguage>,
-    ) -> anyhow::Result<Vec<(&'a str, &'a str)>> {
-        let environments = self
-            .test_case
-            .environments(catalog, test_set)
-            .collect::<Result<Vec<_>, crate::error::Error>>()?;
-        let namespaces = environments
-            .iter()
-            .flat_map(|environment| environment.namespace_pairs())
-            .collect();
+    // fn namespaces<'a>(
+    //     &'a self,
+    //     catalog: &'a Catalog<XsltLanguage>,
+    //     test_set: &'a TestSet<XsltLanguage>,
+    // ) -> anyhow::Result<Vec<(&'a str, &'a str)>> {
+    //     let environments = self
+    //         .test_case
+    //         .environments(catalog, test_set)
+    //         .collect::<Result<Vec<_>, crate::error::Error>>()?;
+    //     let namespaces = environments
+    //         .iter()
+    //         .flat_map(|environment| environment.namespace_pairs())
+    //         .collect();
 
-        Ok(namespaces)
-    }
+    //     Ok(namespaces)
+    // }
 }
 
-impl Runnable<XPathLanguage> for XsltTestCase {
-    fn test_case(&self) -> &TestCase<XPathLanguage> {
+impl Runnable<XsltLanguage> for XsltTestCase {
+    fn test_case(&self) -> &TestCase<XsltLanguage> {
         &self.test_case
     }
 
     fn run(
         &self,
         run_context: &mut RunContext,
-        catalog: &Catalog<XPathLanguage>,
-        test_set: &TestSet<XPathLanguage>,
+        catalog: &Catalog<XsltLanguage>,
+        test_set: &TestSet<XsltLanguage>,
     ) -> TestOutcome {
         // first construct static context
         let mut static_context_builder = context::StaticContextBuilder::default();
@@ -92,12 +90,12 @@ impl Runnable<XPathLanguage> for XsltTestCase {
         static_context_builder.variable_names(variable_names);
 
         // set up the namespaces
-        let namespaces = self.namespaces(catalog, test_set);
-        let namespaces = match namespaces {
-            Ok(namespaces) => namespaces,
-            Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
-        };
-        static_context_builder.namespaces(namespaces);
+        // let namespaces = self.namespaces(catalog, test_set);
+        // let namespaces = match namespaces {
+        //     Ok(namespaces) => namespaces,
+        //     Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
+        // };
+        // static_context_builder.namespaces(namespaces);
 
         // now construct a query with that static context
         let static_context = static_context_builder.build();
