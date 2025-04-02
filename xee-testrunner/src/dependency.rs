@@ -62,6 +62,24 @@ pub(crate) fn xpath_known_dependencies() -> KnownDependencies {
     KnownDependencies::new(&specs)
 }
 
+pub(crate) fn xslt_known_dependencies() -> KnownDependencies {
+    let specs = vec![
+        DependencySpec {
+            type_: "spec".to_string(),
+            value: "XSLT10+".to_string(),
+        },
+        DependencySpec {
+            type_: "spec".to_string(),
+            value: "XSLT20+".to_string(),
+        },
+        DependencySpec {
+            type_: "spec".to_string(),
+            value: "XSLT30+".to_string(),
+        },
+    ];
+    KnownDependencies::new(&specs)
+}
+
 impl KnownDependencies {
     fn new(specs: &[DependencySpec]) -> Self {
         let specs = specs.iter().cloned().collect();

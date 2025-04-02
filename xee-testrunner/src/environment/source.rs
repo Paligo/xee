@@ -129,16 +129,16 @@ impl ContextLoadable<LoadContext> for Sources {
         let uri_query = queries.option("@uri/string()", convert_string)?;
         let metadata_query = Metadata::load_with_context(queries, context)?;
 
-        let sources_query = queries.many("source", move |session, item| {
-            let content = if let Some(file) = file_query.execute(session, item)? {
+        let sources_query = queries.many("source", move |documents, item| {
+            let content = if let Some(file) = file_query.execute(documents, item)? {
                 SourceContent::Path(PathBuf::from(file))
             } else {
                 // look for content inside
-                let s = content_query.execute(session, item)?;
+                let s = content_query.execute(documents, item)?;
                 SourceContent::String(s)
             };
-            let role = role_query.execute(session, item)?;
-            let uri = uri_query.execute(session, item)?;
+            let role = role_query.execute(documents, item)?;
+            let uri = uri_query.execute(documents, item)?;
 
             let uri: IriReferenceString = if let Some(uri) = uri {
                 uri.try_into().unwrap()
@@ -155,7 +155,7 @@ impl ContextLoadable<LoadContext> for Sources {
                 }
             };
 
-            let metadata = metadata_query.execute(session, item)?;
+            let metadata = metadata_query.execute(documents, item)?;
 
             let source = if let Some(role) = role {
                 if role == "." {

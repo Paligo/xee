@@ -192,10 +192,10 @@ impl ContextLoadable<LoadContext> for XPathTestCase {
     fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let test_query = queries.one("test/string()", convert_string)?;
         let test_case_query = TestCase::load_with_context(queries, context)?;
-        let test_case_query = test_case_query.map(move |test_case, session, context| {
+        let test_case_query = test_case_query.map(move |test_case, documents, context| {
             Ok(XPathTestCase {
                 test_case,
-                test: test_query.execute_with_context(session, context)?,
+                test: test_query.execute_with_context(documents, context)?,
             })
         });
         Ok(test_case_query)
