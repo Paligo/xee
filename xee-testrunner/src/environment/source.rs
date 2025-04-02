@@ -18,7 +18,8 @@ pub(crate) struct Source {
     // we may need to define this differently
     pub(crate) role: SourceRole,
     pub(crate) content: SourceContent,
-    pub(crate) uri: IriReferenceString,
+    // this can be optional at least in XSLT mode
+    pub(crate) uri: Option<IriReferenceString>,
     pub(crate) validation: Option<Validation>,
 }
 
@@ -48,13 +49,17 @@ impl Source {
         &self,
         base_dir: &Path,
         documents: &mut Documents,
-        uri: &IriReferenceStr,
+        uri: Option<&IriReferenceStr>,
         base_uri: Option<&IriAbsoluteStr>,
     ) -> Result<xot::Node> {
-        let uri: IriString = if let Some(base_uri) = base_uri {
-            uri.resolve_against(base_uri).into()
+        let uri: Option<IriString> = if let Some(uri) = uri {
+            if let Some(base_uri) = base_uri {
+                Some(uri.resolve_against(base_uri).into())
+            } else {
+                panic!("Cannot resolve relative URL")
+            }
         } else {
-            panic!("Cannot resolve relative URL")
+            None
         };
 
         match &self.content {
@@ -68,7 +73,9 @@ impl Source {
                     // scope borrowed_documents so we drop it afterward
                     let borrowed_documents = documents.documents().borrow();
 
-                    let root = borrowed_documents.get_node_by_uri(&uri);
+                    // we can unwrap here as we know that when it's a path it's an URI
+                    // TODO: would be better to somehow encode this in the type directly
+                    let root = borrowed_documents.get_node_by_uri(uri.as_ref().unwrap());
                     if let Some(root) = root {
                         return Ok(root);
                     }
@@ -81,10 +88,11 @@ impl Source {
                 buf_reader.read_to_string(&mut xml)?;
 
                 let documents_ref = documents.documents().clone();
-                let handle =
-                    documents_ref
-                        .borrow_mut()
-                        .add_string(documents.xot_mut(), Some(&uri), &xml)?;
+                let handle = documents_ref.borrow_mut().add_string(
+                    documents.xot_mut(),
+                    uri.as_deref(),
+                    &xml,
+                )?;
                 Ok(documents
                     .documents()
                     .borrow()
@@ -99,7 +107,7 @@ impl Source {
                 let documents_ref = documents.documents().clone();
                 let handle = documents_ref.borrow_mut().add_string(
                     documents.xot_mut(),
-                    Some(&uri),
+                    uri.as_deref(),
                     value,
                 )?;
                 Ok(documents
@@ -155,18 +163,16 @@ impl ContextLoadable<LoadContext> for Sources {
             let role = role_query.execute(documents, item)?;
             let uri = uri_query.execute(documents, item)?;
 
-            let uri: IriReferenceString = if let Some(uri) = uri {
-                uri.try_into().unwrap()
+            let uri: Option<IriReferenceString> = if let Some(uri) = uri {
+                Some(uri.try_into().unwrap())
             } else {
                 match &content {
                     // if there is no uri attribute, use the file attribute as the url
                     SourceContent::Path(path) => {
                         let uri = path.to_string_lossy().to_string();
-                        uri.try_into().unwrap()
+                        Some(uri.try_into().unwrap())
                     }
-                    SourceContent::String(_) => {
-                        panic!("Cannot have a source without a URI or file attribute")
-                    }
+                    SourceContent::String(_) => None,
                 }
             };
 
@@ -193,7 +199,8 @@ impl ContextLoadable<LoadContext> for Sources {
             } else {
                 Source {
                     metadata,
-                    role: SourceRole::Doc(uri.clone()),
+                    // TODO: this is unwrap safe?
+                    role: SourceRole::Doc(uri.clone().unwrap()),
                     content,
                     uri,
                     // TODO
