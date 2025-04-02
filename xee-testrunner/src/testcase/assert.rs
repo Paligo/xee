@@ -1051,7 +1051,7 @@ mod tests {
 
     use super::*;
 
-    use crate::ns::XPATH_TEST_NS;
+    use crate::{language::XPathLanguage, ns::XPATH_TEST_NS, paths::Mode};
 
     #[test]
     fn test_test_case_result() {
@@ -1062,6 +1062,7 @@ mod tests {
         let context = LoadContext {
             path: PathBuf::new(),
             catalog_ns: XPATH_TEST_NS,
+            mode: Mode::XPath,
         };
         let test_case_result = TestCaseResult::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(
@@ -1084,10 +1085,7 @@ mod tests {
 </doc>"#,
             XPATH_TEST_NS
         );
-        let context = LoadContext {
-            path: PathBuf::new(),
-            catalog_ns: XPATH_TEST_NS,
-        };
+        let context = LoadContext::new::<XPathLanguage>(PathBuf::new());
         let test_case_result = TestCaseResult::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(
             test_case_result,

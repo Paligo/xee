@@ -10,6 +10,7 @@ use crate::filter::TestFilter;
 use crate::hashmap::FxIndexSet;
 use crate::language::Language;
 use crate::outcomes::CatalogOutcomes;
+use crate::paths::Mode;
 use crate::renderer::Renderer;
 use crate::runcontext::RunContext;
 use crate::testset::TestSet;
@@ -26,9 +27,9 @@ pub(crate) struct Catalog<L: Language> {
     pub(crate) shared_environments: SharedEnvironments<L::Environment>,
     pub(crate) full_path: PathBuf,
     #[allow(dead_code)]
-    pub(crate) test_suite: String,
+    pub(crate) test_suite: Option<String>,
     #[allow(dead_code)]
-    pub(crate) version: String,
+    pub(crate) version: Option<String>,
     // pub(crate) test_sets: Vec<TestSetRef>,
     pub(crate) file_paths: FxIndexSet<PathBuf>,
 }
@@ -47,10 +48,7 @@ impl<L: Language> Catalog<L> {
     ) -> Result<CatalogOutcomes> {
         let mut catalog_outcomes = CatalogOutcomes::new();
         for file_path in &self.file_paths {
-            let context = LoadContext {
-                path: self.base_dir().join(file_path),
-                catalog_ns: L::catalog_ns(),
-            };
+            let context = LoadContext::new::<L>(self.base_dir().join(file_path));
             let test_set = TestSet::load_from_file(&context)?;
             let test_set_outcomes = test_set.run(run_context, self, test_filter, out, renderer)?;
             catalog_outcomes.add_outcomes(test_set_outcomes);
@@ -62,6 +60,17 @@ impl<L: Language> Catalog<L> {
 pub(crate) struct LoadContext {
     pub(crate) path: PathBuf,
     pub(crate) catalog_ns: &'static str,
+    pub(crate) mode: Mode,
+}
+
+impl LoadContext {
+    pub(crate) fn new<L: Language>(path: PathBuf) -> Self {
+        Self {
+            path,
+            catalog_ns: L::catalog_ns(),
+            mode: L::mode(),
+        }
+    }
 }
 
 impl ContextWithPath for LoadContext {
@@ -81,8 +90,8 @@ impl<L: Language> ContextLoadable<LoadContext> for Catalog<L> {
         queries: &Queries,
         context: &LoadContext,
     ) -> Result<impl Query<Catalog<L>>> {
-        let test_suite_query = queries.one("@test-suite/string()", convert_string)?;
-        let version_query = queries.one("@version/string()", convert_string)?;
+        let test_suite_query = queries.option("@test-suite/string()", convert_string)?;
+        let version_query = queries.option("@version/string()", convert_string)?;
 
         let shared_environments_query = SharedEnvironments::load_with_context(queries, context)?;
 

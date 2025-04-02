@@ -218,18 +218,12 @@ impl<'a, L: Language> Runner<'a, L> {
     }
 
     fn load_catalog(&mut self) -> Result<Catalog<L>> {
-        let context = LoadContext {
-            path: self.path_info.catalog_path.clone(),
-            catalog_ns: L::catalog_ns(),
-        };
+        let context = LoadContext::new::<L>(self.path_info.catalog_path.clone());
         Catalog::load_from_file(&context)
     }
 
     fn load_test_set(&mut self) -> Result<TestSet<L>> {
-        let context = LoadContext {
-            path: self.path_info.test_file(),
-            catalog_ns: L::catalog_ns(),
-        };
+        let context = LoadContext::new::<L>(self.path_info.test_file().clone());
         TestSet::load_from_file(&context)
     }
 

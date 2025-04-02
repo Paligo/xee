@@ -1,6 +1,7 @@
 use crate::{
     environment::{Environment, XPathEnvironmentSpec, XsltEnvironmentSpec},
     ns::{XPATH_TEST_NS, XSLT_TEST_NS},
+    paths::Mode,
     testcase::{Runnable, XPathTestCase, XsltTestCase},
 };
 
@@ -9,6 +10,7 @@ pub(crate) trait Language: Sized {
     type Runnable: Runnable<Self>;
 
     fn catalog_ns() -> &'static str;
+    fn mode() -> Mode;
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -21,6 +23,10 @@ impl Language for XPathLanguage {
     fn catalog_ns() -> &'static str {
         XPATH_TEST_NS
     }
+
+    fn mode() -> Mode {
+        Mode::XPath
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -32,5 +38,9 @@ impl Language for XsltLanguage {
 
     fn catalog_ns() -> &'static str {
         XSLT_TEST_NS
+    }
+
+    fn mode() -> Mode {
+        Mode::Xslt
     }
 }

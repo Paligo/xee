@@ -83,7 +83,7 @@ impl ContextLoadable<LoadContext> for Metadata {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::ns::XPATH_TEST_NS;
+    use crate::language::XPathLanguage;
 
     use super::*;
 
@@ -94,10 +94,7 @@ mod tests {
   <description>Description</description>
   <created by="Foo Barson" on="2024-01-01"/>
 </container>"#;
-        let context = LoadContext {
-            path: PathBuf::new(),
-            catalog_ns: XPATH_TEST_NS,
-        };
+        let context = LoadContext::new::<XPathLanguage>(PathBuf::new());
         let metadata = Metadata::load_from_xml_with_context(xml, &context).unwrap();
         assert_eq!(
             metadata,

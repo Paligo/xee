@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum Mode {
     XPath,
     Xslt,

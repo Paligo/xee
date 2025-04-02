@@ -9,6 +9,7 @@ use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::catalog::LoadContext;
 use crate::metadata::Metadata;
+use crate::paths::Mode;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Source {
@@ -129,13 +130,27 @@ impl ContextLoadable<LoadContext> for Sources {
         let uri_query = queries.option("@uri/string()", convert_string)?;
         let metadata_query = Metadata::load_with_context(queries, context)?;
 
+        let xslt_content_query = queries.one("content/string()", convert_string)?;
         let sources_query = queries.many("source", move |documents, item| {
             let content = if let Some(file) = file_query.execute(documents, item)? {
                 SourceContent::Path(PathBuf::from(file))
             } else {
-                // look for content inside
-                let s = content_query.execute(documents, item)?;
-                SourceContent::String(s)
+                // HACK: we'd prefer to avoid mode dependence in the
+                // code, but unfortunately source is parsed differently
+                // based on the mode and this is the easiest way
+                match context.mode {
+                    Mode::XPath => {
+                        // if we're in xpath mode, we take the content inside as an xpath expression
+                        let s = content_query.execute(documents, item)?;
+                        SourceContent::String(s)
+                    }
+                    Mode::Xslt => {
+                        // in xslt mode we look for a content element and take its
+                        // content as a String
+                        let s = xslt_content_query.execute(documents, item)?;
+                        SourceContent::String(s)
+                    }
+                }
             };
             let role = role_query.execute(documents, item)?;
             let uri = uri_query.execute(documents, item)?;

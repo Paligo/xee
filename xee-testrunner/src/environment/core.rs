@@ -268,7 +268,10 @@ impl ContextLoadable<LoadContext> for EnvironmentSpec {
 
 #[cfg(test)]
 mod tests {
-    use crate::{environment::source::SourceContent, metadata::Metadata, ns::XPATH_TEST_NS};
+    use crate::{
+        environment::source::SourceContent, language::XPathLanguage, metadata::Metadata,
+        ns::XPATH_TEST_NS,
+    };
 
     use super::*;
 
@@ -285,10 +288,7 @@ mod tests {
             XPATH_TEST_NS
         );
 
-        let context = LoadContext {
-            path: PathBuf::from("bar/foo"),
-            catalog_ns: XPATH_TEST_NS,
-        };
+        let context = LoadContext::new::<XPathLanguage>(PathBuf::from("bar/foo"));
         let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(
             environment_spec,
@@ -351,10 +351,7 @@ mod tests {
             XPATH_TEST_NS
         );
 
-        let context = LoadContext {
-            path: PathBuf::from("bar/foo"),
-            catalog_ns: XPATH_TEST_NS,
-        };
+        let context = LoadContext::new::<XPathLanguage>(PathBuf::from("bar/foo"));
         let environment_spec = EnvironmentSpec::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(
             environment_spec,

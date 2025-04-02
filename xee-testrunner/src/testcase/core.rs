@@ -227,10 +227,7 @@ mod tests {
         );
 
         let path = PathBuf::from("bar/foo");
-        let context = LoadContext {
-            path,
-            catalog_ns: XPATH_TEST_NS,
-        };
+        let context = LoadContext::new::<XPathLanguage>(path);
         let test_case =
             TestCase::<XPathLanguage>::load_from_xml_with_context(&xml, &context).unwrap();
         assert_eq!(

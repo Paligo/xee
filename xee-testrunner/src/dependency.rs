@@ -232,7 +232,7 @@ mod tests {
 
     use super::*;
 
-    use crate::ns::XPATH_TEST_NS;
+    use crate::{language::XPathLanguage, ns::XPATH_TEST_NS};
 
     #[test]
     fn test_load_dependencies() {
@@ -244,10 +244,7 @@ mod tests {
 </doc>"#,
             XPATH_TEST_NS
         );
-        let context = LoadContext {
-            path: PathBuf::new(),
-            catalog_ns: XPATH_TEST_NS,
-        };
+        let context = LoadContext::new::<XPathLanguage>(PathBuf::new());
         let dependencies = Dependencies::load_from_xml_with_context(&xml, &context).unwrap();
 
         assert_eq!(
