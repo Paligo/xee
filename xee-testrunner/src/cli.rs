@@ -8,9 +8,10 @@ use xee_xpath::Documents;
 use xee_xpath_load::PathLoadable;
 
 use crate::catalog::{Catalog, LoadContext};
-use crate::dependency::{xpath_known_dependencies, xslt_known_dependencies};
 use crate::filter::{ExcludedNamesFilter, IncludeAllFilter, NameFilter, TestFilter};
-use crate::language::{Language, XPathLanguage, XsltLanguage};
+use crate::language::{
+    xpath_known_dependencies, xslt_known_dependencies, Language, XPathLanguage, XsltLanguage,
+};
 use crate::outcomes::{CatalogOutcomes, Outcomes, TestSetOutcomes};
 use crate::paths::{paths, Mode, PathInfo};
 use crate::runcontext::RunContext;

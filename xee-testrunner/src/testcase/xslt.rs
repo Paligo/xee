@@ -46,7 +46,6 @@ impl Runnable<XsltLanguage> for XsltTestCase {
         catalog: &Catalog<XsltLanguage>,
         test_set: &TestSet<XsltLanguage>,
     ) -> TestOutcome {
-        dbg!(self);
         TestOutcome::Unsupported
     }
 

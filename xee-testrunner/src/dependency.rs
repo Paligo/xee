@@ -32,56 +32,8 @@ pub(crate) struct KnownDependencies {
     specs: FxIndexSet<DependencySpec>,
 }
 
-pub(crate) fn xpath_known_dependencies() -> KnownDependencies {
-    let specs = vec![
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XP20+".to_string(),
-        },
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XP30+".to_string(),
-        },
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XP31+".to_string(),
-        },
-        DependencySpec {
-            type_: "feature".to_string(),
-            value: "higherOrderFunctions".to_string(),
-        },
-        DependencySpec {
-            type_: "xml-version".to_string(),
-            value: "1.0".to_string(),
-        },
-        DependencySpec {
-            type_: "xsd-version".to_string(),
-            value: "1.1".to_string(),
-        },
-    ];
-    KnownDependencies::new(&specs)
-}
-
-pub(crate) fn xslt_known_dependencies() -> KnownDependencies {
-    let specs = vec![
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XSLT10+".to_string(),
-        },
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XSLT20+".to_string(),
-        },
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XSLT30+".to_string(),
-        },
-    ];
-    KnownDependencies::new(&specs)
-}
-
 impl KnownDependencies {
-    fn new(specs: &[DependencySpec]) -> Self {
+    pub(crate) fn new(specs: &[DependencySpec]) -> Self {
         let specs = specs.iter().cloned().collect();
         Self { specs }
     }
