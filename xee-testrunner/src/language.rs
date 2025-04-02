@@ -12,6 +12,7 @@ pub(crate) trait Language: Sized {
 
     fn catalog_ns() -> &'static str;
     fn mode() -> Mode;
+    fn known_dependencies() -> KnownDependencies;
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -27,6 +28,36 @@ impl Language for XPathLanguage {
 
     fn mode() -> Mode {
         Mode::XPath
+    }
+
+    fn known_dependencies() -> KnownDependencies {
+        let specs = vec![
+            DependencySpec {
+                type_: "spec".to_string(),
+                value: "XP20+".to_string(),
+            },
+            DependencySpec {
+                type_: "spec".to_string(),
+                value: "XP30+".to_string(),
+            },
+            DependencySpec {
+                type_: "spec".to_string(),
+                value: "XP31+".to_string(),
+            },
+            DependencySpec {
+                type_: "feature".to_string(),
+                value: "higherOrderFunctions".to_string(),
+            },
+            DependencySpec {
+                type_: "xml-version".to_string(),
+                value: "1.0".to_string(),
+            },
+            DependencySpec {
+                type_: "xsd-version".to_string(),
+                value: "1.1".to_string(),
+            },
+        ];
+        KnownDependencies::new(&specs)
     }
 }
 
@@ -44,56 +75,26 @@ impl Language for XsltLanguage {
     fn mode() -> Mode {
         Mode::Xslt
     }
-}
 
-pub(crate) fn xpath_known_dependencies() -> KnownDependencies {
-    let specs = vec![
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XP20+".to_string(),
-        },
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XP30+".to_string(),
-        },
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XP31+".to_string(),
-        },
-        DependencySpec {
-            type_: "feature".to_string(),
-            value: "higherOrderFunctions".to_string(),
-        },
-        DependencySpec {
-            type_: "xml-version".to_string(),
-            value: "1.0".to_string(),
-        },
-        DependencySpec {
-            type_: "xsd-version".to_string(),
-            value: "1.1".to_string(),
-        },
-    ];
-    KnownDependencies::new(&specs)
-}
-
-pub(crate) fn xslt_known_dependencies() -> KnownDependencies {
-    let specs = vec![
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XSLT10+".to_string(),
-        },
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XSLT20+".to_string(),
-        },
-        DependencySpec {
-            type_: "spec".to_string(),
-            value: "XSLT30+".to_string(),
-        },
-        DependencySpec {
-            type_: "feature".to_string(),
-            value: "higherOrderFunctions".to_string(),
-        },
-    ];
-    KnownDependencies::new(&specs)
+    fn known_dependencies() -> KnownDependencies {
+        let specs = vec![
+            DependencySpec {
+                type_: "spec".to_string(),
+                value: "XSLT10+".to_string(),
+            },
+            DependencySpec {
+                type_: "spec".to_string(),
+                value: "XSLT20+".to_string(),
+            },
+            DependencySpec {
+                type_: "spec".to_string(),
+                value: "XSLT30+".to_string(),
+            },
+            DependencySpec {
+                type_: "feature".to_string(),
+                value: "higherOrderFunctions".to_string(),
+            },
+        ];
+        KnownDependencies::new(&specs)
+    }
 }

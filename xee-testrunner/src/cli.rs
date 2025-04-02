@@ -9,9 +9,7 @@ use xee_xpath_load::PathLoadable;
 
 use crate::catalog::{Catalog, LoadContext};
 use crate::filter::{ExcludedNamesFilter, IncludeAllFilter, NameFilter, TestFilter};
-use crate::language::{
-    xpath_known_dependencies, xslt_known_dependencies, Language, XPathLanguage, XsltLanguage,
-};
+use crate::language::{Language, XPathLanguage, XsltLanguage};
 use crate::outcomes::{CatalogOutcomes, Outcomes, TestSetOutcomes};
 use crate::paths::{paths, Mode, PathInfo};
 use crate::runcontext::RunContext;
@@ -88,28 +86,16 @@ pub fn cli() -> Result<()> {
     let path = cli.command.path();
     let path_info = paths(path)?;
 
-    let mut documents = Documents::new();
-    let known_dependencies = match path_info.mode {
-        Mode::XPath => xpath_known_dependencies(),
-        Mode::Xslt => xslt_known_dependencies(),
-    };
-
-    let run_context = RunContext::new(&mut documents, known_dependencies, cli.verbose);
-
     match path_info.mode {
-        Mode::XPath => {
-            let runner = Runner::<XPathLanguage>::new(run_context, path_info);
-            cli_command(cli, runner)
-        }
-
-        Mode::Xslt => {
-            let runner = Runner::<XsltLanguage>::new(run_context, path_info);
-            cli_command(cli, runner)
-        }
+        Mode::XPath => cli_run::<XPathLanguage>(cli, path_info),
+        Mode::Xslt => cli_run::<XsltLanguage>(cli, path_info),
     }
 }
 
-fn cli_command<L: Language>(cli: Cli, mut runner: Runner<L>) -> Result<()> {
+fn cli_run<L: Language>(cli: Cli, path_info: PathInfo) -> Result<()> {
+    let mut documents = Documents::new();
+    let run_context = RunContext::new(&mut documents, L::known_dependencies(), cli.verbose);
+    let mut runner = Runner::<L>::new(run_context, path_info);
     match cli.command {
         Commands::Initialize { .. } => runner.initialize(),
         Commands::Check { .. } => runner.check(),
