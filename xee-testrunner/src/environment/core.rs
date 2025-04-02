@@ -361,7 +361,7 @@ mod tests {
             EnvironmentSpec {
                 base_dir: PathBuf::from("bar"),
                 sources: vec![Source {
-                    content: SourceContent::String("Foo".to_string()),
+                    content: SourceContent::Content("Foo".to_string()),
                     role: SourceRole::Context,
                     metadata: Metadata {
                         description: None,

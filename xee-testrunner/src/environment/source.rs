@@ -26,7 +26,8 @@ pub(crate) struct Source {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SourceContent {
     Path(PathBuf),
-    String(String),
+    Content(String),
+    Select(String),
 }
 
 #[allow(dead_code)]
@@ -99,7 +100,7 @@ impl Source {
                     .get_node_by_handle(handle)
                     .unwrap())
             }
-            SourceContent::String(value) => {
+            SourceContent::Content(value) => {
                 // we don't try to get a cached version of the document, as
                 // that would be different each time. we just add it to documents
                 // and return it
@@ -115,6 +116,9 @@ impl Source {
                     .borrow()
                     .get_node_by_handle(handle)
                     .unwrap())
+            }
+            SourceContent::Select(_value) => {
+                todo!("Don't know yet how to execute xpath here")
             }
         }
     }
@@ -138,7 +142,8 @@ impl ContextLoadable<LoadContext> for Sources {
         let uri_query = queries.option("@uri/string()", convert_string)?;
         let metadata_query = Metadata::load_with_context(queries, context)?;
 
-        let xslt_content_query = queries.one("content/string()", convert_string)?;
+        let xslt_select_query = queries.option("@select/string()", convert_string)?;
+        let xslt_content_query = queries.option("content/string()", convert_string)?;
         let sources_query = queries.many("source", move |documents, item| {
             let content = if let Some(file) = file_query.execute(documents, item)? {
                 SourceContent::Path(PathBuf::from(file))
@@ -150,13 +155,11 @@ impl ContextLoadable<LoadContext> for Sources {
                     Mode::XPath => {
                         // if we're in xpath mode, we take the content inside as an xpath expression
                         let s = content_query.execute(documents, item)?;
-                        SourceContent::String(s)
+                        SourceContent::Content(s)
                     }
                     Mode::Xslt => {
-                        // in xslt mode we look for a content element and take its
-                        // content as a String
-                        let s = xslt_content_query.execute(documents, item)?;
-                        SourceContent::String(s)
+                        // TODO
+                        SourceContent::Content("".to_string())
                     }
                 }
             };
@@ -172,7 +175,7 @@ impl ContextLoadable<LoadContext> for Sources {
                         let uri = path.to_string_lossy().to_string();
                         Some(uri.try_into().unwrap())
                     }
-                    SourceContent::String(_) => None,
+                    SourceContent::Content(_) | SourceContent::Select(_) => None,
                 }
             };
 
