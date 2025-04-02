@@ -3,10 +3,17 @@ use std::path::{Path, PathBuf};
 use crate::error::{Error, Result};
 
 #[derive(Debug)]
+pub(crate) enum Mode {
+    XPath,
+    Xslt,
+}
+
+#[derive(Debug)]
 pub(crate) struct PathInfo {
     pub(crate) catalog_path: PathBuf,
     pub(crate) filter_path: PathBuf,
     pub(crate) relative_path: PathBuf,
+    pub(crate) mode: Mode,
 }
 
 pub(crate) fn paths(path: &Path) -> Result<PathInfo> {
@@ -20,10 +27,17 @@ pub(crate) fn paths(path: &Path) -> Result<PathInfo> {
             let relative = path.strip_prefix(ancestor).unwrap();
             // filter file sits next to catalog.xml
             let filter_path = ancestor.join("filters");
+            // hacky way to determine mode from path
+            let mode = if catalog.to_str().unwrap().contains("xslt") {
+                Mode::Xslt
+            } else {
+                Mode::XPath
+            };
             let path_info = PathInfo {
                 catalog_path: catalog,
                 filter_path: filter_path.to_path_buf(),
                 relative_path: relative.to_path_buf(),
+                mode,
             };
             return Ok(path_info);
         }
