@@ -19,14 +19,16 @@ pub(crate) struct Source {
     pub(crate) role: SourceRole,
     pub(crate) content: SourceContent,
     // this can be optional at least in XSLT mode
-    pub(crate) uri: Option<IriReferenceString>,
     pub(crate) validation: Option<Validation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SourceContent {
+    // load from file
     Path(PathBuf),
+    // load from directly included content (XSLT only)
     Content(String),
+    // execute string as xpath expression, should result in singleton (XSLT only)
     Select(String),
 }
 
@@ -41,8 +43,9 @@ pub(crate) enum Validation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SourceRole {
     Context,
-    Var(String),
-    Doc(IriReferenceString), // URI
+    Var(String),                       // only in XPath
+    Doc(IriReferenceString),           // URI
+    ContextAndDoc(IriReferenceString), // context & doc combined
 }
 
 impl Source {
@@ -50,17 +53,18 @@ impl Source {
         &self,
         base_dir: &Path,
         documents: &mut Documents,
-        uri: Option<&IriReferenceStr>,
         base_uri: Option<&IriAbsoluteStr>,
     ) -> Result<xot::Node> {
-        let uri: Option<IriString> = if let Some(uri) = uri {
-            if let Some(base_uri) = base_uri {
-                Some(uri.resolve_against(base_uri).into())
-            } else {
-                panic!("Cannot resolve relative URL")
+        // if we have a role that requires a URI we need to resolve it
+        let uri: Option<IriString> = match &self.role {
+            SourceRole::Doc(uri) | SourceRole::ContextAndDoc(uri) => {
+                if let Some(base_uri) = base_uri {
+                    Some(uri.resolve_against(base_uri).into())
+                } else {
+                    panic!("Cannot resolve relative URL")
+                }
             }
-        } else {
-            None
+            _ => None,
         };
 
         match &self.content {
@@ -74,11 +78,14 @@ impl Source {
                     // scope borrowed_documents so we drop it afterward
                     let borrowed_documents = documents.documents().borrow();
 
-                    // we can unwrap here as we know that when it's a path it's an URI
-                    // TODO: would be better to somehow encode this in the type directly
-                    let root = borrowed_documents.get_node_by_uri(uri.as_ref().unwrap());
-                    if let Some(root) = root {
-                        return Ok(root);
+                    // when we load something from a path, we first check if we
+                    // happen to know it under a URI already
+                    if let Some(uri) = &uri {
+                        // if we know it, we try to look it up
+                        let root = borrowed_documents.get_node_by_uri(uri);
+                        if let Some(root) = root {
+                            return Ok(root);
+                        }
                     }
                 }
 
@@ -158,8 +165,7 @@ impl ContextLoadable<LoadContext> for Sources {
                         SourceContent::Content(s)
                     }
                     Mode::Xslt => {
-                        // TODO
-                        SourceContent::Content("".to_string())
+                        panic!("no xslt yet");
                     }
                 }
             };
@@ -169,6 +175,13 @@ impl ContextLoadable<LoadContext> for Sources {
             let uri: Option<IriReferenceString> = if let Some(uri) = uri {
                 Some(uri.try_into().unwrap())
             } else {
+                // HACK: this is a weird hack. if there's no uri attribute
+                // then we wildly turn the path into the URI.
+                // This is required for a few tests that depend on
+                // the environment works-mod for instance,
+                // which even it doesn't have a URI attribute in its
+                // source, still seems fn-document-uri-20 to result in
+                // a document with works-mod in its URI
                 match &content {
                     // if there is no uri attribute, use the file attribute as the url
                     SourceContent::Path(path) => {
@@ -183,31 +196,46 @@ impl ContextLoadable<LoadContext> for Sources {
 
             let source = if let Some(role) = role {
                 if role == "." {
-                    Source {
-                        metadata: metadata.clone(),
-                        role: SourceRole::Context,
-                        content: content.clone(),
-                        uri,
-                        validation: None,
+                    // it's possible to have a uri and a . role
+                    // at the same time
+                    if let Some(uri) = uri {
+                        Source {
+                            metadata: metadata.clone(),
+                            role: SourceRole::ContextAndDoc(uri),
+                            content: content.clone(),
+                            validation: None,
+                        }
+                    } else {
+                        Source {
+                            metadata: metadata.clone(),
+                            role: SourceRole::Context,
+                            content: content.clone(),
+                            validation: None,
+                        }
                     }
                 } else {
                     Source {
                         metadata: metadata.clone(),
                         role: SourceRole::Var(role),
                         content: content.clone(),
-                        uri,
                         validation: None,
                     }
                 }
             } else {
-                Source {
-                    metadata,
-                    // TODO: this is unwrap safe?
-                    role: SourceRole::Doc(uri.clone().unwrap()),
-                    content,
-                    uri,
-                    // TODO
-                    validation: None,
+                if let Some(uri) = uri {
+                    Source {
+                        metadata: metadata.clone(),
+                        role: SourceRole::ContextAndDoc(uri),
+                        content: content.clone(),
+                        validation: None,
+                    }
+                } else {
+                    Source {
+                        metadata: metadata.clone(),
+                        role: SourceRole::Context,
+                        content: content.clone(),
+                        validation: None,
+                    }
                 }
             };
 

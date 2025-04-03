@@ -110,7 +110,7 @@ impl EnvironmentSpec {
         // load all the sources. since loading a node has a cache,
         // the later context_item load won't clash
         for source in &self.sources {
-            let _ = source.node(&self.base_dir, documents, source.uri.as_deref(), base_uri)?;
+            let _ = source.node(&self.base_dir, documents, base_uri)?;
         }
         Ok(())
     }
@@ -128,8 +128,7 @@ impl EnvironmentSpec {
             // exercise this.
             // https://github.com/w3c/qt3tests/issues/66
             for source in &collection.sources {
-                let node =
-                    source.node(&self.base_dir, documents, source.uri.as_deref(), base_uri)?;
+                let node = source.node(&self.base_dir, documents, base_uri)?;
                 items.push(node.into());
             }
             collections.insert(collection.uri.clone(), items.into());
@@ -143,9 +142,8 @@ impl EnvironmentSpec {
         base_uri: Option<&IriAbsoluteStr>,
     ) -> Result<Option<Item>> {
         for source in &self.sources {
-            if let SourceRole::Context = source.role {
-                let node =
-                    source.node(&self.base_dir, documents, source.uri.as_deref(), base_uri)?;
+            if let SourceRole::Context | SourceRole::ContextAndDoc(_) = source.role {
+                let node = source.node(&self.base_dir, documents, base_uri)?;
                 return Ok(Some(Item::from(node)));
             }
         }
@@ -161,8 +159,7 @@ impl EnvironmentSpec {
         for source in &self.sources {
             if let SourceRole::Var(name) = &source.role {
                 let name = &name[1..]; // without $
-                let node =
-                    source.node(&self.base_dir, documents, source.uri.as_deref(), base_uri)?;
+                let node = source.node(&self.base_dir, documents, base_uri)?;
                 variables.insert(Name::name(name), Item::from(node).into());
             }
         }
@@ -300,13 +297,12 @@ mod tests {
                 sources: vec![
                     Source {
                         content: SourceContent::Path(PathBuf::from("a.xml")),
-                        role: SourceRole::Context,
+                        role: SourceRole::ContextAndDoc("a.xml".try_into().unwrap()),
                         metadata: Metadata {
                             description: None,
                             created: None,
                             modified: vec![],
                         },
-                        uri: Some("a.xml".try_into().unwrap()),
                         validation: None,
                     },
                     Source {
@@ -317,7 +313,6 @@ mod tests {
                             created: None,
                             modified: vec![],
                         },
-                        uri: Some("b.xml".try_into().unwrap()),
                         validation: None,
                     },
                 ],
@@ -362,13 +357,12 @@ mod tests {
                 base_dir: PathBuf::from("bar"),
                 sources: vec![Source {
                     content: SourceContent::Content("Foo".to_string()),
-                    role: SourceRole::Context,
+                    role: SourceRole::ContextAndDoc("example".try_into().unwrap()),
                     metadata: Metadata {
                         description: None,
                         created: None,
                         modified: vec![],
                     },
-                    uri: Some("example".try_into().unwrap()),
                     validation: None,
                 },],
                 ..Default::default()
