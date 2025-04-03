@@ -30,6 +30,8 @@ pub(crate) enum SourceContent {
     Content(String),
     // execute string as xpath expression, should result in singleton (XSLT only)
     Select(String),
+    // content and then select xpath expression
+    ContentAndSelect(String, String),
 }
 
 #[allow(dead_code)]
@@ -124,6 +126,9 @@ impl Source {
                     .get_node_by_handle(handle)
                     .unwrap())
             }
+            SourceContent::ContentAndSelect(_value, _select) => {
+                todo!("Don't know yet how to execute xpath here")
+            }
             SourceContent::Select(_value) => {
                 todo!("Don't know yet how to execute xpath here")
             }
@@ -144,7 +149,7 @@ impl ContextLoadable<LoadContext> for Sources {
 
     fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let file_query = queries.option("@file/string()", convert_string)?;
-        let content_query = queries.one("content/string()", convert_string)?;
+        let xpath_content_query = queries.one("content/string()", convert_string)?;
         let role_query = queries.option("@role/string()", convert_string)?;
         let uri_query = queries.option("@uri/string()", convert_string)?;
         let metadata_query = Metadata::load_with_context(queries, context)?;
@@ -161,11 +166,23 @@ impl ContextLoadable<LoadContext> for Sources {
                 match context.mode {
                     Mode::XPath => {
                         // if we're in xpath mode, we take the content inside as an xpath expression
-                        let s = content_query.execute(documents, item)?;
+                        let s = xpath_content_query.execute(documents, item)?;
                         SourceContent::Content(s)
                     }
                     Mode::Xslt => {
-                        panic!("no xslt yet");
+                        // we can get content from the content element
+                        let content = xslt_content_query.execute(documents, item)?;
+                        let select = xslt_select_query.execute(documents, item)?;
+                        dbg!(&content, &select);
+                        match (content, select) {
+                            (Some(content), Some(select)) => {
+                                SourceContent::ContentAndSelect(content, select)
+                            }
+                            (Some(content), None) => SourceContent::Content(content),
+                            // we cannot execute the select xpath expression here, we do it later
+                            (None, Some(select)) => SourceContent::Select(select),
+                            (None, None) => panic!("Must have content or select"),
+                        }
                     }
                 }
             };
@@ -188,7 +205,9 @@ impl ContextLoadable<LoadContext> for Sources {
                         let uri = path.to_string_lossy().to_string();
                         Some(uri.try_into().unwrap())
                     }
-                    SourceContent::Content(_) | SourceContent::Select(_) => None,
+                    SourceContent::Content(_)
+                    | SourceContent::Select(_)
+                    | SourceContent::ContentAndSelect(_, _) => None,
                 }
             };
 
@@ -221,21 +240,19 @@ impl ContextLoadable<LoadContext> for Sources {
                         validation: None,
                     }
                 }
+            } else if let Some(uri) = uri {
+                Source {
+                    metadata: metadata.clone(),
+                    role: SourceRole::ContextAndDoc(uri),
+                    content: content.clone(),
+                    validation: None,
+                }
             } else {
-                if let Some(uri) = uri {
-                    Source {
-                        metadata: metadata.clone(),
-                        role: SourceRole::ContextAndDoc(uri),
-                        content: content.clone(),
-                        validation: None,
-                    }
-                } else {
-                    Source {
-                        metadata: metadata.clone(),
-                        role: SourceRole::Context,
-                        content: content.clone(),
-                        validation: None,
-                    }
+                Source {
+                    metadata: metadata.clone(),
+                    role: SourceRole::Context,
+                    content: content.clone(),
+                    validation: None,
                 }
             };
 
