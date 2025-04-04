@@ -122,7 +122,7 @@ impl<L: Language> ContextLoadable<LoadContext> for TestSet<L> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{environment::EnvironmentRef, language::XPathLanguage, ns::XPATH_TEST_NS};
+    use crate::{environment::EnvironmentRef, language::XPathLanguage};
 
     use super::*;
 
