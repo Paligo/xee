@@ -127,8 +127,8 @@ impl StaticEvaluator {
             let insert_value = if let Some(value) = value {
                 value.clone()
             } else if required {
-                // a required value is mandatory, should return proper error
-                todo!()
+                // TODO: a required value is mandatory, should return proper error
+                return Err(ElementError::Unsupported);
             } else {
                 let select = attributes.optional(names.select, attributes.xpath())?;
                 if let Some(select) = select {

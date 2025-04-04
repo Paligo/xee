@@ -23,11 +23,18 @@ pub fn compile(
     compile_xslt(declarations, static_context)
 }
 
-pub(crate) fn parse(
+pub fn parse(
     static_context: StaticContext,
     xslt: &str,
 ) -> error::SpannedResult<interpreter::Program> {
-    let transform = parse_transform(xslt).unwrap(); // TODO get rid of error definitely wrong
+    let transform = parse_transform(xslt);
+    // TODO: better error handling
+    let transform = match transform {
+        Ok(transform) => transform,
+        Err(_e) => {
+            return Err(error::Error::Unsupported.into());
+        }
+    };
     compile(transform, static_context)
 }
 
@@ -114,9 +121,7 @@ impl<'a> IrConverter<'a> {
         match declaration {
             Template(template) => self.template(declarations, template),
             Mode(mode) => self.mode(declarations, mode),
-            _ => {
-                todo!("Unsupported declaration")
-            }
+            _ => Err(error::Error::Unsupported.into()),
         }
     }
 
@@ -132,7 +137,7 @@ impl<'a> IrConverter<'a> {
                 let default_priorities = default_priority(&pattern.pattern).collect::<Vec<_>>();
                 if default_priorities.len() > 1 {
                     // for now, we can't deal with multiple registration yet
-                    todo!("Deal with multiple priorities for one rule")
+                    return Err(error::Error::Unsupported.into());
                 } else {
                     default_priorities.first().unwrap().1
                 }
@@ -154,7 +159,7 @@ impl<'a> IrConverter<'a> {
             });
             Ok(())
         } else {
-            todo!();
+            Err(error::Error::Unsupported.into())
         }
     }
 
@@ -283,9 +288,11 @@ impl<'a> IrConverter<'a> {
             Namespace(namespace) => self.namespace(namespace),
             Comment(comment) => self.comment(comment),
             ProcessingInstruction(pi) => self.processing_instruction(pi),
-            // xsl:variable does not produce content and is handled earlier already
-            Variable(_variable) => unreachable!(),
-            _ => todo!(),
+            // TODO: xsl:variable does not produce content and is handled
+            // earlier already should be unreachable!() but at this point this
+            // can be reached so return unsupported
+            Variable(_variable) => Err(error::Error::Unsupported.into()),
+            _ => Err(error::Error::Unsupported.into()),
         }
     }
 
@@ -391,9 +398,14 @@ impl<'a> IrConverter<'a> {
         apply_templates: &ast::ApplyTemplates,
     ) -> error::SpannedResult<Bindings> {
         // TODO: default for select should be child::node()
-        let (select_atom, bindings) = self
-            .expression(apply_templates.select.as_ref().unwrap())?
-            .atom_bindings();
+        let select_expr = apply_templates.select.as_ref();
+        let select_expr = match select_expr {
+            Some(select_expr) => select_expr,
+            None => {
+                return Err(error::Error::Unsupported.into());
+            }
+        };
+        let (select_atom, bindings) = self.expression(select_expr)?.atom_bindings();
         let mode = match &apply_templates.mode {
             ast::ApplyTemplatesModeValue::EqName(name) => {
                 ir::ApplyTemplatesModeValue::Named(name.clone())

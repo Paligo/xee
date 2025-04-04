@@ -1,5 +1,5 @@
 use anyhow::Result;
-use iri_string::types::{IriAbsoluteStr, IriReferenceStr, IriReferenceString, IriString};
+use iri_string::types::{IriAbsoluteStr, IriReferenceString, IriString};
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
@@ -46,7 +46,6 @@ pub(crate) enum Validation {
 pub(crate) enum SourceRole {
     Context,
     Var(String),                       // only in XPath
-    Doc(IriReferenceString),           // URI
     ContextAndDoc(IriReferenceString), // context & doc combined
 }
 
@@ -59,7 +58,7 @@ impl Source {
     ) -> Result<xot::Node> {
         // if we have a role that requires a URI we need to resolve it
         let uri: Option<IriString> = match &self.role {
-            SourceRole::Doc(uri) | SourceRole::ContextAndDoc(uri) => {
+            SourceRole::ContextAndDoc(uri) => {
                 if let Some(base_uri) = base_uri {
                     Some(uri.resolve_against(base_uri).into())
                 } else {
@@ -173,7 +172,6 @@ impl ContextLoadable<LoadContext> for Sources {
                         // we can get content from the content element
                         let content = xslt_content_query.execute(documents, item)?;
                         let select = xslt_select_query.execute(documents, item)?;
-                        dbg!(&content, &select);
                         match (content, select) {
                             (Some(content), Some(select)) => {
                                 SourceContent::ContentAndSelect(content, select)

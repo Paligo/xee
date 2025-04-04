@@ -1,7 +1,10 @@
 use anyhow::Result;
 use iri_string::types::{IriAbsoluteString, IriString};
 
-use xee_xpath::{context, Queries, Query};
+use xee_xpath::{
+    context::{self},
+    Queries, Query,
+};
 use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::{

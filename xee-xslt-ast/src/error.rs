@@ -45,6 +45,8 @@ pub enum ElementError {
     XPathRunTime(xee_xpath_compiler::error::SpannedError),
     // internal error, should not happen
     Internal,
+    // Not yet supported
+    Unsupported,
 }
 
 impl From<AttributeError> for ElementError {

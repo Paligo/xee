@@ -1032,7 +1032,13 @@ pub(crate) fn serialize(xot: &Xot, sequence: &Sequence) -> crate::error::Result<
     let mut xmls = Vec::with_capacity(sequence.len());
     for item in sequence.iter() {
         if let Ok(node) = item.to_node() {
-            let xml_value = xot.to_string(node);
+            // TODO: handle text nodes differently as the underlying
+            // to_string doesn't like it if they don't have a parent..
+            let xml_value = if let Some(text) = xot.text_str(node) {
+                Ok(text.to_string())
+            } else {
+                xot.to_string(node)
+            };
             if let Ok(xml_value) = xml_value {
                 xmls.push(xml_value);
             } else {
