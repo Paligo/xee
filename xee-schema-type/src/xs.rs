@@ -325,8 +325,8 @@ impl Xs {
             GDay => Some(RustInfo::new("crate::atomic::GDay")),
             GMonth => Some(RustInfo::new("crate::atomic::GMonth")),
             Boolean => Some(RustInfo::new("bool")),
-            Base64Binary => Some(RustInfo::as_ref("Vec<u8>")),
-            HexBinary => Some(RustInfo::as_ref("Vec<u8>")),
+            Base64Binary => Some(RustInfo::as_ref("std::rc::Rc<[u8]>")),
+            HexBinary => Some(RustInfo::as_ref("std::rc::Rc<[u8]>")),
             QName => Some(RustInfo::new("xee_xpath_ast::ast::Name")),
             Notation => None,
 

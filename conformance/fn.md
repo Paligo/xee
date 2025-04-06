@@ -108,7 +108,7 @@
 - [x] position
 - [x] prefix-from-QName
 - [x] QName
-- [ ] random-number-generator
+- [x] random-number-generator
 - [x] remove
 - [x] replace
 - [x] resolve-QName

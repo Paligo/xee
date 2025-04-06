@@ -22,6 +22,7 @@ mod sequence;
 mod string;
 mod uri;
 mod xs;
+mod rng;
 
 use crate::function::StaticFunctionDescription;
 
@@ -49,5 +50,6 @@ pub(crate) fn static_function_descriptions() -> Vec<StaticFunctionDescription> {
     descriptions.extend(parse::static_function_descriptions());
     descriptions.extend(json::static_function_descriptions());
     descriptions.extend(id::static_function_descriptions());
+    descriptions.extend(rng::static_function_descriptions());
     descriptions
 }

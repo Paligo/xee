@@ -57,6 +57,9 @@ percent-encoding = "2.3.1"
 json = { workspace = true }
 v_jsonescape = "0.7.8"
 static_assertions = "1.1.0"
+rand = "0.9.0"
+rand_chacha = "0.9.0"
+rand_seeder = "0.4.0"
 
 [dev-dependencies]
 insta = { workspace = true, features = ["yaml", "glob"] }

@@ -753,3 +753,27 @@ impl TryFrom<Atomic> for Name {
         }
     }
 }
+
+// binary
+
+impl TryFrom<Atomic> for Rc<[u8]> {
+    type Error = error::Error;
+
+    fn try_from(a: Atomic) -> Result<Self, Self::Error> {
+        match a {
+            Atomic::Binary(_, n) => Ok(n),
+            _ => Err(error::Error::XPTY0004),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a Atomic> for Rc<[u8]> {
+    type Error = error::Error;
+
+    fn try_from(a: &'a Atomic) -> Result<Self, Self::Error> {
+        match a {
+            Atomic::Binary(_, n) => Ok(Rc::clone(n)),
+            _ => Err(error::Error::XPTY0004),
+        }
+    }
+}
