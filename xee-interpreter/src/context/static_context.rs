@@ -139,4 +139,12 @@ impl StaticContext {
     ) -> Option<function::StaticFunctionId> {
         self.functions.get_by_name(name, arity)
     }
+
+    /// Get a private function by name
+    pub(crate) fn function_id_by_private_name(
+        &self,
+        name: &str,
+    ) -> Option<function::StaticFunctionId> {
+        self.functions.get_by_private_name(name)
+    }
 }

@@ -54,8 +54,31 @@ pub(crate) type StaticFunctionType = fn(
     arguments: &[sequence::Sequence],
 ) -> error::Result<sequence::Sequence>;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum StaticFunctionName {
+    PublicName(Name),
+    PrivateName(&'static str),
+}
+
+impl StaticFunctionName {
+    pub fn public_name(&self) -> Option<&Name> {
+        if let Self::PublicName(name) = self {
+            Some(name)
+        } else {
+            None
+        }
+    }
+}
+
+impl From<Name> for StaticFunctionName {
+    fn from(value: Name) -> Self {
+        Self::PublicName(value)
+    }
+}
+
+
 pub(crate) struct StaticFunctionDescription {
-    pub(crate) name: Name,
+    pub(crate) name: StaticFunctionName,
     pub(crate) signature: function::Signature,
     pub(crate) function_kind: Option<FunctionKind>,
     pub(crate) func: StaticFunctionType,
@@ -92,7 +115,25 @@ impl StaticFunctionDescription {
         let name = signature.name.value.clone();
         let signature: function::Signature = signature.into();
         Self {
-            name,
+            name: name.into(),
+            signature,
+            function_kind,
+            func,
+        }
+    }
+
+    pub(crate) fn new_private(
+        func: StaticFunctionType,
+        signature: &str,
+        private_name: &'static str,
+        function_kind: Option<FunctionKind>,
+        namespaces: &Namespaces,
+    ) -> Self {
+        let signature = ast::Signature::parse(signature, namespaces)
+            .expect("Signature parse failed unexpectedly");
+        let signature: function::Signature = signature.into();
+        Self {
+            name: StaticFunctionName::PrivateName(private_name),
             signature,
             function_kind,
             func,
@@ -143,7 +184,7 @@ impl From<FunctionKind> for FunctionRule {
 }
 
 pub struct StaticFunction {
-    name: Name,
+    name: StaticFunctionName,
     signature: function::Signature,
     arity: usize,
     pub function_rule: Option<FunctionRule>,
@@ -163,7 +204,7 @@ impl Debug for StaticFunction {
 impl StaticFunction {
     pub(crate) fn new(
         func: StaticFunctionType,
-        name: Name,
+        name: StaticFunctionName,
         signature: function::Signature,
         function_kind: Option<FunctionKind>,
     ) -> Self {
@@ -228,8 +269,8 @@ impl StaticFunction {
         }
     }
 
-    pub(crate) fn name(&self) -> &Name {
-        &self.name
+    pub(crate) fn name(&self) -> Option<&Name> {
+        self.name.public_name()
     }
 
     pub(crate) fn arity(&self) -> usize {
@@ -241,7 +282,7 @@ impl StaticFunction {
     }
 
     pub fn display_representation(&self) -> String {
-        let name = self.name.full_name();
+        let name = self.name.public_name().map(|f| f.full_name()).unwrap_or("function".into());
         let signature = self.signature.display_representation();
         format!("{}{}", name, signature)
     }
@@ -260,12 +301,14 @@ fn into_sequences(values: &[stack::Value]) -> error::Result<Vec<sequence::Sequen
 #[derive(Debug)]
 pub struct StaticFunctions {
     by_name: HashMap<(Name, u8), function::StaticFunctionId>,
+    by_private_name: HashMap<&'static str, function::StaticFunctionId>,
     by_index: Vec<StaticFunction>,
 }
 
 impl StaticFunctions {
     pub(crate) fn new() -> Self {
         let mut by_name = HashMap::new();
+        let mut by_private_name = HashMap::new();
         let descriptions = static_function_descriptions();
         let mut by_index = Vec::new();
         for description in descriptions {
@@ -273,17 +316,31 @@ impl StaticFunctions {
         }
 
         for (i, static_function) in by_index.iter().enumerate() {
-            by_name.insert(
-                (static_function.name.clone(), static_function.arity as u8),
-                function::StaticFunctionId(i),
-            );
+            match &static_function.name {
+                StaticFunctionName::PublicName(name) => {
+                    by_name.insert(
+                        (name.clone(), static_function.arity as u8),
+                        function::StaticFunctionId(i)
+                    );
+                },
+                StaticFunctionName::PrivateName(name) => {
+                    by_private_name.insert(
+                        *name,
+                        function::StaticFunctionId(i),
+                    );
+                }
+            }
         }
-        Self { by_name, by_index }
+        Self { by_name, by_private_name, by_index }
     }
 
     pub fn get_by_name(&self, name: &Name, arity: u8) -> Option<function::StaticFunctionId> {
         // TODO annoying clone
         self.by_name.get(&(name.clone(), arity)).copied()
+    }
+
+    pub(crate) fn get_by_private_name(&self, name: &str) -> Option<function::StaticFunctionId> {
+        self.by_private_name.get(name).copied()
     }
 
     pub fn get_by_index(&self, static_function_id: function::StaticFunctionId) -> &StaticFunction {

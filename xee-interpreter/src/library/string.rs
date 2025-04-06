@@ -786,7 +786,7 @@ pub(crate) fn static_function_descriptions() -> Vec<StaticFunctionDescription> {
             Some(string_type.clone()),
         );
         r.push(StaticFunctionDescription {
-            name: name.clone(),
+            name: name.clone().into(),
             signature,
             function_kind: None,
             func: concat,
