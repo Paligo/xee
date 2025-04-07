@@ -20,4 +20,4 @@ mod visitor;
 mod whitespace;
 
 pub use ast_core as ast;
-pub use parse::parse_transform;
+pub use parse::{parse_sequence_constructor_item, parse_transform};

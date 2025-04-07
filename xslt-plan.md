@@ -36,11 +36,9 @@ This is the easiest to step into right now. `xee-xslt-ast` is fairly complete
 already but there are some details to be completed.
 
 So we want to harden the `xee-xslt-ast` so we know it can truly load all valid
-XSLT (and reject invalid XSLT). Right now these are snapshot tests using
-`insta` in `xee-xslt-ast/src/instruction.rs`. I think we should extract them
-and make them integration tests in `xee-xslt-ast/tests`.
-
-We may also want to integrate a way to snapshot test XSLT files (manually
+XSLT (and reject invalid XSLT). Right now this is done via snapshot tests using
+`insta` in `xee-xslt-ast/tests/snapshot_tests.rs`. 
+We may want to integrate a way to snapshot test XSLT files (manually
 verifying whether the AST is plausible and doesn't error when we don't expect
 it to be).
 
