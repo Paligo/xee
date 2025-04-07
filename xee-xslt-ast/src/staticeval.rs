@@ -53,6 +53,8 @@ impl StaticEvaluator {
         // this xot is not the same as the one in state, as
         // it's the one used for parameters
         // TODO: does that make sense? Do parameters need annotations?
+        // if so the Xot should be shared but that leads to mutability issues
+        // down the line
         xot: &mut Xot,
     ) -> Result<(), ElementError> {
         let names = &state.names;
