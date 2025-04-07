@@ -1,4 +1,5 @@
 use ahash::{HashMap, HashMapExt};
+use std::sync::LazyLock;
 
 /// The XPath FN namespace URI
 pub const FN_NAMESPACE: &str = "http://www.w3.org/2005/xpath-functions";
@@ -15,6 +16,9 @@ const STATIC_NAMESPACES: [(&str, &str); 7] = [
     ("err", "http://www.w3.org/2005/xqt-errors"),
     ("output", "http://www.w3.org/2010/xslt-xquery-serialization"),
 ];
+
+/// Static default namespaces.
+pub static DEFAULT_NAMESPACES: LazyLock<Namespaces> = LazyLock::new(|| Default::default());
 
 /// Declared namespaces.
 #[derive(Debug, Clone)]

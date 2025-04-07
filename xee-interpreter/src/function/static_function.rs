@@ -71,12 +71,12 @@ pub(crate) struct StaticFunctionDescription {
 macro_rules! wrap_xpath_fn {
     ($function:path) => {{
         use $function as wrapped_function;
-        let namespaces = xee_name::Namespaces::default();
+        let namespaces = &xee_name::DEFAULT_NAMESPACES;
         $crate::function::StaticFunctionDescription::new(
             wrapped_function::WRAPPER,
             wrapped_function::SIGNATURE,
             $crate::function::FunctionKind::parse(wrapped_function::KIND),
-            &namespaces,
+            namespaces,
         )
     }};
 }
