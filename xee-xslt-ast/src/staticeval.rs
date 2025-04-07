@@ -52,6 +52,7 @@ impl StaticEvaluator {
         top_context: Context,
         // this xot is not the same as the one in state, as
         // it's the one used for parameters
+        // TODO: does that make sense? Do parameters need annotations?
         xot: &mut Xot,
     ) -> Result<(), ElementError> {
         let names = &state.names;
