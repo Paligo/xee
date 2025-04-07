@@ -160,13 +160,16 @@ pub(crate) trait PredicateMatcher {
                         }
                         // TODO: handle other kinds of forward axes
                         pattern::ForwardAxis::Self_ => {
-                            todo!()
+                            // TODO:
+                            return NodeMatch::NotMatch;
                         }
                         pattern::ForwardAxis::DescendantOrSelf => {
-                            todo!()
+                            // TODO:
+                            return NodeMatch::NotMatch;
                         }
                         pattern::ForwardAxis::Namespace => {
-                            todo!()
+                            // TODO:
+                            return NodeMatch::NotMatch;
                         }
                         _ => {
                             if !matches {

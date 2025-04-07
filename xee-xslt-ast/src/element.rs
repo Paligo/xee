@@ -36,7 +36,8 @@ impl<'a> XsltParser<'a> {
     }
 
     pub(crate) fn parse_transform(&self, node: Node) -> Result<ast::Transform, ElementError> {
-        let parser = instruction(self.state.names.xsl_transform);
+        let parser = instruction(self.state.names.xsl_transform)
+            .or(instruction(self.state.names.xsl_stylesheet));
         parser.parse(Some(node), self.state, &Context::empty())
     }
 }

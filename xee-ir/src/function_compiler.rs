@@ -140,7 +140,12 @@ impl<'a> FunctionCompiler<'a> {
                     .emit(Instruction::ClosureVar(index as u16), span);
                 Ok(())
             } else {
-                unreachable!("variable not found: {:?}", name);
+                // TODO: this should be unreachable but the XSLT test suite
+                // at this point comes up with an error. we can explore
+                // whether this can become unreachable again once xslt
+                // support is further along
+                // unreachable!("variable not found: {:?}", name);
+                Err(Error::Unsupported.into())
             }
         }
     }
