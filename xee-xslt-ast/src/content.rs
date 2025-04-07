@@ -7,7 +7,7 @@ use crate::state::State;
 #[derive(Clone)]
 pub(crate) struct Content<'a> {
     pub(crate) node: Node,
-    pub(crate) state: &'a State,
+    pub(crate) state: &'a State<'a>,
     pub(crate) context: Context,
 }
 

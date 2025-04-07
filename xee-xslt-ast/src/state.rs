@@ -3,14 +3,14 @@ use xot::{NameId, Node, SpanInfo, SpanInfoKey, Xot};
 use crate::{ast_core::Span, error::AttributeError, name::XmlName, names::Names};
 
 /// Parser state affects the parsing output but does not change during parsing.
-pub(crate) struct State {
-    pub(crate) xot: Xot,
+pub(crate) struct State<'a> {
+    pub(crate) xot: &'a mut Xot,
     pub(crate) span_info: SpanInfo,
     pub(crate) names: Names,
 }
 
-impl State {
-    pub(crate) fn new(xot: Xot, span_info: SpanInfo, names: Names) -> Self {
+impl<'a> State<'a> {
+    pub(crate) fn new(xot: &'a mut Xot, span_info: SpanInfo, names: Names) -> Self {
         Self {
             xot,
             span_info,

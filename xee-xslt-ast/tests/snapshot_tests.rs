@@ -1,6 +1,24 @@
-use xee_xslt_ast::{parse_sequence_constructor_item, parse_transform};
+use xee_xslt_ast::error::ElementError;
+use xee_xslt_ast::{
+    parse_sequence_constructor_item as parse_sequence_constructor_item_with_xot,
+    parse_transform as parse_transform_with_xot,
+};
+
+use xot::Xot;
 
 use insta::assert_ron_snapshot;
+
+fn parse_sequence_constructor_item(
+    s: &str,
+) -> Result<xee_xslt_ast::ast::SequenceConstructorItem, ElementError> {
+    let mut xot = Xot::new();
+    parse_sequence_constructor_item_with_xot(s, &mut xot)
+}
+
+fn parse_transform(s: &str) -> Result<xee_xslt_ast::ast::Transform, ElementError> {
+    let mut xot = Xot::new();
+    parse_transform_with_xot(s, &mut xot)
+}
 
 #[test]
 fn test_if() {

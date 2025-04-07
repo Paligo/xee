@@ -492,9 +492,8 @@ mod tests {
 
     use super::*;
 
-    fn parse_base(s: &str) -> (State, Context, Node) {
-        let mut xot = Xot::new();
-        let names = Names::new(&mut xot);
+    fn parse_base<'a>(s: &str, xot: &'a mut Xot) -> (State<'a>, Context, Node) {
+        let names = Names::new(xot);
         let (doc, span_info) = xot.parse_with_span_info(s).unwrap();
         let outer = xot.document_element(doc).unwrap();
         let prefixes = xot.prefixes(outer);
@@ -503,15 +502,16 @@ mod tests {
         (state, context, outer)
     }
 
-    fn parse_next(s: &str) -> (State, Context, Option<Node>) {
-        let (state, context, outer) = parse_base(s);
+    fn parse_next<'a>(s: &str, xot: &'a mut Xot) -> (State<'a>, Context, Option<Node>) {
+        let (state, context, outer) = parse_base(s, xot);
         let next = state.xot.first_child(outer);
         (state, context, next)
     }
 
     #[test]
     fn test_one() {
-        let (state, context, next) = parse_next("<outer><a /></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer><a /></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value;
@@ -525,7 +525,8 @@ mod tests {
 
     #[test]
     fn test_one_no_node() {
-        let (state, context, next) = parse_next("<outer></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value;
@@ -538,7 +539,8 @@ mod tests {
 
     #[test]
     fn test_one_wrong_node() {
-        let (mut state, context, next) = parse_next("<outer><b/></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><b/></outer>", &mut xot);
 
         let names = TestNames::new(&mut state.xot);
 
@@ -567,7 +569,8 @@ mod tests {
 
     #[test]
     fn test_option_present() {
-        let (state, context, next) = parse_next("<outer><a /></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer><a /></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value;
@@ -582,7 +585,8 @@ mod tests {
 
     #[test]
     fn test_option_present_but_parse_error() {
-        let (state, context, next) = parse_next("<outer><a /></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer><a /></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value;
@@ -611,7 +615,8 @@ mod tests {
 
     #[test]
     fn test_option_unexpected_node() {
-        let (state, context, node) = parse_next("<outer><a /></outer>");
+        let mut xot = Xot::new();
+        let (state, context, node) = parse_next("<outer><a /></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value;
@@ -631,7 +636,8 @@ mod tests {
 
     #[test]
     fn test_option_not_present() {
-        let (state, context, next) = parse_next("<outer></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value;
@@ -705,7 +711,8 @@ mod tests {
 
     #[test]
     fn test_two_option_both_present() {
-        let (mut state, context, next) = parse_next("<outer><a /><b /></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><a /><b /></outer>", &mut xot);
         let names = TestNames::new(&mut state.xot);
 
         let (item_a, item_b) = parse_two_option(&state, &context, &names, next).unwrap();
@@ -715,7 +722,8 @@ mod tests {
 
     #[test]
     fn test_two_option_only_a_present() {
-        let (mut state, context, next) = parse_next("<outer><a /></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><a /></outer>", &mut xot);
         let names = TestNames::new(&mut state.xot);
 
         let (item_a, item_b) = parse_two_option(&state, &context, &names, next).unwrap();
@@ -725,7 +733,8 @@ mod tests {
 
     #[test]
     fn test_two_option_only_b_present() {
-        let (mut state, context, next) = parse_next("<outer><b /></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><b /></outer>", &mut xot);
         let names = TestNames::new(&mut state.xot);
 
         let (item_a, item_b) = parse_two_option(&state, &context, &names, next).unwrap();
@@ -735,7 +744,8 @@ mod tests {
 
     #[test]
     fn test_two_option_neither_present() {
-        let (mut state, context, next) = parse_next("<outer></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer></outer>", &mut xot);
 
         let names = TestNames::new(&mut state.xot);
 
@@ -746,7 +756,8 @@ mod tests {
 
     #[test]
     fn test_two_option_unexpected() {
-        let (mut state, context, next) = parse_next("<outer><c /></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><c /></outer>", &mut xot);
         let names = TestNames::new(&mut state.xot);
 
         let r = parse_two_option(&state, &context, &names, next);
@@ -760,7 +771,8 @@ mod tests {
 
     #[test]
     fn test_end_found() {
-        let (state, context, next) = parse_next("<outer></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer></outer>", &mut xot);
 
         let end_parser = end();
 
@@ -771,7 +783,8 @@ mod tests {
 
     #[test]
     fn test_end_not_found() {
-        let (state, context, next) = parse_next("<outer><a /></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer><a /></outer>", &mut xot);
 
         let end_parser = end();
 
@@ -787,7 +800,8 @@ mod tests {
 
     #[test]
     fn test_many() {
-        let (state, context, next) = parse_next("<outer><a /><a /><a /></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer><a /><a /><a /></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value;
@@ -801,7 +815,8 @@ mod tests {
 
     #[test]
     fn test_many_empty() {
-        let (state, context, next) = parse_next("<outer></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value;
@@ -816,7 +831,8 @@ mod tests {
 
     #[test]
     fn test_option_then_many() {
-        let (mut state, context, next) = parse_next("<outer><a /><b /><b /></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><a /><b /><b /></outer>", &mut xot);
 
         let names = TestNames::new(&mut state.xot);
 
@@ -857,7 +873,8 @@ mod tests {
 
     #[test]
     fn test_combine() {
-        let (mut state, context, next) = parse_next("<outer><a /><b /><b /></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><a /><b /><b /></outer>", &mut xot);
 
         let names = TestNames::new(&mut state.xot);
 
@@ -900,7 +917,8 @@ mod tests {
 
     #[test]
     fn test_combine_3_values() {
-        let (mut state, context, next) = parse_next("<outer><a /><b /><b /></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><a /><b /><b /></outer>", &mut xot);
 
         let names = TestNames::new(&mut state.xot);
 
@@ -945,7 +963,8 @@ mod tests {
 
     #[test]
     fn test_combine_then_ignore() {
-        let (mut state, context, next) = parse_next("<outer><b /><b /></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><b /><b /></outer>", &mut xot);
 
         let names = TestNames::new(&mut state.xot);
 
@@ -976,7 +995,8 @@ mod tests {
 
     #[test]
     fn test_attribute() {
-        let (mut state, context, next) = parse_next(r#"<outer><b foo="FOO"/></outer>"#);
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next(r#"<outer><b foo="FOO"/></outer>"#, &mut xot);
 
         let names = TestNames::new(&mut state.xot);
 
@@ -1012,7 +1032,8 @@ mod tests {
 
     #[test]
     fn test_contains() {
-        let (state, context, outer) = parse_base("<outer><a /><a /><a /></outer>");
+        let mut xot = Xot::new();
+        let (state, context, outer) = parse_base("<outer><a /><a /><a /></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value;
@@ -1026,7 +1047,8 @@ mod tests {
 
     #[test]
     fn test_or() {
-        let (mut state, context, next) = parse_next("<outer><a/><b/></outer>");
+        let mut xot = Xot::new();
+        let (mut state, context, next) = parse_next("<outer><a/><b/></outer>", &mut xot);
         let names = TestNames::new(&mut state.xot);
 
         #[derive(Debug, PartialEq)]
@@ -1068,7 +1090,8 @@ mod tests {
 
     #[test]
     fn test_map() {
-        let (state, context, next) = parse_next("<outer><a /></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer><a /></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value(usize);
@@ -1085,7 +1108,8 @@ mod tests {
 
     #[test]
     fn test_multi() {
-        let (state, context, next) = parse_next("<outer><a /></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer><a /></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value(usize);
@@ -1099,7 +1123,8 @@ mod tests {
 
     #[test]
     fn test_many_flatten() {
-        let (state, context, next) = parse_next("<outer><a/><a/></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer><a/><a/></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value(usize);
@@ -1113,7 +1138,8 @@ mod tests {
 
     #[test]
     fn test_multi_flatten() {
-        let (state, context, next) = parse_next("<outer><a/><a/></outer>");
+        let mut xot = Xot::new();
+        let (state, context, next) = parse_next("<outer><a/><a/></outer>", &mut xot);
 
         #[derive(Debug, PartialEq)]
         struct Value(usize);

@@ -5,7 +5,7 @@ use xee_interpreter::{context::StaticContext, error, interpreter};
 use xee_ir::{compile_xslt, ir, Bindings, Variables};
 use xee_xpath_ast::{ast as xpath_ast, pattern::transform_pattern, span::Spanned};
 use xee_xslt_ast::{ast, parse_transform};
-use xot::xmlname::NameStrInfo;
+use xot::{xmlname::NameStrInfo, Xot};
 
 use crate::priority::default_priority;
 
@@ -26,8 +26,9 @@ pub fn compile(
 pub fn parse(
     static_context: StaticContext,
     xslt: &str,
+    xot: &mut Xot,
 ) -> error::SpannedResult<interpreter::Program> {
-    let transform = parse_transform(xslt);
+    let transform = parse_transform(xslt, xot);
     // TODO: better error handling
     let transform = match transform {
         Ok(transform) => transform,

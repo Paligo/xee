@@ -27,11 +27,11 @@ static SEQUENCE_CONSTRUCTOR_CONTENT: ContentParseLock<ast::SequenceConstructor> 
 static DECLARATIONS_CONTENT: ContentParseLock<ast::Declarations> = OnceLock::new();
 
 pub(crate) struct XsltParser<'a> {
-    state: &'a State,
+    state: &'a State<'a>,
 }
 
 impl<'a> XsltParser<'a> {
-    pub(crate) fn new(state: &'a State) -> Self {
+    pub(crate) fn new(state: &'a State<'a>) -> Self {
         Self { state }
     }
 

@@ -72,7 +72,8 @@ impl Runnable<XsltLanguage> for XsltTestCase {
         };
         let static_context_builder = StaticContextBuilder::default();
         let static_context = static_context_builder.build();
-        let program = xee_xslt_compiler::parse(static_context, &xslt);
+        let program =
+            xee_xslt_compiler::parse(static_context, &xslt, run_context.documents.xot_mut());
         let program = match program {
             Ok(program) => program,
             Err(error) => {

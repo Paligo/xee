@@ -32,6 +32,6 @@ pub fn evaluate(xot: &mut Xot, xml: &str, xslt: &str) -> error::SpannedResult<se
     );
     let static_context = StaticContext::from_namespaces(namespaces);
     let root = xot.parse(xml).unwrap();
-    let program = parse(static_context, xslt).unwrap();
+    let program = parse(static_context, xslt, xot).unwrap();
     evaluate_program(xot, &program, root)
 }

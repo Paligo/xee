@@ -6,7 +6,7 @@ mod combinator;
 mod content;
 mod context;
 mod element;
-mod error;
+pub mod error;
 mod instruction;
 mod name;
 mod names;

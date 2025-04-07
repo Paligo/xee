@@ -271,7 +271,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let variables =
@@ -294,7 +294,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let variables =
@@ -319,7 +319,7 @@ mod tests {
         let name = xpath_ast::Name::name("x");
         let static_parameters = Variables::from([(name.clone(), Item::from("bar").into())]);
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let variables =
@@ -344,7 +344,7 @@ mod tests {
         let name = xpath_ast::Name::name("x");
         let static_parameters = Variables::new();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let variables =
@@ -369,7 +369,7 @@ mod tests {
         let name = xpath_ast::Name::name("x");
         let static_parameters = Variables::new();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let variables =
@@ -394,7 +394,7 @@ mod tests {
         let name = xpath_ast::Name::name("x");
         let static_parameters = Variables::new();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let variables =
@@ -416,7 +416,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         static_evaluate(&mut state, document_element, Variables::new(), &mut xot).unwrap();
@@ -438,7 +438,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         static_evaluate(&mut state, document_element, Variables::new(), &mut xot).unwrap();
@@ -461,7 +461,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         static_evaluate(&mut state, document_element, Variables::new(), &mut xot).unwrap();
@@ -483,7 +483,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         static_evaluate(&mut state, document_element, Variables::new(), &mut xot).unwrap();
@@ -505,7 +505,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
         let mut xot = Xot::new();
         let variables =
             static_evaluate(&mut state, document_element, Variables::new(), &mut xot).unwrap();
@@ -534,7 +534,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(xslt).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let xhtml = xot.parse(xhtml).unwrap();
@@ -567,7 +567,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(xslt).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let xhtml = xot.parse(xhtml).unwrap();
@@ -591,7 +591,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         static_evaluate(&mut state, document_element, Variables::new(), &mut xot).unwrap();
@@ -613,7 +613,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         static_evaluate(&mut state, document_element, Variables::new(), &mut xot).unwrap();
@@ -635,7 +635,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         static_evaluate(&mut state, document_element, Variables::new(), &mut xot).unwrap();
@@ -653,7 +653,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(root).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         static_evaluate(&mut state, document_element, Variables::new(), &mut xot).unwrap();
@@ -684,7 +684,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(xslt).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let xhtml = xot.parse(xhtml).unwrap();
@@ -717,7 +717,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(xslt).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let xhtml = xot.parse(xhtml).unwrap();
@@ -750,7 +750,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(xslt).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let xhtml = xot.parse(xhtml).unwrap();
@@ -783,7 +783,7 @@ mod tests {
         let names = Names::new(&mut xot);
         let document_element = xot.document_element(xslt).unwrap();
 
-        let mut state = State::new(xot, span_info, names);
+        let mut state = State::new(&mut xot, span_info, names);
 
         let mut xot = Xot::new();
         let xhtml = xot.parse(xhtml).unwrap();

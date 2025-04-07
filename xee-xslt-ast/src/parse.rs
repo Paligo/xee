@@ -9,9 +9,8 @@ use crate::{content::Content, context::Context, element::XsltParser, names::Name
 
 type Result<V> = std::result::Result<V, Error>;
 
-pub fn parse_transform(s: &str) -> Result<ast::Transform> {
-    let mut xot = Xot::new();
-    let names = Names::new(&mut xot);
+pub fn parse_transform(s: &str, xot: &mut Xot) -> Result<ast::Transform> {
+    let names = Names::new(xot);
     let (node, span_info) = xot
         .parse_with_span_info(s)
         .map_err(|_e| Error::Unsupported)?;
@@ -25,9 +24,11 @@ pub fn parse_transform(s: &str) -> Result<ast::Transform> {
     parser.parse_transform(node)
 }
 
-pub fn parse_sequence_constructor_item(s: &str) -> Result<ast::SequenceConstructorItem> {
-    let mut xot = Xot::new();
-    let names = Names::new(&mut xot);
+pub fn parse_sequence_constructor_item(
+    s: &str,
+    xot: &mut Xot,
+) -> Result<ast::SequenceConstructorItem> {
+    let names = Names::new(xot);
     let (node, span_info) = xot.parse_with_span_info(s).unwrap();
     let state = State::new(xot, span_info, names);
     let node = state.xot.document_element(node).unwrap();
