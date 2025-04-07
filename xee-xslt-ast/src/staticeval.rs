@@ -246,7 +246,7 @@ pub(crate) fn static_evaluate(
     static_parameters: Variables,
     xot: &mut Xot,
 ) -> Result<Variables, ElementError> {
-    strip_whitespace(&mut state.xot, &state.names, node);
+    strip_whitespace(state.xot, &state.names, node);
     let mut evaluator = StaticEvaluator::new(static_parameters);
 
     evaluator.evaluate_top_level(node, state, Context::empty(), xot)?;
