@@ -22,7 +22,10 @@ fn id(
         arg,
         node,
         interpreter.xot(),
-        context.documents().borrow().annotations(),
+        context
+            .documents()
+            .borrow()
+            .document_order_access(interpreter.xot()),
     )
 }
 
@@ -42,7 +45,10 @@ fn element_with_id(
         arg,
         node,
         interpreter.xot(),
-        context.documents().borrow().annotations(),
+        context
+            .documents()
+            .borrow()
+            .document_order_access(interpreter.xot()),
     )
 }
 
@@ -50,7 +56,7 @@ fn ids_helper(
     arg: impl Iterator<Item = Result<String, Error>>,
     node: Node,
     xot: &Xot,
-    annotations: &xml::Annotations,
+    annotations: xml::DocumentOrderAccess,
 ) -> Result<Vec<Node>, Error> {
     let document_node = xot.root(node);
     let mut result: Vec<Node> = Vec::new();
@@ -71,17 +77,21 @@ fn ids_helper(
             }
         }
     }
-    result.sort_by_key(|n| annotations.document_order(*n));
+    result.sort_by_key(|n| annotations.get(*n));
     Ok(result)
 }
 
 #[xpath_fn("fn:generate-id($arg as node()?) as xs:string", context_first)]
-fn generate_id(context: &DynamicContext, arg: Option<xot::Node>) -> String {
+fn generate_id(
+    context: &DynamicContext,
+    interpreter: &Interpreter,
+    arg: Option<xot::Node>,
+) -> String {
     if let Some(arg) = arg {
         let documents = context.documents();
         let documents = documents.borrow();
-        let annotations = documents.annotations();
-        let annotation = annotations.get(arg).unwrap();
+        let annotations = documents.document_order_access(interpreter.xot());
+        let annotation = annotations.get(arg);
         annotation.generate_id()
     } else {
         "".to_string()

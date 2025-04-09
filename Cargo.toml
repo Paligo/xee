@@ -23,7 +23,7 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.97"
-xot = "0.29.0"
+xot = "0.31.0"
 ahash = "0.8.11"
 strum = "0.27"
 strum_macros = "0.27"

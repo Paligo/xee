@@ -14,7 +14,7 @@ pub fn evaluate_program(
     root: Node,
 ) -> error::SpannedResult<sequence::Sequence> {
     let mut documents = xee_interpreter::xml::Documents::new();
-    let handle = documents.add_root(xot, None, root).unwrap();
+    let handle = documents.add_root(None, root).unwrap();
     let root = documents.get_node_by_handle(handle).unwrap();
     let mut dynamic_context_builder = program.dynamic_context_builder();
     dynamic_context_builder.context_node(root);

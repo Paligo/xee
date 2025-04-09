@@ -4,7 +4,8 @@ use ahash::{HashMap, HashMapExt};
 use iri_string::types::{IriStr, IriString};
 use xot::Xot;
 
-use super::Annotations;
+use super::annotation2::DocumentOrderAnnotations;
+use super::DocumentOrderAccess;
 
 static DOCUMENTS_COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 
@@ -68,7 +69,7 @@ impl Document {
 #[derive(Debug, Clone)]
 pub struct Documents {
     id: usize,
-    annotations: Annotations,
+    annotations: DocumentOrderAnnotations,
     documents: Vec<Document>,
     by_uri: HashMap<IriString, DocumentHandle>,
     uri_by_document_node: HashMap<xot::Node, IriString>,
@@ -89,7 +90,7 @@ impl Documents {
     pub fn new() -> Self {
         Self {
             id: get_documents_id(),
-            annotations: Annotations::new(),
+            annotations: DocumentOrderAnnotations::new(),
             documents: Vec::new(),
             by_uri: HashMap::new(),
             uri_by_document_node: HashMap::new(),
@@ -101,7 +102,6 @@ impl Documents {
         for document in &self.documents {
             document.cleanup(xot);
         }
-        self.annotations.clear();
         self.documents.clear();
         self.by_uri.clear();
     }
@@ -114,7 +114,7 @@ impl Documents {
         xml: &str,
     ) -> Result<DocumentHandle, DocumentsError> {
         let root = xot.parse(xml)?;
-        self.add_root(xot, uri, root)
+        self.add_root(uri, root)
     }
 
     /// Add a string as an XML fragment.
@@ -124,13 +124,12 @@ impl Documents {
         xml: &str,
     ) -> Result<DocumentHandle, DocumentsError> {
         let root = xot.parse_fragment(xml)?;
-        self.add_root(xot, None, root)
+        self.add_root(None, root)
     }
 
     /// Add a root node of an XML document. Designate it with a URI.
     pub fn add_root(
         &mut self,
-        xot: &Xot,
         uri: Option<&IriStr>,
         root: xot::Node,
     ) -> Result<DocumentHandle, DocumentsError> {
@@ -154,7 +153,6 @@ impl Documents {
             self.by_uri.insert(uri.to_owned(), handle);
             self.uri_by_document_node.insert(root, uri.to_owned());
         }
-        self.annotations.add(xot, root);
 
         Ok(handle)
     }
@@ -204,8 +202,12 @@ impl Documents {
     }
 
     /// Get the annotations object
-    pub(crate) fn annotations(&self) -> &Annotations {
+    pub(crate) fn annotations(&self) -> &DocumentOrderAnnotations {
         &self.annotations
+    }
+
+    pub(crate) fn document_order_access<'a>(&'a self, xot: &'a Xot) -> DocumentOrderAccess<'a> {
+        self.annotations.access(xot)
     }
 }
 

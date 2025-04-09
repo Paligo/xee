@@ -92,7 +92,7 @@ impl Sequence {
     }
 
     // https://www.w3.org/TR/xpath-31/#id-path-operator
-    pub(crate) fn deduplicate(self, annotations: &xml::Annotations) -> error::Result<Self> {
+    pub(crate) fn deduplicate(self, annotations: xml::DocumentOrderAccess) -> error::Result<Self> {
         let mut s = HashSet::new();
         let mut non_node_seen = false;
 
@@ -121,11 +121,11 @@ impl Sequence {
 
     pub(crate) fn process_set_result(
         s: HashSet<xot::Node>,
-        annotations: &xml::Annotations,
+        annotations: xml::DocumentOrderAccess,
     ) -> Self {
         // sort nodes by document order
         let mut nodes = s.into_iter().collect::<Vec<_>>();
-        nodes.sort_by_key(|n| annotations.document_order(*n));
+        nodes.sort_by_key(|n| annotations.get(*n));
         nodes.into()
     }
 
@@ -194,7 +194,11 @@ impl Sequence {
         Ok(result.into())
     }
 
-    pub(crate) fn union(self, other: Self, annotations: &xml::Annotations) -> error::Result<Self> {
+    pub(crate) fn union(
+        self,
+        other: Self,
+        annotations: xml::DocumentOrderAccess,
+    ) -> error::Result<Self> {
         let mut s = HashSet::new();
         for node in self.nodes() {
             s.insert(node?);
@@ -209,7 +213,7 @@ impl Sequence {
     pub(crate) fn intersect(
         self,
         other: Self,
-        annotations: &xml::Annotations,
+        annotations: xml::DocumentOrderAccess,
     ) -> error::Result<Self> {
         let mut s = HashSet::new();
         let mut r = HashSet::new();
@@ -225,7 +229,11 @@ impl Sequence {
         Ok(Self::process_set_result(r, annotations))
     }
 
-    pub(crate) fn except(self, other: Self, annotations: &xml::Annotations) -> error::Result<Self> {
+    pub(crate) fn except(
+        self,
+        other: Self,
+        annotations: xml::DocumentOrderAccess,
+    ) -> error::Result<Self> {
         let mut s = HashSet::new();
         for node in self.nodes() {
             s.insert(node?);

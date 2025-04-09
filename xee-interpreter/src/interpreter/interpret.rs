@@ -279,8 +279,13 @@ impl<'a> Interpreter<'a> {
                         self.state.push(sequence::Sequence::default());
                         continue;
                     }
-                    let result =
-                        a.precedes(&b, self.runnable.documents().borrow().annotations())?;
+                    let result = a.precedes(
+                        &b,
+                        self.runnable
+                            .documents()
+                            .borrow()
+                            .document_order_access(self.xot()),
+                    )?;
                     self.state.push(result);
                 }
                 EncodedInstruction::Follows => {
@@ -290,26 +295,49 @@ impl<'a> Interpreter<'a> {
                         self.state.push(sequence::Sequence::default());
                         continue;
                     }
-                    let result = a.follows(&b, self.runnable.documents().borrow().annotations())?;
+                    let result = a.follows(
+                        &b,
+                        self.runnable
+                            .documents()
+                            .borrow()
+                            .document_order_access(self.xot()),
+                    )?;
                     self.state.push(result);
                 }
                 EncodedInstruction::Union => {
                     let b = self.state.pop()?;
                     let a = self.state.pop()?;
-                    let combined = a.union(b, self.runnable.documents().borrow().annotations())?;
+                    let combined = a.union(
+                        b,
+                        self.runnable
+                            .documents()
+                            .borrow()
+                            .document_order_access(self.xot()),
+                    )?;
                     self.state.push(combined);
                 }
                 EncodedInstruction::Intersect => {
                     let b = self.state.pop()?;
                     let a = self.state.pop()?;
-                    let combined =
-                        a.intersect(b, self.runnable.documents().borrow().annotations())?;
+                    let combined = a.intersect(
+                        b,
+                        self.runnable
+                            .documents()
+                            .borrow()
+                            .document_order_access(self.xot()),
+                    )?;
                     self.state.push(combined);
                 }
                 EncodedInstruction::Except => {
                     let b = self.state.pop()?;
                     let a = self.state.pop()?;
-                    let combined = a.except(b, self.runnable.documents().borrow().annotations())?;
+                    let combined = a.except(
+                        b,
+                        self.runnable
+                            .documents()
+                            .borrow()
+                            .document_order_access(self.xot()),
+                    )?;
                     self.state.push(combined);
                 }
                 EncodedInstruction::Dup => {
@@ -339,8 +367,12 @@ impl<'a> Interpreter<'a> {
                 }
                 EncodedInstruction::Deduplicate => {
                     let value = self.state.pop()?;
-                    let value =
-                        value.deduplicate(self.runnable.documents().borrow().annotations())?;
+                    let value = value.deduplicate(
+                        self.runnable
+                            .documents()
+                            .borrow()
+                            .document_order_access(self.xot()),
+                    )?;
                     self.state.push(value);
                 }
                 EncodedInstruction::Return => {

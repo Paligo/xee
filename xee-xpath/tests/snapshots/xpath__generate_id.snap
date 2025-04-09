@@ -1,5 +1,5 @@
 ---
-source: xee-xpath-compiler/tests/xpath.rs
+source: xee-xpath/tests/xpath.rs
 expression: "run_xml(r#\"<doc><a/><b/><c/></doc>\"#, \"generate-id(doc/a)\",)"
 ---
 Ok(
@@ -8,7 +8,7 @@ Ok(
             item: Atomic(
                 String(
                     String,
-                    "id0s2",
+                    "id1s2",
                 ),
             ),
         },

@@ -377,7 +377,7 @@ impl Sequence {
     pub(crate) fn precedes(
         &self,
         other: &Self,
-        annotations: &xml::Annotations,
+        annotations: xml::DocumentOrderAccess,
     ) -> error::Result<bool> {
         match (self, other) {
             (Sequence::Empty(a), Sequence::Empty(b)) => a.precedes(b, annotations),
@@ -402,7 +402,7 @@ impl Sequence {
     pub(crate) fn follows(
         &self,
         other: &Self,
-        annotations: &xml::Annotations,
+        annotations: xml::DocumentOrderAccess,
     ) -> error::Result<bool> {
         match (self, other) {
             (Sequence::Empty(a), Sequence::Empty(b)) => a.follows(b, annotations),
