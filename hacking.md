@@ -167,12 +167,15 @@ with the exact context you want it to have.
 
 ### Testing XSLT
 
-XSLT support is much more immature. While the test runner has been prepared to
-make it generic to support the tests in `vendor/xslt-tests`, the work is not
-yet completed, so no XSLT conformance tests can be run.
+Manual Rust-based XSLT tests can be written in `xee-xslt-compiler/tests`.
 
-We should lift this restriction, but until then XSLT tests can be written
-manually in `xee-xslt-compiler/tests`.
+To run the XSLT conformance tests you can now do:
+
+```
+cargo run --release  -- check ../vendor/xslt-tests/
+```
+
+You can improve tests just as described for XPath.
 
 ### Adding XSLT functionality
 

@@ -51,7 +51,6 @@ accept-915
 accept-916
 = accessor
 accessor-001
-accessor-002
 accessor-003
 accessor-004
 accessor-005
@@ -60,7 +59,6 @@ accessor-007
 accessor-008
 accessor-009
 accessor-010
-accessor-011
 accessor-012
 accessor-013
 accessor-014
@@ -68,11 +66,9 @@ accessor-015
 accessor-016
 accessor-017
 accessor-018
-accessor-019
 accessor-020
 accessor-021
 accessor-022
-accessor-023
 accessor-024
 accessor-025
 accessor-026
@@ -82,7 +78,6 @@ accessor-029
 accessor-030
 accessor-031
 accessor-032
-accessor-033
 accessor-034
 accessor-035
 accessor-036
@@ -719,7 +714,6 @@ available-system-properties-101
 avt-0101
 avt-0201
 avt-0202
-avt-0301
 avt-0302
 avt-0303
 avt-0401
@@ -731,15 +725,11 @@ avt-0901
 avt-1001
 avt-1101
 avt-1201
-avt-1202
 avt-1203
-avt-1204
 avt-1205
-avt-1206
 avt-1301
 avt-1302
 avt-1401
-avt-1501
 avt-1502
 avt-1601
 avt-1701
@@ -804,9 +794,6 @@ axes-049
 axes-050
 axes-051
 axes-052
-axes-053
-axes-054
-axes-055
 axes-056
 axes-057
 axes-058
@@ -815,33 +802,23 @@ axes-060
 axes-061
 axes-062
 axes-063
-axes-064
 axes-065
 axes-066
 axes-067
 axes-068
 axes-069
 axes-070
-axes-071
-axes-072
-axes-073
-axes-074
-axes-075
-axes-076
 axes-077
 axes-078
 axes-079
 axes-080
-axes-081
 axes-082
 axes-083
 axes-084
 axes-085
-axes-086
 axes-087
 axes-088
 axes-089
-axes-090
 axes-091
 axes-092
 axes-093
@@ -876,12 +853,7 @@ axes-121
 axes-122
 axes-123
 axes-124
-axes-125
-axes-126
-axes-127
-axes-128
 axes-129
-axes-130
 axes-131
 axes-132
 axes-133
@@ -900,7 +872,6 @@ axes-145
 axes-146
 axes-147
 axes-148
-axes-149
 axes-150
 axes-151
 axes-152
@@ -913,10 +884,8 @@ axes-158
 axes-159
 axes-160
 axes-161
-axes-162
 axes-163
 axes-164
-axes-165
 axes-166
 axes-167
 axes-168
@@ -949,9 +918,7 @@ axes-194
 axes-195
 axes-196
 axes-197
-axes-198
 axes-199
-axes-200
 axes-201
 axes-202
 = backwards
@@ -1058,31 +1025,7 @@ base-uri-051b
 base-uri-052
 base-uri-053
 = boolean
-boolean-001
 boolean-002
-boolean-003
-boolean-004
-boolean-005
-boolean-006
-boolean-007
-boolean-008
-boolean-009
-boolean-010
-boolean-011
-boolean-012
-boolean-013
-boolean-014
-boolean-015
-boolean-016
-boolean-017
-boolean-018
-boolean-019
-boolean-020
-boolean-021
-boolean-022
-boolean-023
-boolean-024
-boolean-025
 boolean-026
 boolean-027
 boolean-028
@@ -1124,17 +1067,10 @@ boolean-063
 boolean-064
 boolean-065
 boolean-066
-boolean-067
-boolean-068
 boolean-069
 boolean-070
 boolean-071
 boolean-072
-boolean-073
-boolean-074
-boolean-075
-boolean-076
-boolean-077
 boolean-078
 boolean-079
 boolean-080
@@ -1142,21 +1078,8 @@ boolean-081
 boolean-082
 boolean-083
 boolean-084
-boolean-085
-boolean-086
-boolean-087
-boolean-088
-boolean-089
-boolean-090
-boolean-091
-boolean-092
-boolean-093
-boolean-094
 boolean-095
 boolean-096
-boolean-097
-boolean-098
-boolean-099
 boolean-100
 boolean-101
 boolean-102
@@ -1171,8 +1094,6 @@ boolean-110
 boolean-111
 boolean-112
 = bug
-bug-0101
-bug-0201
 bug-0301
 bug-0302
 bug-0303
@@ -1194,7 +1115,6 @@ bug-1301
 bug-1401
 bug-1402
 bug-1403
-bug-1404
 bug-1405
 bug-1406
 bug-1501
@@ -1229,7 +1149,6 @@ bug-3701
 bug-3801
 bug-3901
 bug-4001
-bug-4101
 bug-4201
 bug-4301
 bug-4401
@@ -1238,19 +1157,15 @@ bug-4601
 bug-4701
 bug-4702
 bug-4703
-bug-4801
 bug-4901
 bug-5001
 bug-5101
 bug-5201
 bug-5301
 bug-5302
-bug-5401
 bug-5501
 bug-5601
 bug-5701
-bug-5801
-bug-5802
 bug-5901
 bug-6001
 bug-6101
@@ -1311,7 +1226,6 @@ call-template-2102
 castable-001
 castable-002
 castable-003
-castable-004
 castable-005
 castable-006
 castable-007
@@ -1378,8 +1292,6 @@ choose-0403
 choose-0404
 choose-0501
 choose-0502
-choose-0601
-choose-0602
 choose-0603
 choose-0604
 choose-0605
@@ -1402,8 +1314,6 @@ choose-1401
 choose-1501
 choose-1502
 choose-1601
-choose-1701
-choose-1702
 choose-1703
 choose-1704
 choose-1705
@@ -1469,11 +1379,6 @@ collection-004
 collection-005
 collection-006
 = construct-node
-construct-node-001
-construct-node-002
-construct-node-003
-construct-node-004
-construct-node-005
 construct-node-006
 construct-node-007
 construct-node-008
@@ -1499,10 +1404,6 @@ construct-node-027
 construct-node-028
 construct-node-029
 construct-node-030
-construct-node-031
-construct-node-032
-construct-node-033
-construct-node-034
 = context-item
 context-item-001
 context-item-002
@@ -1541,10 +1442,6 @@ copy-0102
 copy-0103
 copy-0104
 copy-0105
-copy-0201
-copy-0202
-copy-0203
-copy-0401
 copy-0501
 copy-0601
 copy-0602
@@ -1571,7 +1468,6 @@ copy-0624
 copy-0625
 copy-0626
 copy-0627
-copy-0701
 copy-0801
 copy-0901
 copy-1001
@@ -1605,15 +1501,12 @@ copy-1501
 copy-1601
 copy-1602
 copy-1701
-copy-1801
 copy-2001
 copy-2101
 copy-2201
 copy-2202
 copy-2203
 copy-2301
-copy-2401
-copy-2402
 copy-2501
 copy-2502
 copy-2601
@@ -1660,9 +1553,6 @@ copy-4701
 copy-4702
 copy-4801
 copy-4802
-copy-4803
-copy-4804
-copy-4805
 copy-4901
 copy-5001
 copy-5002
@@ -1839,56 +1729,11 @@ data-manipulation-026
 data-manipulation-027
 data-manipulation-028
 = date
-date-001
-date-002
-date-003
-date-004
-date-005
-date-006
-date-007
-date-008
-date-009
-date-010
-date-011
 date-012
-date-013
-date-014
-date-015
-date-016
-date-017
-date-018
 date-019
 date-019a
-date-020
-date-021
-date-022
-date-023
-date-024
-date-025
-date-026
-date-027
-date-028
-date-029
-date-030
-date-031
 date-032
-date-033
-date-034
-date-035
-date-036
-date-037
-date-038
-date-039
-date-040
-date-041
-date-042
-date-043
 date-044
-date-045
-date-046
-date-047
-date-048
-date-049
 date-050
 date-051
 date-052
@@ -1903,7 +1748,6 @@ date-060
 date-061
 date-062
 date-063
-date-063a
 date-064
 date-065
 date-066
@@ -1913,29 +1757,18 @@ date-069
 date-070
 date-071
 date-072
-date-073
-date-074
 date-074a
-date-075
 date-075a
-date-076
-date-076a
-date-077
 date-078
-date-079
 date-080
 date-081
 date-082
 date-083
 date-084
-date-085
-date-086
-date-087
 date-088
 date-089
 date-090
 date-091
-date-092
 date-093
 date-094a
 date-094b
@@ -1993,8 +1826,6 @@ declared-modes-012
 declared-modes-013
 declared-modes-014
 = deep-equal
-deep-equal-001
-deep-equal-002
 = disable-output-escaping
 doe-0176
 doe-0176a
@@ -2056,7 +1887,6 @@ document-0203
 document-0204
 document-0301
 document-0302
-document-0303
 document-0304
 document-0305
 document-0306
@@ -2105,7 +1935,6 @@ element-0003
 element-0004
 element-0005
 element-0006
-element-0101
 element-0102
 element-0103
 element-0104
@@ -2678,8 +2507,6 @@ error-FOAR0001b
 error-FODC0002a
 error-FODC0002a-ignore
 error-FOER0001a
-error-FORG0001a
-error-FORG0006a
 error-FORG0006b
 error-FORX0002a
 error-XPDY0002a
@@ -2909,7 +2736,6 @@ expression-0802
 expression-0803
 expression-0804
 expression-0901
-expression-0902
 expression-0903
 expression-0904
 expression-0905
@@ -2921,21 +2747,15 @@ expression-0910
 expression-0911
 expression-0912
 expression-0913
-expression-0914
 expression-0915
 expression-0916
 expression-0917
 expression-0918
 expression-0919
-expression-0920
-expression-0921
 expression-0922
 expression-0923
 expression-0924
 expression-0925
-expression-0926
-expression-0927
-expression-0928
 expression-0929
 expression-0930
 expression-0931
@@ -2946,10 +2766,6 @@ expression-1101
 expression-1102
 expression-1103
 expression-1104
-expression-1201
-expression-1301
-expression-1401
-expression-1501
 expression-1601
 expression-1701
 expression-1702
@@ -4073,11 +3889,9 @@ load-xquery-module-004
 lre-001
 lre-002
 lre-003
-lre-004
 lre-005
 lre-006
 lre-007
-lre-008
 lre-009
 lre-010
 lre-011
@@ -4198,7 +4012,6 @@ match-041
 match-042
 match-043
 match-044
-match-045
 match-046
 match-047
 match-048
@@ -4220,7 +4033,6 @@ match-063
 match-064
 match-065
 match-066
-match-067
 match-068
 match-069
 match-070
@@ -4272,7 +4084,6 @@ match-111
 match-112
 match-113
 match-114
-match-115
 match-116
 match-117
 match-118
@@ -4454,7 +4265,6 @@ math-0102
 math-0103
 math-0104
 math-0105
-math-0106
 math-0107
 math-0201
 math-0202
@@ -4472,7 +4282,6 @@ math-1004
 math-1005
 math-1101
 math-1201
-math-1301
 math-1401
 math-1501
 math-1502
@@ -4582,7 +4391,6 @@ math-3305
 math-3305a
 math-3306
 math-3306a
-math-3307
 math-3307a
 math-3308
 math-3308a
@@ -4591,7 +4399,6 @@ math-3309a
 math-3310
 math-3310a
 math-3311
-math-3312
 math-3313
 math-3314
 math-3315
@@ -4778,15 +4585,12 @@ mode-0013
 mode-0014
 mode-0015
 mode-0016
-mode-0101
 mode-0102
-mode-0103
 mode-0104
 mode-0105
 mode-0106
 mode-0107
 mode-0108
-mode-0201
 mode-0301
 mode-0401
 mode-0501
@@ -4801,7 +4605,6 @@ mode-0804
 mode-0805
 mode-0806
 mode-0901
-mode-1001
 mode-1101
 mode-1102
 mode-1103
@@ -4886,21 +4689,6 @@ mode-1514
 mode-1515
 mode-1516
 mode-1517
-mode-1601
-mode-1602
-mode-1603
-mode-1604
-mode-1605
-mode-1606
-mode-1607
-mode-1608
-mode-1609
-mode-1610
-mode-1611
-mode-1612
-mode-1613
-mode-1614
-mode-1615
 mode-1616
 mode-1617
 mode-1618
@@ -4949,7 +4737,6 @@ namespace-0901
 namespace-0902
 namespace-0903
 namespace-0904
-namespace-0905
 namespace-0906
 namespace-0907
 namespace-0908
@@ -4963,12 +4750,7 @@ namespace-1101
 namespace-1102
 namespace-1103
 namespace-1104
-namespace-1201
-namespace-1301
-namespace-1401
-namespace-1402
 namespace-1403
-namespace-1404
 namespace-1501
 namespace-1502
 namespace-1601
@@ -4982,7 +4764,6 @@ namespace-2201
 namespace-2301
 namespace-2302
 namespace-2401
-namespace-2402
 namespace-2501
 namespace-2502
 namespace-2503
@@ -5020,11 +4801,9 @@ namespace-2633
 namespace-2701
 namespace-2801
 namespace-2901
-namespace-3001
 namespace-3002
 namespace-3003
 namespace-3004
-namespace-3005
 namespace-3101
 namespace-3102
 namespace-3103
@@ -5049,7 +4828,6 @@ namespace-3121
 namespace-3122
 namespace-3123
 namespace-3124
-namespace-3125
 namespace-3126
 namespace-3127
 namespace-3128
@@ -5065,7 +4843,6 @@ namespace-3137
 namespace-3138
 namespace-3139
 namespace-3140
-namespace-3141
 namespace-3142
 namespace-3143
 namespace-3144
@@ -5080,8 +4857,6 @@ namespace-3152
 namespace-3153
 namespace-3154
 namespace-3155
-namespace-3156
-namespace-3157
 namespace-3158
 namespace-3159
 namespace-3160
@@ -5130,7 +4905,6 @@ namespace-4006
 namespace-4007
 namespace-4008
 namespace-4009
-namespace-4101
 namespace-4301
 namespace-4302
 namespace-4401
@@ -5141,8 +4915,6 @@ namespace-4901
 namespace-5001
 namespace-5101
 namespace-5201
-namespace-5301
-namespace-5401
 namespace-5501
 namespace-5601
 namespace-5602
@@ -5150,7 +4922,6 @@ namespace-5701
 namespace-5901
 namespace-5902
 namespace-5903
-namespace-6001
 namespace-6002
 namespace-6003
 namespace-6101
@@ -5232,31 +5003,19 @@ node-0401
 node-0501
 node-0601
 node-0701
-node-0801
 node-0901
-node-1001
 node-1101
 node-1102
 node-1201
-node-1301
-node-1401
-node-1501
-node-1502
 node-1601
 node-1701
 node-1801
 node-1802
-node-1901
-node-1902
-node-1903
-node-1904
 node-1905
 node-1906
 node-2001
 node-2002
-node-2003
 node-2004
-node-2005
 = nodetest
 nodetest-001
 nodetest-002
@@ -6387,7 +6146,6 @@ position-4801
 position-4901
 position-5001
 position-5002
-position-5101
 position-5201
 position-5301
 position-5302
@@ -6402,7 +6160,6 @@ position-5903
 position-6001
 position-6002
 position-6101
-position-6201
 position-6301
 position-6302
 position-6401
@@ -6412,7 +6169,6 @@ position-6701
 position-6801
 position-6802
 position-6901
-position-7001
 position-7002
 position-7101
 position-7201
@@ -6493,10 +6249,6 @@ regex-002
 regex-003
 regex-004
 regex-005
-regex-009
-regex-010
-regex-011
-regex-013
 regex-014
 regex-015
 regex-016
@@ -6512,15 +6264,12 @@ regex-025
 regex-026
 regex-027
 regex-028
-regex-029
-regex-030
 regex-031
 regex-032
 regex-038
 regex-039
 regex-040
 regex-041
-regex-043
 regex-044
 regex-054
 regex-055
@@ -8834,26 +8583,20 @@ result-document-1411
 result-document-1501
 result-document-1502
 = root
-root-0101
 root-0102
-root-0103
 root-0104
-root-0201
 root-0301
 root-0401
 root-0501
 root-0502
 root-0601
 = select
-select-0101
-select-0102
 select-0201
 select-0202
 select-0301
 select-0302
 select-0401
 select-0501
-select-0601
 select-0701
 select-0801
 select-0802
@@ -8867,7 +8610,6 @@ select-1301
 select-1302
 select-1401
 select-1402
-select-1501
 select-1502
 select-1503
 select-1504
@@ -8988,7 +8730,6 @@ select-5901
 select-6001
 select-6101
 select-6201
-select-6301
 select-6401
 select-6501
 select-6601
@@ -9094,9 +8835,7 @@ sequence-0114
 sequence-0115
 sequence-0116
 sequence-0117
-sequence-0118
 sequence-0119
-sequence-0120
 sequence-0121
 sequence-0122
 sequence-0123
@@ -9119,7 +8858,6 @@ sequence-0138
 sequence-0139
 sequence-0201
 sequence-0202
-sequence-0203
 sequence-0301
 sequence-0302
 sequence-0303
@@ -9133,10 +8871,6 @@ sequence-0403
 sequence-0501
 sequence-0502
 sequence-0601
-sequence-0701
-sequence-0702
-sequence-0703
-sequence-0704
 sequence-0705
 sequence-0706
 sequence-0901
@@ -9150,8 +8884,6 @@ sequence-1201
 sequence-1202
 sequence-1203
 sequence-1204
-sequence-1205
-sequence-1301
 sequence-1401
 sequence-1402
 sequence-1501
@@ -10897,17 +10629,11 @@ snapshot-0110
 snapshot-0111
 snapshot-0112
 = sort
-sort-001
 sort-002
 sort-003
 sort-004
-sort-005
 sort-006
-sort-007
-sort-008
-sort-009
 sort-010
-sort-011
 sort-012
 sort-013
 sort-014
@@ -10917,8 +10643,6 @@ sort-017
 sort-018
 sort-019
 sort-020
-sort-021
-sort-022
 sort-023
 sort-024
 sort-025
@@ -10941,7 +10665,6 @@ sort-041
 sort-042
 sort-043
 sort-044
-sort-045
 sort-046
 sort-047
 sort-048
@@ -11246,12 +10969,6 @@ string-001
 string-002
 string-003
 string-004
-string-005
-string-006
-string-007
-string-008
-string-009
-string-010
 string-011
 string-012
 string-013
@@ -11363,13 +11080,11 @@ string-118
 string-119
 string-120
 string-121
-string-122
 string-123
 string-124
 string-125
 string-126
 string-127
-string-128
 string-129
 string-130
 string-131
@@ -12404,7 +12119,6 @@ template-002
 template-003
 template-004
 template-005
-template-006
 = transform
 transform-001
 transform-002
@@ -12523,7 +12237,6 @@ tunnel-0405
 tunnel-0406
 tunnel-0501
 = type
-type-0101
 type-0102
 type-0103
 type-0104
@@ -12560,7 +12273,6 @@ type-0134
 type-0135
 type-0136
 type-0137
-type-0138
 type-0139
 type-0140
 type-0141
@@ -12600,7 +12312,6 @@ type-0203
 type-0301
 type-0302
 type-0303
-type-0401
 type-0501
 = type-available
 type-available-0146
@@ -14233,7 +13944,6 @@ use-when-0217
 use-when-0218
 use-when-0219
 use-when-0220
-use-when-0221
 use-when-0222
 use-when-0223
 use-when-0224
@@ -14263,7 +13973,6 @@ use-when-0418
 use-when-0419
 use-when-0420
 use-when-0421
-use-when-0422
 use-when-0423
 use-when-0424
 use-when-0425
@@ -14273,7 +13982,6 @@ use-when-0428
 use-when-0429
 use-when-0430
 use-when-0431
-use-when-0501
 = validation
 validation-0004
 validation-0005
@@ -14287,7 +13995,6 @@ validation-0104
 validation-0105a
 validation-0105b
 validation-0106
-validation-0106a
 validation-0107
 validation-0108
 validation-0109
@@ -14419,7 +14126,6 @@ variable-2301
 variable-2302
 variable-2303
 variable-2304
-variable-2305
 variable-2401
 variable-2501
 variable-2601
@@ -14430,7 +14136,6 @@ variable-3001
 variable-3101
 variable-3201
 variable-3301
-variable-3401
 variable-3501
 variable-3601
 variable-3701
@@ -14462,7 +14167,6 @@ version-007
 version-008
 version-009
 version-010
-version-011
 version-012
 version-013
 version-014
@@ -14527,22 +14231,12 @@ whitespace-008
 whitespace-009
 whitespace-010
 whitespace-011
-whitespace-012
-whitespace-013
 whitespace-014
 whitespace-015
-whitespace-016
-whitespace-017
-whitespace-018
 whitespace-019
-whitespace-020
-whitespace-021
 whitespace-022
 whitespace-023
-whitespace-024
 whitespace-025
-whitespace-026
-whitespace-027
 whitespace-028
 = xml-to-json
 xml-to-json-A001
@@ -14764,7 +14458,6 @@ xpath-compat-0701
 xpath-default-namespace-0101
 xpath-default-namespace-0102
 xpath-default-namespace-0103
-xpath-default-namespace-0104
 xpath-default-namespace-0105
 xpath-default-namespace-0106
 xpath-default-namespace-0107
@@ -14776,7 +14469,6 @@ xpath-default-namespace-0401
 xpath-default-namespace-0501
 xpath-default-namespace-0502
 xpath-default-namespace-0503
-xpath-default-namespace-0601
 xpath-default-namespace-0701
 xpath-default-namespace-0702
 xpath-default-namespace-0703
