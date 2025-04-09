@@ -2967,7 +2967,9 @@ dependencies = [
  "const_format",
  "regex",
  "rustyline",
+ "xee-interpreter",
  "xee-xpath",
+ "xee-xslt-compiler",
  "xot",
 ]
 
