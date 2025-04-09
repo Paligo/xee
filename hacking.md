@@ -177,6 +177,10 @@ cargo run --release  -- check ../vendor/xslt-tests/
 
 You can improve tests just as described for XPath.
 
+Note that some features of the XSLT test runner such as passing in parameters
+are not yet working correctly; so if a test fails you may also want to suspect
+the test runner setup, not just the implementation.
+
 ### Adding XSLT functionality
 
 The XSLT AST is pretty complete, and underlying IR and bytecode interpreter
