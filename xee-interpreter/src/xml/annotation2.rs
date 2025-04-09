@@ -123,12 +123,22 @@ fn annotation_with_document_order(
     node: xot::Node,
     xot: &Xot,
 ) -> DocumentOrder {
+    if root_node == node {
+        // if the root node is the same as the node, we can just return
+        // the document order
+        return document_order;
+    }
     // we know the document order to start with
     let document_id = document_order.0;
-    // all following won't include the starting node, so we need to start
-    // 1 beyond that
+    // we need to visit all descendants, then all following nodes
+    let mut iter = xot
+        .all_descendants(root_node)
+        .chain(xot.all_following(root_node));
+    // we don't need to revisit the root node itself
+    iter.next();
+    // so we start one beyond the previous document order
     let start = document_order.1 + 1;
-    for (i, descendant) in xot.all_following(root_node).enumerate() {
+    for (i, descendant) in iter.enumerate() {
         let document_order = DocumentOrder(document_id, start + i);
         map.insert(descendant, document_order);
         if descendant == node {
