@@ -1125,7 +1125,8 @@ impl<'a> Interpreter<'a> {
                     }
                     match self.state.xot.value(node) {
                         xot::Value::Document => {
-                            todo!("Handle adding all the children instead");
+                            // TODO: Handle adding all the children instead
+                            return Err(error::Error::Unsupported);
                         }
                         xot::Value::Text(text) => {
                             // zero length text nodes are skipped

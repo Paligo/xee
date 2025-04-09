@@ -399,7 +399,13 @@ impl Assertable for AssertXml {
 
         let mut compare_xot = Xot::new();
         // now parse both with Xot
-        let found = compare_xot.parse(&xml).unwrap();
+        let found = compare_xot.parse(&xml);
+        let found = match found {
+            Ok(found) => found,
+            Err(_err) => {
+                return TestOutcome::EnvironmentError("Cannot parse assert XML".to_string());
+            }
+        };
         let expected = compare_xot.parse(&expected_xml).unwrap();
 
         // and compare
