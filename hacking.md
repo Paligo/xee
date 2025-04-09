@@ -179,7 +179,9 @@ You can improve tests just as described for XPath.
 
 Note that some features of the XSLT test runner such as passing in parameters
 are not yet working correctly; so if a test fails you may also want to suspect
-the test runner setup, not just the implementation.
+the test runner setup, not just the implementation. Like for the XPath
+conformance tests we intend to improve support for the testrunner
+incrementally.
 
 ### Adding XSLT functionality
 
