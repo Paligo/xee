@@ -192,6 +192,31 @@ fn test_transform_local_variable_from_sequence_constructor() {
 }
 
 #[test]
+
+fn test_transform_document_order_dynamically_with_variable() {
+    let mut xot = Xot::new();
+
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <xsl:variable name="foo"><a><b/><b/></a></xsl:variable>
+    <o><xsl:for-each select="$foo//node()"><v/></xsl:for-each></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+
+    // TODO: I am not sure whether this is correct; I'd expect $foo//node() to
+    // also get the root nodes of the sequence, but it doesn't seem to do so
+    // but the main point of this test is to check that the nodes found
+    // do have document order (created dynamically) and they do
+    assert_eq!(xml(&xot, output), "<o><v/><v/></o>");
+}
+
+#[test]
 fn test_transform_if_true() {
     let mut xot = Xot::new();
     let output = evaluate(
