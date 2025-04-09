@@ -4,7 +4,7 @@ use ahash::{HashMap, HashMapExt};
 use iri_string::types::{IriStr, IriString};
 use xot::Xot;
 
-use super::annotation2::DocumentOrderAnnotations;
+use super::document_order::DocumentOrderAnnotations;
 use super::DocumentOrderAccess;
 
 static DOCUMENTS_COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(0);

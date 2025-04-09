@@ -1,6 +1,6 @@
-// Annotations for XML nodes. This maintains both a document id (so we can
-// distinguish between nodes from different documents) as well as as a
-// document preorder (so we can sort nodes from the same document).
+// Document order for XML nodes. This maintains both a document id (so we can
+// distinguish between nodes from different documents) as well as as a document
+// preorder (so we can sort nodes from the same document).
 //
 // We create annotations on the fly as needed, so that nodes even if
 // dynamically created (as happens with XSLT) also get them.
@@ -13,8 +13,8 @@
 // root and count the nodes, and once forward again to assign the annotations.
 //
 // As an optimization we stop the traversal as soon as we run into an already
-// annotated node. From this we can determine the document id as well as
-// the preorder count of this node.
+// annotated node. From this we can determine the document id as well as the
+// preorder count of this node.
 
 use std::cell::RefCell;
 
