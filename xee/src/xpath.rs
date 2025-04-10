@@ -1,12 +1,9 @@
 use clap::Parser;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
 use std::path::PathBuf;
 use xee_xpath::context::StaticContextBuilder;
 use xee_xpath::Itemable;
 use xee_xpath::Query;
-
+use crate::common::input_xml;
 use crate::error::render_error;
 
 #[derive(Debug, Parser)]
@@ -30,14 +27,7 @@ pub(crate) struct XPath {
 
 impl XPath {
     pub(crate) fn run(&self) -> Result<(), anyhow::Error> {
-        let mut reader: Box<dyn BufRead> = if let Some(infile) = &self.infile {
-            Box::new(BufReader::new(File::open(infile)?))
-        } else {
-            Box::new(BufReader::new(std::io::stdin()))
-        };
-
-        let mut input_xml = String::new();
-        reader.read_to_string(&mut input_xml)?;
+        let input_xml = input_xml(&self.infile)?;
 
         let mut documents = xee_xpath::Documents::new();
         let doc = documents.add_string_without_uri(&input_xml)?;

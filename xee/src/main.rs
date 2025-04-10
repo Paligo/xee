@@ -3,8 +3,9 @@ mod format;
 mod indent;
 mod repl;
 mod repl_cmd;
-mod transform;
+mod xslt;
 mod xpath;
+mod common;
 
 use clap::{Parser, Subcommand};
 use const_format::formatcp;
@@ -36,7 +37,7 @@ enum Commands {
     /// Interactive xpath REPL (read-eval-print loop).
     Repl(repl::Repl),
     /// Transform an XML document using an XSLT stylesheet.
-    Transform(transform::Transform),
+    Xslt(xslt::Xslt),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -54,8 +55,8 @@ fn main() -> anyhow::Result<()> {
         Commands::Repl(repl) => {
             repl.run()?;
         }
-        Commands::Transform(transform) => {
-            transform.run()?;
+        Commands::Xslt(xslt) => {
+            xslt.run()?;
         }
     }
     Ok(())

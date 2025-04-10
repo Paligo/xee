@@ -1,6 +1,5 @@
 use std::{
     fs::File,
-    io::{BufRead, BufReader},
     path::PathBuf,
 };
 
@@ -13,7 +12,7 @@ use xot::{
     NameId,
 };
 use xot::{xmlname::OwnedName, Xot};
-
+use crate::common::input_xml;
 use crate::error::render_parse_error;
 
 static URI_QUALIFIED_NAME_REGEX: std::sync::LazyLock<regex::Regex> =
@@ -71,14 +70,6 @@ impl Format {
     // - invalid XML (should show line number, context)
     // - invalid XML name given as option
     pub(crate) fn run(&self) -> anyhow::Result<()> {
-        // open infile from path unless it's not given, in which case
-        // we want to use stdin
-        let mut reader: Box<dyn BufRead> = if let Some(infile) = &self.infile {
-            Box::new(BufReader::new(File::open(infile)?))
-        } else {
-            Box::new(BufReader::new(std::io::stdin()))
-        };
-
         // open outfile from path unless it's not given, in which case
         // we want to use stdout
         let mut writer: Box<dyn std::io::Write> = if let Some(outfile) = &self.outfile {
@@ -151,8 +142,7 @@ impl Format {
             unescaped_gt,
         };
 
-        let mut input_xml = String::new();
-        reader.read_to_string(&mut input_xml)?;
+        let input_xml = input_xml(&self.infile)?;
 
         let root = match xot.parse(&input_xml) {
             Ok(root) => root,

@@ -15,7 +15,7 @@ use super::{
     opc::{OptionParameterConverter, QNameOrString},
 };
 
-pub(crate) struct SerializationParameters {
+pub struct SerializationParameters {
     pub(crate) allow_duplicate_names: bool,
     pub(crate) byte_order_mark: bool,
     pub(crate) cdata_section_elements: Vec<OwnedName>,
@@ -40,6 +40,33 @@ pub(crate) struct SerializationParameters {
 }
 
 impl SerializationParameters {
+    // default values are as used in XSLT 3.0
+    pub fn new() -> Self {
+        Self {
+            allow_duplicate_names: false,
+            byte_order_mark: false,
+            cdata_section_elements: Vec::new(),
+            doctype_public: None,
+            doctype_system: None,
+            encoding: "utf-8".to_string(),
+            escape_uri_attributes: true,
+            html_version: Decimal::from_str_exact("5.0").unwrap(),
+            include_content_type: true,
+            indent: false,
+            item_separator: " ".to_string(),
+            json_node_output_method: QNameOrString::String("xml".to_string()),
+            media_type: Some("text/xml".to_string()),
+            method: QNameOrString::String("xml".to_string()),
+            normalization_form: None,
+            omit_xml_declaration: false,
+            standalone: None,
+            suppress_indentation: Vec::new(),
+            undeclare_prefixes: false,
+            use_character_maps: HashMap::default(),
+            version: "1.0".to_string(),
+        }
+    }
+
     pub(crate) fn from_map(
         map: Map,
         static_context: &context::StaticContext,

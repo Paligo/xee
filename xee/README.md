@@ -9,7 +9,7 @@ Features include:
 - formatting XML in various ways, including in indented form
 - evaluate an XPath expression against an XML document
 - a REPL for evaluating XPath expressions
-- transform XML documents using XSLT stylesheets
+- transform XML documents using XSLT stylesheets.
 
 This implements XPath 3.1 and parts of XSLT 3.0.
 
@@ -57,19 +57,19 @@ xee indent foo.xml
 Transform an XML document using an XSLT stylesheet:
 
 ```
-xee transform stylesheet.xsl input.xml
+xee xslt stylesheet.xsl input.xml
 ```
 
 You can also specify an output file:
 
 ```
-xee transform stylesheet.xsl input.xml --output result.xml
+xee xslt stylesheet.xsl input.xml --output result.xml
 ```
 
 Or read from stdin:
 
 ```
-cat input.xml | xee transform stylesheet.xsl
+cat input.xml | xee xslt stylesheet.xsl
 ```
 
 ## More Xee
