@@ -1,9 +1,9 @@
 ---
-source: xee-xslt-ast/src/instruction.rs
+source: xee-xslt-ast/tests/snapshot_tests.rs
 expression: "parse_sequence_constructor_item(r#\"<xsl:apply-templates mode=\"foo\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" select=\"*\"/>\"#)"
 ---
 Ok(Instruction(ApplyTemplates(ApplyTemplates(
-  select: Some(Expression(
+  select: Expression(
     xpath: XPath(Expr([
       Path(PathExpr(
         steps: [
@@ -19,7 +19,7 @@ Ok(Instruction(ApplyTemplates(ApplyTemplates(
       start: 89,
       end: 90,
     ),
-  )),
+  ),
   mode: EqName(OwnedName(
     local_name_str: "foo",
     namespace_str: "",

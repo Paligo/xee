@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
-
+use xee_name::{Namespaces, VariableNames};
 use xot::Node;
+
+use xee_xpath_ast::ast as xpath_ast;
 
 use crate::ast_core::{self as ast};
 use crate::attributes::Attributes;
@@ -290,7 +292,20 @@ impl InstructionParser for ast::ApplyTemplates {
         };
 
         Ok(ast::ApplyTemplates {
-            select: attributes.optional(names.select, attributes.xpath())?,
+            select: attributes
+                .optional(names.select, attributes.xpath())?
+                .unwrap_or(
+                    // child::node() axis
+                    ast::Expression {
+                        xpath: xpath_ast::XPath::parse(
+                            "child::node()",
+                            &Namespaces::default(),
+                            &VariableNames::default(),
+                        )
+                        .unwrap(),
+                        span: ast::Span::new(0, 0),
+                    },
+                ),
             mode,
             span: content.span()?,
             content: parse(content)?,

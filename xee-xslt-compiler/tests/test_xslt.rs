@@ -1110,3 +1110,30 @@ fn test_mode_undeclared() {
 
     assert_eq!(xml(&xot, output), r#"<o><bar/></o>"#);
 }
+
+#[test]
+fn test_generate_text_node() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        r#"<doc>test</doc>"#,
+        r#"<?xml version="1.0"?>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+
+<xsl:template match="/doc">
+  <out>
+    <xsl:value-of select="./text()"/>
+  </out>
+</xsl:template>
+
+<xsl:template match="text()">
+  <xsl:value-of select="."/>
+</xsl:template>
+
+</xsl:stylesheet>
+    "#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), r#"<out>test</out>"#);
+}

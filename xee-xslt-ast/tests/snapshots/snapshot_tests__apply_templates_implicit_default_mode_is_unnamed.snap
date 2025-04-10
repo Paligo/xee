@@ -1,9 +1,25 @@
 ---
-source: xee-xslt-ast/src/instruction.rs
+source: xee-xslt-ast/tests/snapshot_tests.rs
 expression: "parse_sequence_constructor_item(r#\"<xsl:apply-templates xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" />\"#)"
 ---
 Ok(Instruction(ApplyTemplates(ApplyTemplates(
-  select: None,
+  select: Expression(
+    xpath: XPath(Expr([
+      Path(PathExpr(
+        steps: [
+          AxisStep(AxisStep(
+            axis: Child,
+            node_test: KindTest(Any),
+            predicates: [],
+          )),
+        ],
+      )),
+    ])),
+    span: Span(
+      start: 0,
+      end: 0,
+    ),
+  ),
   mode: Unnamed,
   content: [],
   span: Span(

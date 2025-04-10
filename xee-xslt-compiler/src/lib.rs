@@ -1,4 +1,5 @@
 mod ast_ir;
+mod default_declarations;
 mod priority;
 mod run;
 

@@ -7,7 +7,7 @@ use xee_xpath_ast::{ast as xpath_ast, pattern::transform_pattern, span::Spanned}
 use xee_xslt_ast::{ast, parse_transform};
 use xot::xmlname::NameStrInfo;
 
-use crate::priority::default_priority;
+use crate::{default_declarations::text_only_copy_declarations, priority::default_priority};
 
 struct IrConverter<'a> {
     variables: Variables,
@@ -29,12 +29,16 @@ pub fn parse(
 ) -> error::SpannedResult<interpreter::Program> {
     let transform = parse_transform(xslt);
     // TODO: better error handling
-    let transform = match transform {
+    let mut transform = match transform {
         Ok(transform) => transform,
         Err(_e) => {
             return Err(error::Error::Unsupported.into());
         }
     };
+    // insert default rules early on in precedence order
+    let mut declarations = text_only_copy_declarations().unwrap();
+    declarations.extend(transform.declarations);
+    transform.declarations = declarations;
     compile(transform, static_context)
 }
 
@@ -52,7 +56,7 @@ impl<'a> IrConverter<'a> {
                 // TODO: mode should be configurable from the outside somehow,
                 // the XSTL test suite I think requires this.
                 mode: ast::ApplyTemplatesModeValue::Unnamed,
-                select: Some(ast::Expression {
+                select: ast::Expression {
                     xpath: xee_xpath_ast::ast::XPath::parse(
                         "/",
                         &Namespaces::default(),
@@ -60,7 +64,7 @@ impl<'a> IrConverter<'a> {
                     )
                     .unwrap(),
                     span: xee_xslt_ast::ast::Span::new(0, 0),
-                }),
+                },
                 content: vec![],
                 span: xee_xslt_ast::ast::Span::new(0, 0),
             })),
@@ -106,6 +110,7 @@ impl<'a> IrConverter<'a> {
         let main_sequence_constructor = self.main_sequence_constructor();
         let main = self.sequence_constructor_function(&main_sequence_constructor)?;
         let mut declarations = ir::Declarations::new(main);
+
         for declaration in &transform.declarations {
             self.declaration(&mut declarations, declaration)?;
         }
@@ -397,15 +402,7 @@ impl<'a> IrConverter<'a> {
         &mut self,
         apply_templates: &ast::ApplyTemplates,
     ) -> error::SpannedResult<Bindings> {
-        // TODO: default for select should be child::node()
-        let select_expr = apply_templates.select.as_ref();
-        let select_expr = match select_expr {
-            Some(select_expr) => select_expr,
-            None => {
-                return Err(error::Error::Unsupported.into());
-            }
-        };
-        let (select_atom, bindings) = self.expression(select_expr)?.atom_bindings();
+        let (select_atom, bindings) = self.expression(&apply_templates.select)?.atom_bindings();
         let mode = match &apply_templates.mode {
             ast::ApplyTemplatesModeValue::EqName(name) => {
                 ir::ApplyTemplatesModeValue::Named(name.clone())

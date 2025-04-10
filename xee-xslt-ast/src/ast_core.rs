@@ -299,7 +299,7 @@ impl From<ApplyImports> for SequenceConstructorItem {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ApplyTemplates {
-    pub select: Option<Expression>,
+    pub select: Expression,
     pub mode: ApplyTemplatesModeValue,
 
     pub content: Vec<ApplyTemplatesContent>,
