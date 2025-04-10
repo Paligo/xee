@@ -74,7 +74,6 @@ accessor-026
 accessor-027
 accessor-028
 accessor-030
-accessor-032
 accessor-034
 accessor-035
 accessor-036
@@ -765,7 +764,6 @@ axes-039
 axes-040
 axes-041
 axes-042
-axes-043
 axes-044
 axes-045
 axes-046
@@ -775,7 +773,6 @@ axes-049
 axes-050
 axes-051
 axes-052
-axes-056
 axes-057
 axes-058
 axes-059
@@ -799,6 +796,7 @@ axes-085
 axes-087
 axes-088
 axes-089
+axes-090
 axes-091
 axes-092
 axes-093
@@ -832,7 +830,6 @@ axes-120
 axes-121
 axes-122
 axes-123
-axes-124
 axes-129
 axes-131
 axes-132
@@ -848,7 +845,6 @@ axes-141
 axes-142
 axes-143
 axes-144
-axes-145
 axes-146
 axes-147
 axes-148
@@ -1062,14 +1058,12 @@ bug-2001
 bug-2101
 bug-2102
 bug-2201
-bug-2301
 bug-2401
 bug-2501
 bug-2502
 bug-2601
 bug-2701
 bug-2702
-bug-2703
 bug-2801
 bug-3001
 bug-3101
@@ -3484,7 +3478,6 @@ initial-function-903
 initial-function-904
 initial-function-905
 = initial-mode
-initial-mode-001
 initial-mode-002
 initial-mode-003
 initial-mode-004
@@ -3837,6 +3830,7 @@ match-042
 match-043
 match-044
 match-045
+match-046
 match-048
 match-049
 match-050
@@ -3847,12 +3841,9 @@ match-054
 match-055
 match-056
 match-057
-match-059
 match-060
 match-061
 match-062
-match-063
-match-064
 match-065
 match-066
 match-068
@@ -3901,7 +3892,6 @@ match-108
 match-109
 match-110
 match-111
-match-112
 match-116
 match-119
 match-120
@@ -4388,6 +4378,7 @@ mode-0105
 mode-0106
 mode-0107
 mode-0108
+mode-0201
 mode-0301
 mode-0601
 mode-0801a
@@ -4483,10 +4474,9 @@ mode-1515
 mode-1516
 mode-1517
 mode-1604
-mode-1606
+mode-1615
 mode-1616
 mode-1617
-mode-1618
 mode-1619
 mode-1701
 mode-1701a
@@ -4518,7 +4508,6 @@ mode-1905
 namespace-0101
 namespace-0201
 namespace-0202
-namespace-0301
 namespace-0501
 namespace-0601
 namespace-0602
@@ -4543,8 +4532,6 @@ namespace-1101
 namespace-1102
 namespace-1103
 namespace-1104
-namespace-1403
-namespace-1501
 namespace-1502
 namespace-1601
 namespace-1602
@@ -4687,7 +4674,6 @@ namespace-4002
 namespace-4003
 namespace-4004
 namespace-4005
-namespace-4006
 namespace-4007
 namespace-4008
 namespace-4009
@@ -5747,7 +5733,6 @@ path-010
 = position
 position-0102
 position-0103
-position-0201
 position-0202
 position-0401
 position-0601
@@ -5791,7 +5776,6 @@ position-3101
 position-3102
 position-3103
 position-3104
-position-3301
 position-3302
 position-3501
 position-3701
@@ -8212,7 +8196,6 @@ select-0801
 select-0802
 select-0901
 select-1001
-select-1101
 select-1401
 select-1402
 select-1503
@@ -8261,7 +8244,6 @@ select-2401
 select-2402
 select-3301
 select-3401
-select-3501
 select-3601
 select-3602
 select-3603
@@ -13360,7 +13342,6 @@ use-when-0138
 use-when-0139
 use-when-0140
 use-when-0201
-use-when-0211
 use-when-0212
 use-when-0213
 use-when-0214
@@ -13884,7 +13865,6 @@ xpath-default-namespace-0701
 xpath-default-namespace-0702
 xpath-default-namespace-0703
 xpath-default-namespace-0801
-xpath-default-namespace-0901
 xpath-default-namespace-1001
 xpath-default-namespace-1101
 xpath-default-namespace-1102

@@ -701,6 +701,7 @@ fn test_transform_predicate() {
   <xsl:template match="foo[2]">
     <found><xsl:value-of select="string()" /></found>
   </xsl:template>
+  <xsl:template match="text()" />
 </xsl:transform>"#,
     )
     .unwrap();
@@ -721,6 +722,7 @@ fn test_transform_predicate_with_attribute() {
   <xsl:template match="foo[@bar]">
     <found><xsl:value-of select="string()" /></found>
   </xsl:template>
+  <xsl:template match="text()" />
 </xsl:transform>"#,
     )
     .unwrap();

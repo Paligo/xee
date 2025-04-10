@@ -53,7 +53,6 @@ impl PredicateMatcher for Interpreter<'_> {
         if let Ok(value) = value {
             value.effective_boolean_value().unwrap_or(false)
         } else {
-            println!("error");
             false
         }
     }
