@@ -74,5 +74,5 @@ pub use itemable::Itemable;
 pub use queries::Queries;
 pub use query::{Query, Recurse};
 pub use xee_interpreter::atomic::Atomic;
-pub use xee_interpreter::sequence::{Item, Sequence};
+pub use xee_interpreter::sequence::{Item, Sequence, SerializationParameters};
 pub use xee_interpreter::xml::DocumentHandle;

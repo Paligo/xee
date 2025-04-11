@@ -16,27 +16,27 @@ use super::{
 };
 
 pub struct SerializationParameters {
-    pub(crate) allow_duplicate_names: bool,
-    pub(crate) byte_order_mark: bool,
-    pub(crate) cdata_section_elements: Vec<OwnedName>,
-    pub(crate) doctype_public: Option<String>,
-    pub(crate) doctype_system: Option<String>,
-    pub(crate) encoding: String,
-    pub(crate) escape_uri_attributes: bool,
-    pub(crate) html_version: Decimal,
-    pub(crate) include_content_type: bool,
-    pub(crate) indent: bool,
-    pub(crate) item_separator: String,
-    pub(crate) json_node_output_method: QNameOrString,
-    pub(crate) media_type: Option<String>,
-    pub(crate) method: QNameOrString,
-    pub(crate) normalization_form: Option<String>,
-    pub(crate) omit_xml_declaration: bool,
-    pub(crate) standalone: Option<bool>,
-    pub(crate) suppress_indentation: Vec<OwnedName>,
-    pub(crate) undeclare_prefixes: bool,
-    pub(crate) use_character_maps: HashMap<char, String>,
-    pub(crate) version: String,
+    pub allow_duplicate_names: bool,
+    pub byte_order_mark: bool,
+    pub cdata_section_elements: Vec<OwnedName>,
+    pub doctype_public: Option<String>,
+    pub doctype_system: Option<String>,
+    pub encoding: String,
+    pub escape_uri_attributes: bool,
+    pub html_version: Decimal,
+    pub include_content_type: bool,
+    pub indent: bool,
+    pub item_separator: String,
+    pub json_node_output_method: QNameOrString,
+    pub media_type: Option<String>,
+    pub method: QNameOrString,
+    pub normalization_form: Option<String>,
+    pub omit_xml_declaration: bool,
+    pub standalone: Option<bool>,
+    pub suppress_indentation: Vec<OwnedName>,
+    pub undeclare_prefixes: bool,
+    pub use_character_maps: HashMap<char, String>,
+    pub version: String,
 }
 
 impl SerializationParameters {
@@ -183,6 +183,12 @@ impl SerializationParameters {
     }
 }
 
+impl Default for SerializationParameters {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub(crate) fn serialize_sequence(
     arg: &Sequence,
     parameters: SerializationParameters,
@@ -233,6 +239,7 @@ fn serialize_xml(
         doctype,
         ..Default::default()
     };
+
     Ok(xot.serialize_xml_string(output_parameters, node)?)
 }
 

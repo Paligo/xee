@@ -2,6 +2,7 @@ use ahash::AHashMap;
 use chrono::Offset;
 use std::fmt;
 use xee_xpath::context::{Collation, DynamicContext};
+use xee_xpath::SerializationParameters;
 use xot::xmlname::{NameStrInfo, OwnedName as Name};
 use xot::Xot;
 
@@ -384,29 +385,34 @@ impl Assertable for AssertXml {
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
-        let xml = serialize(documents.xot(), sequence);
+        let xml = sequence.serialize(
+            SerializationParameters {
+                omit_xml_declaration: true,
+                ..Default::default()
+            },
+            documents.xot_mut(),
+        );
 
-        let xml = if let Ok(xml) = xml {
-            xml
-        } else {
-            return TestOutcome::Failed(Failure::Xml(
-                self.clone(),
-                AssertXmlFailure::WrongValue(sequence.clone()),
-            ));
+        let xml = match xml {
+            Ok(xml) => xml,
+            Err(_error) => {
+                return TestOutcome::Failed(Failure::Xml(
+                    self.clone(),
+                    AssertXmlFailure::WrongValue(sequence.clone()),
+                ));
+            }
         };
-        // also wrap expected XML in a sequence element
-        let expected_xml = format!("<sequence>{}</sequence>", self.0);
 
         let mut compare_xot = Xot::new();
-        // now parse both with Xot
-        let found = compare_xot.parse(&xml);
+
+        let found = compare_xot.parse_fragment(&xml);
         let found = match found {
             Ok(found) => found,
             Err(_err) => {
-                return TestOutcome::EnvironmentError("Cannot parse assert XML".to_string());
+                return TestOutcome::EnvironmentError("Cannot parse result XML".to_string());
             }
         };
-        let expected = compare_xot.parse(&expected_xml).unwrap();
+        let expected = compare_xot.parse_fragment(&self.0).unwrap();
 
         // and compare
         let c = compare_xot.deep_equal(expected, found);
@@ -1032,29 +1038,6 @@ fn run_xpath_with_result(
     q.execute_build_context(documents, |build| {
         build.variables(variables);
     })
-}
-
-pub(crate) fn serialize(xot: &Xot, sequence: &Sequence) -> crate::error::Result<String> {
-    let mut xmls = Vec::with_capacity(sequence.len());
-    for item in sequence.iter() {
-        if let Ok(node) = item.to_node() {
-            // TODO: handle text nodes differently as the underlying
-            // to_string doesn't like it if they don't have a parent..
-            let xml_value = if let Some(text) = xot.text_str(node) {
-                Ok(text.to_string())
-            } else {
-                xot.to_string(node)
-            };
-            if let Ok(xml_value) = xml_value {
-                xmls.push(xml_value);
-            } else {
-                return Err(crate::error::Error::CannotRepresentAsXml);
-            }
-        } else {
-            return Err(crate::error::Error::CannotRepresentAsXml);
-        }
-    }
-    Ok(format!("<sequence>{}</sequence>", xmls.join("")))
 }
 
 #[cfg(test)]

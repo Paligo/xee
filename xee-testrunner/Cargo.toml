@@ -14,6 +14,7 @@ homepage = "https://github.com/Paligo/xee"
 [dependencies]
 xee-xpath-load = { path = "../xee-xpath-load", version = "0.1.4" }
 xee-xpath = { path = "../xee-xpath", version = "0.1.4" }
+# the dependency on the xslt compiler should be replaced with xee-xslt dependency
 xee-xslt-compiler = { path = "../xee-xslt-compiler", version = "0.1.5" }
 xee-name = { path = "../xee-name", version = "0.1.4" }
 anyhow = { workspace = true }

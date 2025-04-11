@@ -54,7 +54,7 @@ pub(crate) fn normalize(
                 // we have to clone the node here as
                 // we don't want to mutate the original document
                 // after this, all nodes should be cloned
-                let node = xot.clone_node(node);
+                let node = xot.clone_with_prefixes(node);
                 if matches!(xot.value(node), xot::Value::Document) {
                     for child in xot.children(node) {
                         flattened_nodes.push(child);
