@@ -1089,7 +1089,6 @@ bug-5001
 bug-5101
 bug-5201
 bug-5302
-bug-5401
 bug-5501
 bug-5601
 bug-5701
@@ -3478,6 +3477,7 @@ initial-function-903
 initial-function-904
 initial-function-905
 = initial-mode
+initial-mode-001
 initial-mode-002
 initial-mode-003
 initial-mode-004
@@ -4378,7 +4378,6 @@ mode-0105
 mode-0106
 mode-0107
 mode-0108
-mode-0201
 mode-0301
 mode-0601
 mode-0801a
@@ -4404,8 +4403,6 @@ mode-1107a
 mode-1107b
 mode-1107c
 mode-1108
-mode-1202
-mode-1203
 mode-1204
 mode-1301
 mode-1401
@@ -4474,10 +4471,9 @@ mode-1515
 mode-1516
 mode-1517
 mode-1604
-mode-1615
+mode-1606
 mode-1616
 mode-1617
-mode-1619
 mode-1701
 mode-1701a
 mode-1702

@@ -83,6 +83,10 @@ impl<'a> DeclarationCompiler<'a> {
                     ir::ModeValue::Named(name) => ir::ApplyTemplatesModeValue::Named(name.clone()),
                     ir::ModeValue::Unnamed => ir::ApplyTemplatesModeValue::Unnamed,
                 };
+                // we want the mode id to be unique and not overwritten
+                if self.mode_ids.contains_key(&apply_templates_mode_value) {
+                    continue;
+                }
                 let mode_id = ModeId::new(self.mode_ids.len());
                 self.mode_ids.insert(apply_templates_mode_value, mode_id);
             }
@@ -110,14 +114,15 @@ impl<'a> DeclarationCompiler<'a> {
         function_id: function::InlineFunctionId,
     ) {
         // ensure there are no duplicate modes
-        let mut mode_set = HashSet::new();
-        for mode in modes {
-            mode_set.insert(mode);
-        }
+        let mut mode_seen = HashSet::new();
 
         let declaration_order = self.rule_declaration_order;
         self.rule_declaration_order += 1;
-        for mode in mode_set {
+        for mode in modes {
+            if mode_seen.contains(mode) {
+                continue;
+            }
+            mode_seen.insert(mode);
             self.rule_builders
                 .entry(mode.clone())
                 .or_default()
