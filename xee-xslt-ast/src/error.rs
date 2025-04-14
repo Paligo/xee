@@ -46,7 +46,7 @@ pub enum ElementError {
     // internal error, should not happen
     Internal,
     // Not yet supported
-    Unsupported,
+    Unsupported(String),
 }
 
 impl From<AttributeError> for ElementError {

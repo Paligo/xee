@@ -77,7 +77,7 @@ impl Runnable<XsltLanguage> for XsltTestCase {
             Ok(program) => program,
             Err(error) => {
                 return TestOutcome::EnvironmentError(format!(
-                    "Error parsing stylesheet: {}",
+                    "Error parsing stylesheet: {:?}",
                     error
                 ))
             }

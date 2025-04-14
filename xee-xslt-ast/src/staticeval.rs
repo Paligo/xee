@@ -128,7 +128,9 @@ impl StaticEvaluator {
                 value.clone()
             } else if required {
                 // TODO: a required value is mandatory, should return proper error
-                return Err(ElementError::Unsupported);
+                return Err(ElementError::Unsupported(
+                    "required parameter not found".to_string(),
+                ));
             } else {
                 let select = attributes.optional(names.select, attributes.xpath())?;
                 if let Some(select) = select {

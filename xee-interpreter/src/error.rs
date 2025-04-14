@@ -33,10 +33,10 @@ pub enum Error {
     /// Internal stack overflow.
     StackOverflow,
 
-    /// Unsupported XPath feature.
+    /// Unsupported XPath/XSLT feature.
     ///
-    /// This XPath feature is not supported by Xee.
-    Unsupported,
+    /// This XPath/XSLT feature is not supported by Xee.
+    Unsupported(String),
 
     /// Used query with wrong queries.
     ///

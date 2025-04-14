@@ -14,13 +14,13 @@ pub fn parse_transform(s: &str) -> Result<ast::Transform> {
     let names = Names::new(&mut xot);
     let (node, span_info) = xot
         .parse_with_span_info(s)
-        .map_err(|_e| Error::Unsupported)?;
+        .map_err(|_e| Error::Unsupported("Could not parse XSLT XML".to_string()))?;
     let node = xot.document_element(node).unwrap();
     let mut state = State::new(xot, span_info, names);
 
     let mut xot = Xot::new();
     static_evaluate(&mut state, node, Variables::new(), &mut xot)
-        .map_err(|_e| Error::Unsupported)?;
+        .map_err(|_e| Error::Unsupported("Static evaluation failed".to_string()))?;
     let parser = XsltParser::new(&state);
     parser.parse_transform(node)
 }
