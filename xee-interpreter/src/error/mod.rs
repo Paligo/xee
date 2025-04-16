@@ -1,5 +1,5 @@
 mod code;
 mod core;
 
-pub use code::{ApplicationError, Error};
-pub use core::{Result, SpannedError, SpannedResult};
+pub use code::{ApplicationError, ErrorCode};
+pub use core::{Error, Result, SpannedError, SpannedResult};

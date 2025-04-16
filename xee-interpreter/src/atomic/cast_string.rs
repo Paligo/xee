@@ -74,7 +74,7 @@ impl atomic::Atomic {
                 whitespace_collapse(&s).into(),
             )),
             atomic::Atomic::Untyped(s) => Ok(atomic::Atomic::String(StringType::AnyURI, s.clone())),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -97,7 +97,7 @@ impl atomic::Atomic {
         if regex.is_match(&s) {
             Ok(atomic::Atomic::String(string_type, s.into()))
         } else {
-            Err(error::Error::FORG0001)
+            Err(error::Error::new(error::ErrorCode::FORG0001))
         }
     }
 
@@ -154,7 +154,7 @@ impl atomic::Atomic {
                         if name.in_default_namespace() {
                             // we deliberately do not parse Qualified names, as they are not
                             // legal for xs:QName
-                            Err(error::Error::FORG0001)
+                            Err(error::Error::new(error::ErrorCode::FORG0001))
                         } else {
                             Ok(atomic::Atomic::QName(
                                 name.with_default_namespace(namespaces.default_element_namespace())
@@ -166,10 +166,10 @@ impl atomic::Atomic {
                     // and namespace lookup errors, which should be a FONS0004 error
                     // This requires the parser to be modified so it retains that
                     // information.
-                    Err(_) => Err(error::Error::FORG0001),
+                    Err(_) => Err(error::Error::new(error::ErrorCode::FORG0001)),
                 }
             }
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }

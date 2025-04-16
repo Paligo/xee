@@ -41,7 +41,7 @@ pub(crate) fn normalize(
                 items.push(NodeOrString::Node(node));
             }
             Item::Function(_) => {
-                return Err(error::Error::SENR0001);
+                return Err(error::Error::new(error::ErrorCode::SENR0001));
             }
         }
     }
@@ -94,7 +94,7 @@ pub(crate) fn normalize(
                 unreachable!("Documents should have been flattened by this point");
             }
             xot::Value::Attribute(_) | xot::Value::Namespace(_) => {
-                return Err(error::Error::SENR0001);
+                return Err(error::Error::new(error::ErrorCode::SENR0001));
             }
             // anything else is acceptable as a node
             _ => {}

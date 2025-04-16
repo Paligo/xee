@@ -18,7 +18,7 @@ pub(crate) fn round_atomic(arg: atomic::Atomic, precision: i32) -> error::Result
         // make do with doing the operation directly on f32 and f64
         atomic::Atomic::Float(OrderedFloat(f)) => Ok(round_float(f, precision)?.into()),
         atomic::Atomic::Double(OrderedFloat(d)) => Ok(round_float(d, precision)?.into()),
-        _ => Err(error::Error::XPTY0004),
+        _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
     }
 }
 
@@ -85,7 +85,7 @@ fn round_float<F: num_traits::Float>(arg: F, precision: i32) -> error::Result<F>
             if let Some(d) = d {
                 Ok(round_float_ties_to_positive_infinity(arg * d) / d)
             } else {
-                Err(error::Error::FOAR0001)
+                Err(error::Error::new(error::ErrorCode::FOAR0001))
             }
         }
         Ordering::Less => {
@@ -94,7 +94,7 @@ fn round_float<F: num_traits::Float>(arg: F, precision: i32) -> error::Result<F>
             if let Some(d) = d {
                 Ok(round_float_ties_to_positive_infinity(arg / d) * d)
             } else {
-                Err(error::Error::FOAR0001)
+                Err(error::Error::new(error::ErrorCode::FOAR0001))
             }
         }
     }
@@ -133,10 +133,12 @@ pub(crate) fn round_half_to_even_atomic(
             if let Some(f) = f {
                 let f = round_half_to_even_decimal(f, precision);
                 // turn f back into a float
-                let f: f32 = f.try_into().map_err(|_| error::Error::FOAR0001)?;
+                let f: f32 = f
+                    .try_into()
+                    .map_err(|_| error::Error::new(error::ErrorCode::FOAR0001))?;
                 Ok(f.into())
             } else {
-                Err(error::Error::FOCA0001)
+                Err(error::Error::new(error::ErrorCode::FOCA0001))
             }
         }
         atomic::Atomic::Double(OrderedFloat(d)) => {
@@ -150,13 +152,15 @@ pub(crate) fn round_half_to_even_atomic(
             if let Some(d) = d {
                 let d = round_half_to_even_decimal(d, precision);
                 // turn d back into a double
-                let d: f64 = d.try_into().map_err(|_| error::Error::FOAR0001)?;
+                let d: f64 = d
+                    .try_into()
+                    .map_err(|_| error::Error::new(error::ErrorCode::FOAR0001))?;
                 Ok(d.into())
             } else {
-                Err(error::Error::FOCA0001)
+                Err(error::Error::new(error::ErrorCode::FOCA0001))
             }
         }
-        _ => Err(error::Error::XPTY0004),
+        _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
     }
 }
 

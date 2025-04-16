@@ -114,7 +114,9 @@ impl<'a> AtomizedItemIter<'a> {
             Item::Node(n) => Self::Node(AtomizedNodeIter::new(n, xot)),
             Item::Function(function) => match function {
                 function::Function::Array(a) => Self::Array(AtomizedArrayIter::new(a, xot)),
-                _ => Self::Erroring(std::iter::once(Err(error::Error::FOTY0013))),
+                _ => Self::Erroring(std::iter::once(Err(error::Error::new(
+                    error::ErrorCode::FOTY0013,
+                )))),
             },
         }
     }
@@ -240,10 +242,10 @@ pub(crate) fn one<'a, T>(mut iter: impl Iterator<Item = T> + 'a) -> error::Resul
         if iter.next().is_none() {
             Ok(one)
         } else {
-            Err(error::Error::XPTY0004)
+            Err(error::Error::new(error::ErrorCode::XPTY0004))
         }
     } else {
-        Err(error::Error::XPTY0004)
+        Err(error::Error::new(error::ErrorCode::XPTY0004))
     }
 }
 
@@ -252,7 +254,7 @@ pub(crate) fn option<'a, T>(mut iter: impl Iterator<Item = T> + 'a) -> error::Re
         if iter.next().is_none() {
             Ok(Some(one))
         } else {
-            Err(error::Error::XPTY0004)
+            Err(error::Error::new(error::ErrorCode::XPTY0004))
         }
     } else {
         Ok(None)

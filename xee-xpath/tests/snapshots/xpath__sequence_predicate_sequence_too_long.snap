@@ -1,10 +1,13 @@
 ---
-source: xee-xpath-compiler/tests/xpath.rs
+source: xee-xpath/tests/xpath.rs
 expression: "run(\"(1, 2, 3)[(2, 3)]\")"
 ---
 Err(
     SpannedError {
-        error: XPTY0004,
+        error: Error {
+            code: XPTY0004,
+            message: None,
+        },
         span: Some(
             SourceSpan(
                 10,

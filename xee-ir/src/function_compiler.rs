@@ -1,10 +1,10 @@
 use ibig::{ibig, IBig};
 
-use xee_interpreter::error::Error;
+use xee_interpreter::error;
 use xee_interpreter::function::FunctionRule;
 use xee_interpreter::interpreter::instruction::Instruction;
 use xee_interpreter::span::SourceSpan;
-use xee_interpreter::{error, function, sequence};
+use xee_interpreter::{function, sequence};
 
 use crate::declaration_compiler::ModeIds;
 use crate::ir;
@@ -125,7 +125,7 @@ impl<'a> FunctionCompiler<'a> {
     fn compile_variable(&mut self, name: &ir::Name, span: SourceSpan) -> error::SpannedResult<()> {
         if let Some(index) = self.scopes.get(name) {
             if index > u16::MAX as usize {
-                return Err(Error::XPDY0130.with_span(span));
+                return Err(error::Error::new(error::ErrorCode::XPDY0130).with_span(span));
             }
             self.builder.emit(Instruction::Var(index as u16), span);
             Ok(())
@@ -134,7 +134,7 @@ impl<'a> FunctionCompiler<'a> {
             if self.scopes.is_closed_over_name(name) {
                 let index = self.builder.add_closure_name(name);
                 if index > u16::MAX as usize {
-                    return Err(Error::XPDY0130.with_span(span));
+                    return Err(error::Error::new(error::ErrorCode::XPDY0130).with_span(span));
                 }
                 self.builder
                     .emit(Instruction::ClosureVar(index as u16), span);
@@ -144,7 +144,10 @@ impl<'a> FunctionCompiler<'a> {
                 // the XSLT test suite for some reason triggers
                 // this condition, so for now we've hacked our way
                 // around it
-                Err(Error::Unsupported("Cannot compile XSLT variable".to_string()).into())
+                Err(error::Error::new(error::ErrorCode::Unsupported(
+                    "Cannot compile XSLT variable".to_string(),
+                ))
+                .into())
                 // unreachable!("variable not found: {:?}", name);
             }
         }
@@ -157,7 +160,7 @@ impl<'a> FunctionCompiler<'a> {
     ) -> error::SpannedResult<()> {
         if let Some(index) = self.scopes.get(name) {
             if index > u16::MAX as usize {
-                return Err(Error::XPDY0130.with_span(span));
+                return Err(error::Error::new(error::ErrorCode::XPDY0130).with_span(span));
             }
             self.builder.emit(Instruction::Set(index as u16), span);
         } else {
@@ -382,11 +385,13 @@ impl<'a> FunctionCompiler<'a> {
             .function_by_id(static_function_id);
         match static_function.function_rule {
             Some(FunctionRule::ItemFirst) => {
-                let context_names = context_names.ok_or(Error::XPDY0002.with_span(span))?;
+                let context_names = context_names
+                    .ok_or(error::Error::new(error::ErrorCode::XPDY0002).with_span(span))?;
                 self.compile_variable(&context_names.item, span)?
             }
             Some(FunctionRule::ItemLast) => {
-                let context_names = context_names.ok_or(Error::XPDY0002.with_span(span))?;
+                let context_names = context_names
+                    .ok_or(error::Error::new(error::ErrorCode::XPDY0002).with_span(span))?;
                 self.compile_variable(&context_names.item, span)?
             }
             Some(FunctionRule::ItemLastOptional) => {
@@ -399,13 +404,15 @@ impl<'a> FunctionCompiler<'a> {
             }
             Some(FunctionRule::PositionFirst) => self.compile_variable(
                 {
-                    let context_names = context_names.ok_or(Error::XPDY0002.with_span(span))?;
+                    let context_names = context_names
+                        .ok_or(error::Error::new(error::ErrorCode::XPDY0002).with_span(span))?;
                     &context_names.position
                 },
                 span,
             )?,
             Some(FunctionRule::SizeFirst) => {
-                let context_names = context_names.ok_or(Error::XPDY0002.with_span(span))?;
+                let context_names = context_names
+                    .ok_or(error::Error::new(error::ErrorCode::XPDY0002).with_span(span))?;
                 self.compile_variable(&context_names.last, span)?
             }
             Some(FunctionRule::Collation) | Some(FunctionRule::AnonymousClosure) | None => {}

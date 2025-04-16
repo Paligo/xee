@@ -20,20 +20,20 @@ pub(crate) fn op_mod(a: atomic::Atomic, b: atomic::Atomic) -> error::Result<atom
         (Atomic::Integer(_, a), Atomic::Integer(_, b)) => Ok(op_mod_integer(a, b)?),
         (Atomic::Float(a), Atomic::Float(b)) => Ok(op_mod_float(a, b)?),
         (Atomic::Double(a), Atomic::Double(b)) => Ok(op_mod_float(a, b)?),
-        _ => Err(error::Error::XPTY0004),
+        _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
     }
 }
 
 fn op_mod_decimal(a: Rc<Decimal>, b: Rc<Decimal>) -> error::Result<atomic::Atomic> {
     if b.is_zero() {
-        return Err(error::Error::FOAR0001);
+        return Err(error::Error::new(error::ErrorCode::FOAR0001));
     }
     Ok((a.as_ref() % b.as_ref()).into())
 }
 
 fn op_mod_integer(a: Rc<IBig>, b: Rc<IBig>) -> error::Result<atomic::Atomic> {
     if b.is_zero() {
-        return Err(error::Error::FOAR0001);
+        return Err(error::Error::new(error::ErrorCode::FOAR0001));
     }
     Ok((a.as_ref() % b.as_ref()).into())
 }

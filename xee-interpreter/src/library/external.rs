@@ -25,7 +25,9 @@ fn doc_available(context: &DynamicContext, uri: Option<&str>) -> bool {
 }
 
 fn document_node(context: &DynamicContext, uri: &str) -> error::Result<Option<xot::Node>> {
-    let iri_reference: &IriReferenceStr = uri.try_into().map_err(|_| error::Error::FODC0005)?;
+    let iri_reference: &IriReferenceStr = uri
+        .try_into()
+        .map_err(|_| error::Error::new(error::ErrorCode::FODC0005))?;
     let uri = absolute_uri(context, iri_reference)?;
 
     // first check whether a document is there at all, if so, return it
@@ -37,7 +39,7 @@ fn document_node(context: &DynamicContext, uri: &str) -> error::Result<Option<xo
         Ok(Some(document.root()))
     } else {
         // The document doesn't exist, so return an error
-        Err(error::Error::FODC0002)
+        Err(error::Error::new(error::ErrorCode::FODC0002))
     }
 }
 
@@ -46,24 +48,26 @@ fn collection(context: &DynamicContext) -> error::Result<Sequence> {
     if let Some(collection) = context.default_collection() {
         Ok(collection.clone())
     } else {
-        Err(error::Error::FODC0002)
+        Err(error::Error::new(error::ErrorCode::FODC0002))
     }
 }
 
 #[xpath_fn("fn:collection($uri as xs:string?) as item()*")]
 fn collection_by_uri(context: &DynamicContext, uri: Option<&str>) -> error::Result<Sequence> {
     if let Some(uri) = uri {
-        let iri_reference: &IriReferenceStr = uri.try_into().map_err(|_| error::Error::FODC0004)?;
+        let iri_reference: &IriReferenceStr = uri
+            .try_into()
+            .map_err(|_| error::Error::new(error::ErrorCode::FODC0004))?;
         let uri = absolute_uri(context, iri_reference)?;
         if let Some(collection) = context.collection(&uri) {
             Ok(collection.clone())
         } else {
-            Err(error::Error::FODC0002)
+            Err(error::Error::new(error::ErrorCode::FODC0002))
         }
     } else if let Some(collection) = context.default_collection() {
         Ok(collection.clone())
     } else {
-        Err(error::Error::FODC0002)
+        Err(error::Error::new(error::ErrorCode::FODC0002))
     }
 }
 
@@ -72,24 +76,26 @@ fn uri_collection(context: &DynamicContext) -> error::Result<Sequence> {
     if let Some(collection) = context.default_uri_collection() {
         Ok(collection.clone())
     } else {
-        Err(error::Error::FODC0002)
+        Err(error::Error::new(error::ErrorCode::FODC0002))
     }
 }
 
 #[xpath_fn("fn:uri-collection($uri as xs:string?) as xs:anyURI*")]
 fn uri_collection_by_uri(context: &DynamicContext, uri: Option<&str>) -> error::Result<Sequence> {
     if let Some(uri) = uri {
-        let iri_reference: &IriReferenceStr = uri.try_into().map_err(|_| error::Error::FODC0004)?;
+        let iri_reference: &IriReferenceStr = uri
+            .try_into()
+            .map_err(|_| error::Error::new(error::ErrorCode::FODC0004))?;
         let uri = absolute_uri(context, iri_reference)?;
         if let Some(collection) = context.uri_collection(&uri) {
             Ok(collection.clone())
         } else {
-            Err(error::Error::FODC0002)
+            Err(error::Error::new(error::ErrorCode::FODC0002))
         }
     } else if let Some(collection) = context.default_uri_collection() {
         Ok(collection.clone())
     } else {
-        Err(error::Error::FODC0002)
+        Err(error::Error::new(error::ErrorCode::FODC0002))
     }
 }
 
@@ -101,7 +107,7 @@ fn absolute_uri(context: &DynamicContext, uri: &IriReferenceStr) -> error::Resul
             if let Some(base) = base {
                 relative_iri.resolve_against(base).into()
             } else {
-                return Err(error::Error::FODC0002);
+                return Err(error::Error::new(error::ErrorCode::FODC0002));
             }
         }
     };

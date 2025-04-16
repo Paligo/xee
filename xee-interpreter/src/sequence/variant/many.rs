@@ -40,12 +40,12 @@ impl<'a> SequenceCore<'a, std::iter::Cloned<std::slice::Iter<'a, Item>>> for Man
 
     #[inline]
     fn one(self) -> error::Result<Item> {
-        Err(error::Error::XPTY0004)
+        Err(error::Error::new(error::ErrorCode::XPTY0004))
     }
 
     #[inline]
     fn option(self) -> error::Result<Option<Item>> {
-        Err(error::Error::XPTY0004)
+        Err(error::Error::new(error::ErrorCode::XPTY0004))
     }
 
     #[inline]
@@ -60,13 +60,13 @@ impl<'a> SequenceCore<'a, std::iter::Cloned<std::slice::Iter<'a, Item>>> for Man
         if matches!(self.items[0], Item::Node(_)) {
             Ok(true)
         } else {
-            Err(error::Error::FORG0006)
+            Err(error::Error::new(error::ErrorCode::FORG0006))
         }
     }
 
     #[inline]
     fn string_value(&self, _xot: &xot::Xot) -> error::Result<String> {
-        Err(error::Error::XPTY0004)
+        Err(error::Error::new(error::ErrorCode::XPTY0004))
     }
 }
 
@@ -90,6 +90,6 @@ where
     Many: SequenceCore<'a, I>,
 {
     fn one_node(&self) -> error::Result<xot::Node> {
-        Err(error::Error::XPTY0004)
+        Err(error::Error::new(error::ErrorCode::XPTY0004))
     }
 }

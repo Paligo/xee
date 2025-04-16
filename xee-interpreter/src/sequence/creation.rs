@@ -100,13 +100,13 @@ impl Sequence {
             match item {
                 Item::Node(n) => {
                     if non_node_seen {
-                        return Err(error::Error::XPTY0004);
+                        return Err(error::Error::new(error::ErrorCode::XPTY0004));
                     }
                     s.insert(n);
                 }
                 _ => {
                     if !s.is_empty() {
-                        return Err(error::Error::XPTY0004);
+                        return Err(error::Error::new(error::ErrorCode::XPTY0004));
                     }
                     non_node_seen = true;
                 }

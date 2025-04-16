@@ -199,10 +199,10 @@ pub(crate) fn serialize_sequence(
             "xml" => serialize_xml(arg, parameters, xot),
             "html" => serialize_html(arg, parameters, xot),
             "json" => serialize_json(arg, parameters, xot),
-            _ => Err(error::Error::SEPM0016),
+            _ => Err(error::Error::new(error::ErrorCode::SEPM0016)),
         }
     } else {
-        Err(error::Error::SEPM0016)
+        Err(error::Error::new(error::ErrorCode::SEPM0016))
     }
 }
 
@@ -277,7 +277,9 @@ fn serialize_json_sequence(
     match arg {
         Sequence::One(item) => serialize_json_item(item.item(), parameters, xot),
         Sequence::Empty(_) => Ok(json::JsonValue::Null),
-        Sequence::Many(_) | Sequence::Range(_) => Err(error::Error::SERE0023),
+        Sequence::Many(_) | Sequence::Range(_) => {
+            Err(error::Error::new(error::ErrorCode::SERE0023))
+        }
     }
 }
 
@@ -301,21 +303,21 @@ fn serialize_json_atomic(
         atomic::Atomic::Float(float) => {
             let f = float.into_inner();
             if f.is_infinite() || f.is_nan() {
-                return Err(error::Error::SERE0020);
+                return Err(error::Error::new(error::ErrorCode::SERE0020));
             }
             Ok(json::JsonValue::Number(f.into()))
         }
         atomic::Atomic::Double(double) => {
             let d = double.into_inner();
             if d.is_infinite() || d.is_nan() {
-                return Err(error::Error::SERE0020);
+                return Err(error::Error::new(error::ErrorCode::SERE0020));
             }
             Ok(json::JsonValue::Number(d.into()))
         }
         atomic::Atomic::Decimal(decimal) => {
             let d: f64 = (*decimal.as_ref())
                 .try_into()
-                .map_err(|_| error::Error::SERE0020)?;
+                .map_err(|_| error::Error::new(error::ErrorCode::SERE0020))?;
             Ok(json::JsonValue::Number(d.into()))
         }
         atomic::Atomic::Integer(_t, integer) => {
@@ -369,7 +371,7 @@ fn serialize_json_function(
     match function {
         function::Function::Array(array) => serialize_json_array(array, parameters, xot),
         function::Function::Map(map) => serialize_json_map(map, parameters, xot),
-        _ => Err(error::Error::SERE0021),
+        _ => Err(error::Error::new(error::ErrorCode::SERE0021)),
     }
 }
 

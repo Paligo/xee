@@ -465,7 +465,10 @@ fn test_copy_function() {
     assert!(matches!(
         output,
         error::SpannedResult::Err(error::SpannedError {
-            error: error::Error::FOTY0014,
+            error: error::Error {
+                code: error::ErrorCode::FOTY0014,
+                message: _
+            },
             span: _
         })
     ));
@@ -655,7 +658,10 @@ fn test_function_item_in_complex_content() {
     assert!(matches!(
         output,
         error::SpannedResult::Err(error::SpannedError {
-            error: error::Error::XTDE0450,
+            error: error::Error {
+                message: _,
+                code: error::ErrorCode::XTDE0450
+            },
             span: _
         })
     ));

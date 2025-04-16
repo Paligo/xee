@@ -21,7 +21,7 @@ fn get(array: function::Array, position: IBig) -> error::Result<sequence::Sequen
     let position = convert_position(position)?;
     let item = array
         .index(position as usize)
-        .ok_or(error::Error::FOAY0001)?;
+        .ok_or(error::Error::new(error::ErrorCode::FOAY0001))?;
     Ok(item.clone())
 }
 
@@ -39,7 +39,9 @@ fn put(
     member: &sequence::Sequence,
 ) -> error::Result<function::Array> {
     let position = convert_position(position)?;
-    array.put(position, member).ok_or(error::Error::FOAY0001)
+    array
+        .put(position, member)
+        .ok_or(error::Error::new(error::ErrorCode::FOAY0001))
 }
 
 #[xpath_fn("array:append($array as array(*), $appendage as item()*) as array(*)")]
@@ -51,7 +53,9 @@ fn append(array: function::Array, appendage: &sequence::Sequence) -> function::A
 fn subarray2(array: function::Array, start: IBig) -> error::Result<function::Array> {
     let start = convert_position(start)?;
     let length = array.len() - start;
-    array.subarray(start, length).ok_or(error::Error::FOAY0001)
+    array
+        .subarray(start, length)
+        .ok_or(error::Error::new(error::ErrorCode::FOAY0001))
 }
 
 #[xpath_fn(
@@ -60,7 +64,9 @@ fn subarray2(array: function::Array, start: IBig) -> error::Result<function::Arr
 fn subarray3(array: function::Array, start: IBig, length: IBig) -> error::Result<function::Array> {
     let start = convert_position(start)?;
     let length = convert_length(length)?;
-    array.subarray(start, length).ok_or(error::Error::FOAY0001)
+    array
+        .subarray(start, length)
+        .ok_or(error::Error::new(error::ErrorCode::FOAY0001))
 }
 
 #[xpath_fn("array:remove($array as array(*), $positions as xs:integer*) as array(*)")]
@@ -73,7 +79,7 @@ fn remove(
         .collect::<error::Result<Vec<usize>>>()?;
     array
         .remove_positions(&positions)
-        .ok_or(error::Error::FOAY0001)
+        .ok_or(error::Error::new(error::ErrorCode::FOAY0001))
 }
 
 #[xpath_fn("array:insert-before($array as array(*), $position as xs:integer, $member as item()*) as array(*)")]
@@ -85,12 +91,14 @@ fn insert_before(
     let position = convert_position(position)?;
     array
         .insert_before(position, member)
-        .ok_or(error::Error::FOAY0001)
+        .ok_or(error::Error::new(error::ErrorCode::FOAY0001))
 }
 
 #[xpath_fn("array:head($array as array(*)) as item()*")]
 fn head(array: function::Array) -> error::Result<sequence::Sequence> {
-    let item = array.index(0).ok_or(error::Error::FOAY0001)?;
+    let item = array
+        .index(0)
+        .ok_or(error::Error::new(error::ErrorCode::FOAY0001))?;
     Ok(item.clone())
 }
 
@@ -99,9 +107,9 @@ fn tail(array: function::Array) -> error::Result<function::Array> {
     if !array.is_empty() {
         array
             .subarray(1, array.len() - 1)
-            .ok_or(error::Error::FOAY0001)
+            .ok_or(error::Error::new(error::ErrorCode::FOAY0001))
     } else {
-        Err(error::Error::FOAY0001)
+        Err(error::Error::new(error::ErrorCode::FOAY0001))
     }
 }
 
@@ -312,7 +320,7 @@ fn convert_position(position: IBig) -> error::Result<usize> {
     let position: i64 = position.try_into()?;
     let position = position - 1;
     if position < 0 {
-        return Err(error::Error::FOAY0001);
+        return Err(error::Error::new(error::ErrorCode::FOAY0001));
     }
     Ok(position as usize)
 }
@@ -320,7 +328,7 @@ fn convert_position(position: IBig) -> error::Result<usize> {
 fn convert_length(length: IBig) -> error::Result<usize> {
     let length: i64 = length.try_into()?;
     if length < 0 {
-        return Err(error::Error::FOAY0002);
+        return Err(error::Error::new(error::ErrorCode::FOAY0002));
     }
     let length = length as usize;
     Ok(length)

@@ -4,12 +4,12 @@ pub(crate) fn render_error(src: &str, e: Error) {
     let red = ariadne::Color::Red;
 
     let mut report = ariadne::Report::build(ariadne::ReportKind::Error, ("source", (0..0)))
-        .with_code(e.error.code());
+        .with_code(e.error.code.code());
 
     if let Some(span) = e.span {
         report = report.with_label(
             ariadne::Label::new(("source", span.range()))
-                .with_message(e.error.message())
+                .with_message(e.error.code.message())
                 .with_color(red),
         )
     }
@@ -17,7 +17,7 @@ pub(crate) fn render_error(src: &str, e: Error) {
         .finish()
         .eprint(("source", ariadne::Source::from(src)))
         .unwrap();
-    println!("{}", e.error.note());
+    println!("{}", e.error.code.note());
 }
 
 pub(crate) fn render_parse_error(src: &str, e: xot::ParseError) {

@@ -32,7 +32,11 @@ pub fn parse(
     let mut transform = match transform {
         Ok(transform) => transform,
         Err(e) => {
-            return Err(error::Error::Unsupported(format!("Element error {:?}", e)).into());
+            return Err(error::Error::new(error::ErrorCode::Unsupported(format!(
+                "Element error {:?}",
+                e
+            )))
+            .into());
         }
     };
     // insert default rules early on in precedence order
@@ -126,9 +130,11 @@ impl<'a> IrConverter<'a> {
         match declaration {
             Template(template) => self.template(declarations, template),
             Mode(mode) => self.mode(declarations, mode),
-            _ => Err(
-                error::Error::Unsupported(format!("Unknown declaration: {:?}", declaration)).into(),
-            ),
+            _ => Err(error::Error::new(error::ErrorCode::Unsupported(format!(
+                "Unknown declaration: {:?}",
+                declaration
+            )))
+            .into()),
         }
     }
 
@@ -144,9 +150,9 @@ impl<'a> IrConverter<'a> {
                 let default_priorities = default_priority(&pattern.pattern).collect::<Vec<_>>();
                 if default_priorities.len() > 1 {
                     // for now, we can't deal with multiple registration yet
-                    return Err(error::Error::Unsupported(
+                    return Err(error::Error::new(error::ErrorCode::Unsupported(
                         "Cannot handle multiple default priorities yet".to_string(),
-                    )
+                    ))
                     .into());
                 } else {
                     default_priorities.first().unwrap().1
@@ -169,10 +175,10 @@ impl<'a> IrConverter<'a> {
             });
             Ok(())
         } else {
-            Err(
-                error::Error::Unsupported("Cannot handle template without pattern yet".to_string())
-                    .into(),
-            )
+            Err(error::Error::new(error::ErrorCode::Unsupported(
+                "Cannot handle template without pattern yet".to_string(),
+            ))
+            .into())
         }
     }
 
@@ -304,14 +310,14 @@ impl<'a> IrConverter<'a> {
             // TODO: xsl:variable does not produce content and is handled
             // earlier already should be unreachable!() but at this point this
             // can be reached so return unsupported
-            Variable(_variable) => Err(error::Error::Unsupported(
+            Variable(_variable) => Err(error::Error::new(error::ErrorCode::Unsupported(
                 "Variable is reached but should be unreadable".to_string(),
-            )
+            ))
             .into()),
-            _ => Err(error::Error::Unsupported(format!(
+            _ => Err(error::Error::new(error::ErrorCode::Unsupported(format!(
                 "Unsupported sequence constructor function: {:?}",
                 instruction
-            ))
+            )))
             .into()),
         }
     }

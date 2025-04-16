@@ -28,7 +28,7 @@ fn abs(arg: Option<Atomic>) -> error::Result<Option<Atomic>> {
             Atomic::Decimal(d) => Ok(Some(d.abs().into())),
             Atomic::Float(f) => Ok(Some(f.abs().into())),
             Atomic::Double(d) => Ok(Some(d.abs().into())),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     } else {
         Ok(None)
@@ -43,7 +43,7 @@ fn ceiling(arg: Option<Atomic>) -> error::Result<Option<Atomic>> {
             Atomic::Decimal(d) => Ok(Some(d.ceil().into())),
             Atomic::Float(f) => Ok(Some(f.ceil().into())),
             Atomic::Double(d) => Ok(Some(d.ceil().into())),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     } else {
         Ok(None)
@@ -58,7 +58,7 @@ fn floor(arg: Option<Atomic>) -> error::Result<Option<Atomic>> {
             Atomic::Decimal(d) => Ok(Some(d.floor().into())),
             Atomic::Float(f) => Ok(Some(f.floor().into())),
             Atomic::Double(d) => Ok(Some(d.floor().into())),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     } else {
         Ok(None)
@@ -77,7 +77,9 @@ fn round1(arg: Option<Atomic>) -> error::Result<Option<Atomic>> {
 #[xpath_fn("fn:round($arg as xs:numeric?, $precision as xs:integer) as xs:numeric?")]
 fn round2(arg: Option<Atomic>, precision: IBig) -> error::Result<Option<Atomic>> {
     if let Some(arg) = arg {
-        let precision: i32 = precision.try_into().map_err(|_| error::Error::FOAR0002)?;
+        let precision: i32 = precision
+            .try_into()
+            .map_err(|_| error::Error::new(error::ErrorCode::FOAR0002))?;
         round_atomic(arg, precision).map(Some)
     } else {
         Ok(None)
@@ -96,7 +98,9 @@ fn round_half_to_even1(arg: Option<Atomic>) -> error::Result<Option<Atomic>> {
 #[xpath_fn("fn:round-half-to-even($arg as xs:numeric?, $precision as xs:integer) as xs:numeric?")]
 fn round_half_to_even2(arg: Option<Atomic>, precision: IBig) -> error::Result<Option<Atomic>> {
     if let Some(arg) = arg {
-        let precision: i32 = precision.try_into().map_err(|_| error::Error::FOAR0002)?;
+        let precision: i32 = precision
+            .try_into()
+            .map_err(|_| error::Error::new(error::ErrorCode::FOAR0002))?;
         round_half_to_even_atomic(arg, precision).map(Some)
     } else {
         Ok(None)

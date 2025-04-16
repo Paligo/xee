@@ -261,7 +261,7 @@ fn into_sequences(values: &[stack::Value]) -> error::Result<Vec<sequence::Sequen
         .iter()
         .map(|v| match v {
             stack::Value::Sequence(sequence) => Ok(sequence.clone()),
-            stack::Value::Absent => Err(error::Error::XPDY0002),
+            stack::Value::Absent => Err(error::Error::new(error::ErrorCode::XPDY0002)),
         })
         .collect()
 }

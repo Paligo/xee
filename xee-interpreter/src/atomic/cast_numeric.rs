@@ -55,9 +55,10 @@ impl atomic::Atomic {
 
     pub(crate) fn parse_decimal(s: &str) -> error::Result<Decimal> {
         if s.contains('_') {
-            return Err(error::Error::FORG0001);
+            return Err(error::Error::new(error::ErrorCode::FORG0001));
         }
-        s.parse::<Decimal>().map_err(|_| error::Error::FORG0001)
+        s.parse::<Decimal>()
+            .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
     }
 
     pub(crate) fn parse_integer_number<V>(s: &str) -> error::Result<V>
@@ -68,7 +69,7 @@ impl atomic::Atomic {
         // numbers. There doesn't appear to be a configuration option for
         // lexical for this.
         let s = if s == "-0" { "0" } else { s };
-        lexical::parse::<V, _>(s).map_err(|_| error::Error::FORG0001)
+        lexical::parse::<V, _>(s).map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
     }
 
     // we can't use lexical::parse_float_options::XML as it doesn't allow INF
@@ -80,7 +81,7 @@ impl atomic::Atomic {
             .build()
             .unwrap();
         lexical::parse_with_options::<f32, _, { lexical::format::XML }>(s, &options)
-            .map_err(|_| error::Error::FORG0001)
+            .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
     }
 
     pub(crate) fn parse_double(s: &str) -> error::Result<f64> {
@@ -89,7 +90,7 @@ impl atomic::Atomic {
             .build()
             .unwrap();
         lexical::parse_with_options::<f64, _, { lexical::format::XML }>(s, &options)
-            .map_err(|_| error::Error::FORG0001)
+            .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
     }
 
     pub(crate) fn cast_to_numeric(self) -> error::Result<atomic::Atomic> {
@@ -110,14 +111,16 @@ impl atomic::Atomic {
             // we know xs:boolean is castable to double, so we don't even
             // try the other options
             atomic::Atomic::Boolean(_) => self.cast_to_double(),
-            _ => Err(error::Error::FORG0001),
+            _ => Err(error::Error::new(error::ErrorCode::FORG0001)),
         }
     }
 
     pub(crate) fn cast_to_float(self) -> error::Result<atomic::Atomic> {
         match self {
             atomic::Atomic::Untyped(s) => Self::parse_atomic::<f32>(&s),
-            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::XPTY0004),
+            atomic::Atomic::String(StringType::AnyURI, _) => {
+                Err(error::Error::new(error::ErrorCode::XPTY0004))
+            }
             atomic::Atomic::String(_, s) => Self::parse_atomic::<f32>(&s),
             atomic::Atomic::Float(_) => Ok(self.clone()),
             // TODO: this should implement the rule in 19.1.2.1
@@ -143,14 +146,16 @@ impl atomic::Atomic {
                     Ok(atomic::Atomic::Float(OrderedFloat(0.0)))
                 }
             }
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
     pub(crate) fn cast_to_double(self) -> error::Result<atomic::Atomic> {
         match self {
             atomic::Atomic::Untyped(s) => Self::parse_atomic::<f64>(s.trim()),
-            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::XPTY0004),
+            atomic::Atomic::String(StringType::AnyURI, _) => {
+                Err(error::Error::new(error::ErrorCode::XPTY0004))
+            }
             atomic::Atomic::String(_, s) => Self::parse_atomic::<f64>(s.trim()),
             atomic::Atomic::Float(OrderedFloat(f)) => {
                 Ok(atomic::Atomic::Double(OrderedFloat(f as f64)))
@@ -166,34 +171,36 @@ impl atomic::Atomic {
                     Ok(atomic::Atomic::Double(OrderedFloat(0.0)))
                 }
             }
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
     pub(crate) fn cast_to_decimal(self) -> error::Result<atomic::Atomic> {
         match self {
             atomic::Atomic::Untyped(s) => Self::parse_atomic::<Decimal>(&s),
-            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::XPTY0004),
+            atomic::Atomic::String(StringType::AnyURI, _) => {
+                Err(error::Error::new(error::ErrorCode::XPTY0004))
+            }
             atomic::Atomic::String(_, s) => Self::parse_atomic::<Decimal>(&s),
             atomic::Atomic::Float(OrderedFloat(f)) => {
                 if f.is_nan() || f.is_infinite() {
-                    return Err(error::Error::FOCA0002);
+                    return Err(error::Error::new(error::ErrorCode::FOCA0002));
                 }
 
                 Ok(atomic::Atomic::Decimal(
                     Decimal::try_from(f)
-                        .map_err(|_| error::Error::FOCA0001)?
+                        .map_err(|_| error::Error::new(error::ErrorCode::FOCA0001))?
                         .into(),
                 ))
             }
             atomic::Atomic::Double(OrderedFloat(f)) => {
                 if f.is_nan() || f.is_infinite() {
-                    return Err(error::Error::FOCA0002);
+                    return Err(error::Error::new(error::ErrorCode::FOCA0002));
                 }
 
                 Ok(atomic::Atomic::Decimal(
                     Decimal::try_from(f)
-                        .map_err(|_| error::Error::FOCA0001)?
+                        .map_err(|_| error::Error::new(error::ErrorCode::FOCA0001))?
                         .into(),
                 ))
             }
@@ -204,10 +211,12 @@ impl atomic::Atomic {
                 Decimal::try_from_i128_with_scale(
                     // if this is bigger than an i128, it certainly can't be
                     // an integer
-                    i.as_ref().try_into().map_err(|_| error::Error::FOAR0002)?,
+                    i.as_ref()
+                        .try_into()
+                        .map_err(|_| error::Error::new(error::ErrorCode::FOAR0002))?,
                     0,
                 )
-                .map_err(|_| error::Error::FOAR0002)?
+                .map_err(|_| error::Error::new(error::ErrorCode::FOAR0002))?
                 .into(),
             )),
             atomic::Atomic::Boolean(b) => {
@@ -217,7 +226,7 @@ impl atomic::Atomic {
                     Ok(atomic::Atomic::Decimal(Decimal::from(0).into()))
                 }
             }
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -294,7 +303,7 @@ impl atomic::Atomic {
     pub(crate) fn cast_to_non_positive_integer(self) -> error::Result<atomic::Atomic> {
         let i = self.cast_to_integer_value::<IBig>()?;
         if i > ibig!(0) {
-            return Err(error::Error::FORG0001);
+            return Err(error::Error::new(error::ErrorCode::FORG0001));
         }
         Ok(atomic::Atomic::Integer(
             atomic::IntegerType::NonPositiveInteger,
@@ -305,7 +314,7 @@ impl atomic::Atomic {
     pub(crate) fn cast_to_negative_integer(self) -> error::Result<atomic::Atomic> {
         let i = self.cast_to_integer_value::<IBig>()?;
         if i >= ibig!(0) {
-            return Err(error::Error::FORG0001);
+            return Err(error::Error::new(error::ErrorCode::FORG0001));
         }
         Ok(atomic::Atomic::Integer(
             atomic::IntegerType::NegativeInteger,
@@ -316,7 +325,7 @@ impl atomic::Atomic {
     pub(crate) fn cast_to_non_negative_integer(self) -> error::Result<atomic::Atomic> {
         let i = self.cast_to_integer_value::<IBig>()?;
         if i < ibig!(0) {
-            return Err(error::Error::FORG0001);
+            return Err(error::Error::new(error::ErrorCode::FORG0001));
         }
         Ok(atomic::Atomic::Integer(
             atomic::IntegerType::NonNegativeInteger,
@@ -327,7 +336,7 @@ impl atomic::Atomic {
     pub(crate) fn cast_to_positive_integer(self) -> error::Result<atomic::Atomic> {
         let i = self.cast_to_integer_value::<IBig>()?;
         if i <= ibig!(0) {
-            return Err(error::Error::FORG0001);
+            return Err(error::Error::new(error::ErrorCode::FORG0001));
         }
         Ok(atomic::Atomic::Integer(
             atomic::IntegerType::PositiveInteger,
@@ -352,35 +361,51 @@ impl atomic::Atomic {
         match self {
             atomic::Atomic::Untyped(s) => Ok(s
                 .parse::<Parsed<V>>()
-                .map_err(|_| error::Error::FORG0001)?
+                .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))?
                 .into_inner()),
-            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::XPTY0004),
+            atomic::Atomic::String(StringType::AnyURI, _) => {
+                Err(error::Error::new(error::ErrorCode::XPTY0004))
+            }
             atomic::Atomic::String(_, s) => Ok(s
                 .parse::<Parsed<V>>()
-                .map_err(|_| error::Error::FORG0001)?
+                .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))?
                 .into_inner()),
             atomic::Atomic::Float(OrderedFloat(f)) => {
                 if f.is_nan() | f.is_infinite() {
-                    return Err(error::Error::FOCA0002);
+                    return Err(error::Error::new(error::ErrorCode::FOCA0002));
                 }
                 // we first go to a decimal. Any larger number we won't be able to
                 // express, even though bigint strictly speaking could handle it.
                 // But converting a float to a bigint directly isn't possible.
-                let d: Decimal = f.trunc().try_into().map_err(|_| error::Error::FOCA0003)?;
-                let i: i128 = d.try_into().map_err(|_| error::Error::FOCA0003)?;
-                let i: V = i.try_into().map_err(|_| error::Error::FOCA0003)?;
+                let d: Decimal = f
+                    .trunc()
+                    .try_into()
+                    .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?;
+                let i: i128 = d
+                    .try_into()
+                    .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?;
+                let i: V = i
+                    .try_into()
+                    .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?;
                 Ok(i)
             }
             atomic::Atomic::Double(OrderedFloat(d)) => {
                 if d.is_nan() | d.is_infinite() {
-                    return Err(error::Error::FOCA0002);
+                    return Err(error::Error::new(error::ErrorCode::FOCA0002));
                 }
                 // we first go to a decimal. Any larger number we won't be able to
                 // express, even though bigint strictly speaking could handle it.
                 // But converting a float to a bigint directly isn't possible.
-                let d: Decimal = d.trunc().try_into().map_err(|_| error::Error::FOCA0003)?;
-                let i: i128 = d.try_into().map_err(|_| error::Error::FOCA0003)?;
-                let i: V = i.try_into().map_err(|_| error::Error::FOCA0003)?;
+                let d: Decimal = d
+                    .trunc()
+                    .try_into()
+                    .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?;
+                let i: i128 = d
+                    .try_into()
+                    .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?;
+                let i: V = i
+                    .try_into()
+                    .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?;
                 Ok(i)
             }
             atomic::Atomic::Decimal(d) => decimal_to_integer(d),
@@ -389,18 +414,20 @@ impl atomic::Atomic {
                     .as_ref()
                     .clone()
                     .try_into()
-                    .map_err(|_| error::Error::FOCA0003)?;
+                    .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?;
                 Ok(i)
             }
             atomic::Atomic::Boolean(b) => {
                 let v: V = if b {
-                    1.try_into().map_err(|_| error::Error::FOCA0003)?
+                    1.try_into()
+                        .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?
                 } else {
-                    0.try_into().map_err(|_| error::Error::FOCA0003)?
+                    0.try_into()
+                        .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?
                 };
                 Ok(v)
             }
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -462,7 +489,7 @@ where
 // saturated, then we overflow
 pub(crate) fn duration_i64(x: f64) -> error::Result<i64> {
     if x.is_infinite() {
-        return Err(error::Error::FODT0002);
+        return Err(error::Error::new(error::ErrorCode::FODT0002));
     }
     Ok(x.round() as i64)
 }
@@ -481,9 +508,14 @@ where
         + TryFrom<u8>,
 {
     // we first go to a i128; this accomodates the largest Decimal
-    let i: i128 = d.trunc().try_into().map_err(|_| error::Error::FOCA0003)?;
+    let i: i128 = d
+        .trunc()
+        .try_into()
+        .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?;
     // then we convert this into the target integer type
-    let i: V = i.try_into().map_err(|_| error::Error::FOCA0003)?;
+    let i: V = i
+        .try_into()
+        .map_err(|_| error::Error::new(error::ErrorCode::FOCA0003))?;
     Ok(i)
 }
 
@@ -499,7 +531,9 @@ impl FromStr for Parsed<IBig> {
     type Err = error::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Parsed(s.parse().map_err(|_| error::Error::FOCA0003)?))
+        Ok(Parsed(s.parse().map_err(|_| {
+            error::Error::new(error::ErrorCode::FOCA0003)
+        })?))
     }
 }
 
@@ -602,7 +636,7 @@ mod tests {
     fn test_parse_decimal_no_underscore() {
         assert_eq!(
             atomic::Atomic::parse_atomic::<Decimal>("1_000.0"),
-            Err(error::Error::FORG0001)
+            Err(error::Error::new(error::ErrorCode::FORG0001))
         );
     }
 
@@ -626,7 +660,7 @@ mod tests {
     fn test_parse_integer_no_underscore() {
         assert_eq!(
             atomic::Atomic::parse_atomic::<i64>("1_000"),
-            Err(error::Error::FORG0001)
+            Err(error::Error::new(error::ErrorCode::FORG0001))
         );
     }
 
@@ -683,7 +717,7 @@ mod tests {
     fn test_parse_double_invalid_nan() {
         assert_eq!(
             atomic::Atomic::parse_atomic::<f64>("NAN"),
-            Err(error::Error::FORG0001)
+            Err(error::Error::new(error::ErrorCode::FORG0001))
         );
     }
 
@@ -793,7 +827,7 @@ mod tests {
     fn test_cast_inf_float_to_decimal() {
         assert_eq!(
             atomic::Atomic::Float(OrderedFloat(f32::INFINITY)).cast_to_decimal(),
-            Err(error::Error::FOCA0002)
+            Err(error::Error::new(error::ErrorCode::FOCA0002))
         );
     }
 
@@ -801,7 +835,7 @@ mod tests {
     fn test_cast_huge_float_to_decimal() {
         assert_eq!(
             atomic::Atomic::Float(OrderedFloat(1.0e30)).cast_to_decimal(),
-            Err(error::Error::FOCA0001)
+            Err(error::Error::new(error::ErrorCode::FOCA0001))
         );
     }
 

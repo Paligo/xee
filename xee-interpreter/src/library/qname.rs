@@ -65,7 +65,7 @@ fn qname(param_uri: Option<&str>, param_qname: &str) -> error::Result<atomic::At
     let pairs = if let Some(prefix) = prefix_split.next() {
         if prefix_split.next().is_some() {
             if param_uri.is_empty() {
-                return Err(error::Error::FOCA0002);
+                return Err(error::Error::new(error::ErrorCode::FOCA0002));
             }
             vec![(prefix.to_string(), param_uri.to_string())]
         } else {
@@ -80,7 +80,7 @@ fn qname(param_uri: Option<&str>, param_qname: &str) -> error::Result<atomic::At
     // TODO: see efficiency note for resolve-QName
     let namespaces = Namespaces::new(pairs, "".to_string(), "".to_string());
     let name = parse_name(param_qname, &namespaces)
-        .map_err(|_| error::Error::FOCA0002)?
+        .map_err(|_| error::Error::new(error::ErrorCode::FOCA0002))?
         .value;
     // TODO: the parser should do this already
     // put in default namespace if required

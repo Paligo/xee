@@ -25,17 +25,17 @@ fn my_function(a: IBig, b: IBig) -> IBig {
 
 #[xpath_fn("fn:error() as item()*")]
 fn error_zero_args() -> error::Result<sequence::Sequence> {
-    Err(error::Error::FOER0000)
+    Err(error::Error::new(error::ErrorCode::FOER0000))
 }
 
 #[xpath_fn("fn:error($code as xs:QName?) as item()*")]
 fn error_with_code(code: Option<Name>) -> error::Result<sequence::Sequence> {
     if let Some(code) = code {
-        Err(error::Error::Application(Box::new(
+        Err(error::Error::new(error::ErrorCode::Application(Box::new(
             error::ApplicationError::new(code, "".to_string()),
-        )))
+        ))))
     } else {
-        Err(error::Error::FOER0000)
+        Err(error::Error::new(error::ErrorCode::FOER0000))
     }
 }
 
@@ -61,18 +61,18 @@ fn error_with_code_and_description_and_sequence(
 
 fn error_helper(code: Option<Name>, description: &str) -> error::Result<sequence::Sequence> {
     if let Some(code) = code {
-        Err(error::Error::Application(Box::new(
+        Err(error::Error::new(error::ErrorCode::Application(Box::new(
             error::ApplicationError::new(code, description.to_string()),
-        )))
+        ))))
     } else {
         let unknown_error_qname = Name::new(
             "FOER0000".to_string(),
             "http://www.w3.org/2005/xqt-errors".to_string(),
             "".to_string(),
         );
-        Err(error::Error::Application(Box::new(
+        Err(error::Error::new(error::ErrorCode::Application(Box::new(
             error::ApplicationError::new(unknown_error_qname, description.to_string()),
-        )))
+        ))))
     }
 }
 

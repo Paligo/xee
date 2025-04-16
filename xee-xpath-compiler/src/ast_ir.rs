@@ -1,4 +1,4 @@
-use xee_interpreter::{context, error, error::Error, function, xml};
+use xee_interpreter::{context, error, function, xml};
 use xee_ir::{ir, ir::AtomS, Binding, Bindings, Variables};
 use xee_schema_type::Xs;
 use xee_xpath_ast::{ast, ast::Span, span::Spanned, FN_NAMESPACE};
@@ -254,7 +254,7 @@ impl<'a> IrConverter<'a> {
         let mut current_context_bindings = self.variables.context_item(span)?;
 
         if matches!(ast.axis, ast::Axis::Namespace) {
-            return Err(Error::XPST0010.with_ast_span(span));
+            return Err(error::Error::new(error::ErrorCode::XPST0010).with_ast_span(span));
         }
 
         let step = xml::Step {
@@ -400,10 +400,14 @@ impl<'a> IrConverter<'a> {
                 );
                 if let Some(xs) = xs {
                     if !xs.derives_from(Xs::AnySimpleType) {
-                        return Err(Error::XQST0052.with_ast_span(span));
+                        return Err(
+                            error::Error::new(error::ErrorCode::XQST0052).with_ast_span(span)
+                        );
                     }
                     if xs == Xs::Notation || xs == Xs::AnySimpleType || xs == Xs::AnyAtomicType {
-                        return Err(Error::XPST0080.with_ast_span(span));
+                        return Err(
+                            error::Error::new(error::ErrorCode::XPST0080).with_ast_span(span)
+                        );
                     }
                     let mut bindings = self.path_expr(&ast.path_expr)?;
                     let expr = ir::Expr::Cast(ir::Cast {
@@ -414,7 +418,7 @@ impl<'a> IrConverter<'a> {
                     let binding = self.variables.new_binding(expr, span);
                     Ok(bindings.bind(binding))
                 } else {
-                    Err(Error::XQST0052.with_ast_span(span))
+                    Err(error::Error::new(error::ErrorCode::XQST0052).with_ast_span(span))
                 }
             }
             ast::ApplyOperator::Castable(single_type) => {
@@ -424,10 +428,14 @@ impl<'a> IrConverter<'a> {
                 );
                 if let Some(xs) = xs {
                     if !xs.derives_from(Xs::AnySimpleType) {
-                        return Err(Error::XQST0052.with_ast_span(span));
+                        return Err(
+                            error::Error::new(error::ErrorCode::XQST0052).with_ast_span(span)
+                        );
                     }
                     if xs == Xs::Notation || xs == Xs::AnySimpleType || xs == Xs::AnyAtomicType {
-                        return Err(Error::XPST0080.with_ast_span(span));
+                        return Err(
+                            error::Error::new(error::ErrorCode::XPST0080).with_ast_span(span)
+                        );
                     }
                     let mut bindings = self.path_expr(&ast.path_expr)?;
                     let expr = ir::Expr::Castable(ir::Castable {
@@ -438,7 +446,7 @@ impl<'a> IrConverter<'a> {
                     let binding = self.variables.new_binding(expr, span);
                     Ok(bindings.bind(binding))
                 } else {
-                    Err(Error::XQST0052.with_ast_span(span))
+                    Err(error::Error::new(error::ErrorCode::XQST0052).with_ast_span(span))
                 }
             }
             ast::ApplyOperator::InstanceOf(sequence_type) => {
@@ -575,7 +583,7 @@ impl<'a> IrConverter<'a> {
     ) -> error::SpannedResult<Bindings> {
         let arity = ast.arguments.len();
         if arity > u8::MAX as usize {
-            return Err(Error::XPDY0130.with_ast_span(span));
+            return Err(error::Error::new(error::ErrorCode::XPDY0130).with_ast_span(span));
         }
         // hardcoded fn:position and fn:last
         // These should work without hardcoding them, but this is faster
@@ -586,13 +594,13 @@ impl<'a> IrConverter<'a> {
         if ast.name.value == self.fn_position {
             if arity != 0 {
                 // advice: format!("Either the function name {:?} does not exist, or you are calling it with the wrong number of arguments ({})", ast.name, arity),
-                return Err(Error::XPST0017.with_ast_span(span));
+                return Err(error::Error::new(error::ErrorCode::XPST0017).with_ast_span(span));
             }
             return self.variables.fn_position(span);
         } else if ast.name.value == self.fn_last {
             if arity != 0 {
                 // advice: format!("Either the function name {:?} does not exist, or you are calling it with the wrong number of arguments ({})", ast.name, arity),
-                return Err(Error::XPST0017.with_ast_span(span));
+                return Err(error::Error::new(error::ErrorCode::XPST0017).with_ast_span(span));
             }
             return self.variables.fn_last(span);
         }
@@ -601,7 +609,7 @@ impl<'a> IrConverter<'a> {
         let static_function_id = self
             .static_context
             .function_id_by_name(&ast.name.value, arity as u8)
-            .ok_or(Error::XPST0017.with_ast_span(span))?;
+            .ok_or(error::Error::new(error::ErrorCode::XPST0017).with_ast_span(span))?;
         // TODO we don't know yet how to get the proper span here
         let empty_span = (0..0).into();
         let mut static_function_ref_bindings =
@@ -624,7 +632,7 @@ impl<'a> IrConverter<'a> {
         let static_function_id = self
             .static_context
             .function_id_by_name(&ast.name.value, ast.arity)
-            .ok_or(Error::XPST0017.with_ast_span(span))?;
+            .ok_or(error::Error::new(error::ErrorCode::XPST0017).with_ast_span(span))?;
         Ok(self.static_function_ref(static_function_id, span))
     }
 

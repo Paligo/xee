@@ -69,14 +69,14 @@ pub(crate) fn op_add(
         (Atomic::DayTimeDuration(a), Atomic::DayTimeDuration(b)) => {
             Ok(op_add_day_time_durations(a, b)?)
         }
-        _ => Err(error::Error::XPTY0004),
+        _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
     }
 }
 
 fn op_add_decimal(a: Rc<Decimal>, b: Rc<Decimal>) -> error::Result<atomic::Atomic> {
     Ok(a.as_ref()
         .checked_add(*b.as_ref())
-        .ok_or(error::Error::FOAR0002)?
+        .ok_or(error::Error::new(error::ErrorCode::FOAR0002))?
         .into())
 }
 
@@ -92,10 +92,10 @@ fn op_add_year_month_duration_to_date(
     let date = a.date;
     let new_date = if b.months >= 0 {
         date.checked_add_months(chrono::Months::new(b.months as u32))
-            .ok_or(error::Error::FOAR0002)
+            .ok_or(error::Error::new(error::ErrorCode::FOAR0002))
     } else {
         date.checked_sub_months(chrono::Months::new(b.months.unsigned_abs() as u32))
-            .ok_or(error::Error::FOAR0002)
+            .ok_or(error::Error::new(error::ErrorCode::FOAR0002))
     }?;
 
     Ok(NaiveDateWithOffset::new(new_date, a.offset).into())
@@ -108,7 +108,9 @@ fn op_add_day_time_duration_to_date(
 ) -> error::Result<atomic::Atomic> {
     let offset = a.as_ref().offset;
     let a = a.to_date_time_stamp(default_offset);
-    let a = a.checked_add_signed(b).ok_or(error::Error::FOAR0002)?;
+    let a = a
+        .checked_add_signed(b)
+        .ok_or(error::Error::new(error::ErrorCode::FOAR0002))?;
     let new_date = a.date_naive();
     Ok(NaiveDateWithOffset::new(new_date, offset).into())
 }
@@ -131,11 +133,11 @@ fn op_add_year_month_duration_to_date_time(
     let new_date_time = if b.months >= 0 {
         date_time
             .checked_add_months(chrono::Months::new(b.months as u32))
-            .ok_or(error::Error::FOAR0002)
+            .ok_or(error::Error::new(error::ErrorCode::FOAR0002))
     } else {
         date_time
             .checked_sub_months(chrono::Months::new(b.months.unsigned_abs() as u32))
-            .ok_or(error::Error::FOAR0002)
+            .ok_or(error::Error::new(error::ErrorCode::FOAR0002))
     }?;
 
     Ok(NaiveDateTimeWithOffset::new(new_date_time, a.offset).into())
@@ -150,11 +152,11 @@ fn op_add_year_month_duration_to_date_time_stamp(
     let new_date_time = if b.months >= 0 {
         date_time
             .checked_add_months(chrono::Months::new(b.months as u32))
-            .ok_or(error::Error::FOAR0002)
+            .ok_or(error::Error::new(error::ErrorCode::FOAR0002))
     } else {
         date_time
             .checked_sub_months(chrono::Months::new(b.months.unsigned_abs() as u32))
-            .ok_or(error::Error::FOAR0002)
+            .ok_or(error::Error::new(error::ErrorCode::FOAR0002))
     }?;
 
     Ok(new_date_time.into())
@@ -168,7 +170,7 @@ fn op_add_day_time_duration_to_date_time(
         .as_ref()
         .date_time
         .checked_add_signed(b)
-        .ok_or(error::Error::FOAR0002)?;
+        .ok_or(error::Error::new(error::ErrorCode::FOAR0002))?;
     Ok(NaiveDateTimeWithOffset::new(new_date_time, a.as_ref().offset).into())
 }
 
@@ -178,7 +180,7 @@ fn op_add_day_time_duration_to_date_time_stamp(
 ) -> error::Result<atomic::Atomic> {
     let new_date_time = (*a.as_ref())
         .checked_add_signed(b)
-        .ok_or(error::Error::FOAR0002)?;
+        .ok_or(error::Error::new(error::ErrorCode::FOAR0002))?;
     Ok(new_date_time.into())
 }
 
@@ -189,7 +191,7 @@ fn op_add_year_month_durations(
     let new_months = a
         .months
         .checked_add(b.months)
-        .ok_or(error::Error::FOAR0002)?;
+        .ok_or(error::Error::new(error::ErrorCode::FOAR0002))?;
     Ok(YearMonthDuration { months: new_months }.into())
 }
 
@@ -199,7 +201,7 @@ fn op_add_day_time_durations(
 ) -> error::Result<atomic::Atomic> {
     let new_duration = (*a.as_ref())
         .checked_add(b.as_ref())
-        .ok_or(error::Error::FOAR0002)?;
+        .ok_or(error::Error::new(error::ErrorCode::FOAR0002))?;
 
     Ok(new_duration.into())
 }
@@ -229,7 +231,7 @@ mod tests {
         let a = Decimal::MAX.into();
         let b = dec!(2.7).into();
         let result = op_add(a, b, default_offset());
-        assert_eq!(result, Err(error::Error::FOAR0002));
+        assert_eq!(result, Err(error::Error::new(error::ErrorCode::FOAR0002)));
     }
 
     #[test]

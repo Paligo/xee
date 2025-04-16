@@ -55,14 +55,14 @@ pub(crate) fn op_multiply(a: atomic::Atomic, b: atomic::Atomic) -> error::Result
         | (Atomic::Double(OrderedFloat(b)), Atomic::DayTimeDuration(a)) => {
             Ok(op_multiply_day_time_duration_by_double(a, b)?)
         }
-        _ => Err(error::Error::XPTY0004),
+        _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
     }
 }
 
 fn op_multiply_decimal(a: Rc<Decimal>, b: Rc<Decimal>) -> error::Result<atomic::Atomic> {
     Ok(a.as_ref()
         .checked_mul(*b.as_ref())
-        .ok_or(error::Error::FOAR0002)?
+        .ok_or(error::Error::new(error::ErrorCode::FOAR0002))?
         .into())
 }
 
@@ -87,7 +87,7 @@ fn op_multiply_year_month_duration_by_double(
     b: f64,
 ) -> error::Result<atomic::Atomic> {
     if b.is_nan() {
-        return Err(error::Error::FOCA0005);
+        return Err(error::Error::new(error::ErrorCode::FOCA0005));
     }
     let total = duration_i64(a.months as f64 * b)?;
     Ok(YearMonthDuration::new(total).into())
@@ -110,7 +110,7 @@ fn op_multiply_day_time_duration_by_double(
     b: f64,
 ) -> error::Result<atomic::Atomic> {
     if b.is_nan() {
-        return Err(error::Error::FOCA0005);
+        return Err(error::Error::new(error::ErrorCode::FOCA0005));
     }
     let a = a.num_milliseconds() as f64;
     let total = duration_i64(a * b)?;

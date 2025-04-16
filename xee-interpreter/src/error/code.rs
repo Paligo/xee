@@ -2,10 +2,6 @@ use strum::EnumMessage;
 use strum_macros::{Display, EnumMessage};
 use xot::xmlname::NameStrInfo;
 
-use crate::span::SourceSpan;
-
-use super::SpannedError;
-
 /// XPath/XSLT error code
 ///
 /// These are specified by the XPath and XSLT specifications.
@@ -15,7 +11,7 @@ use super::SpannedError;
 /// Also known as `Error` internally.
 #[derive(Debug, Clone, PartialEq, Display, EnumMessage)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub enum Error {
+pub enum ErrorCode {
     /// Stack overflow.
     ///
     /// Internal stack overflow.
@@ -718,21 +714,10 @@ impl ApplicationError {
     }
 }
 
-impl Error {
-    pub fn with_span(self, span: SourceSpan) -> SpannedError {
-        SpannedError {
-            error: self,
-            span: Some(span),
-        }
-    }
-
-    pub fn with_ast_span(self, span: xee_xpath_ast::ast::Span) -> SpannedError {
-        Self::with_span(self, span.into())
-    }
-
+impl ErrorCode {
     pub fn code(&self) -> String {
         match self {
-            Error::Application(application_error) => {
+            ErrorCode::Application(application_error) => {
                 application_error.qname.local_name().to_string()
             }
             _ => self.to_string(),
@@ -741,7 +726,7 @@ impl Error {
 
     pub fn code_qname(&self) -> xot::xmlname::OwnedName {
         match self {
-            Error::Application(application_error) => application_error.qname.clone(),
+            ErrorCode::Application(application_error) => application_error.qname.clone(),
             _ => xot::xmlname::OwnedName::new(
                 self.code(),
                 "http://www.w3.org/2005/xqt-errors".to_string(),
@@ -769,4 +754,3 @@ impl Error {
         }
     }
 }
-impl std::error::Error for Error {}

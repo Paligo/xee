@@ -24,7 +24,7 @@ impl TryFrom<Sequence> for xot::Node {
     fn try_from(sequence: Sequence) -> Result<Self, Self::Error> {
         match sequence {
             Sequence::One(item) => item.item().try_into(),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -35,7 +35,7 @@ impl TryFrom<Sequence> for function::Function {
     fn try_from(sequence: Sequence) -> Result<Self, Self::Error> {
         match sequence {
             Sequence::One(item) => item.item().try_into(),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }

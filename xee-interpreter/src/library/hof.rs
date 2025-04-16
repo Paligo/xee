@@ -254,7 +254,7 @@ fn apply(
     let function = function.to_function()?;
     let arity = array.len();
     if interpreter.function_arity(&function) != arity {
-        return Err(error::Error::FOAP0001);
+        return Err(error::Error::new(error::ErrorCode::FOAP0001));
     }
     interpreter.call_function_with_arguments(&function, &array.0)
 }

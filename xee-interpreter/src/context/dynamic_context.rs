@@ -2,6 +2,7 @@ use ahash::{AHashMap, HashMap};
 use iri_string::types::{IriStr, IriString};
 use std::fmt::Debug;
 
+use crate::error::ErrorCode;
 use crate::function::{self, Function};
 use crate::{error::Error, interpreter::Program};
 use crate::{interpreter, sequence};
@@ -127,7 +128,10 @@ impl<'a> DynamicContext<'a> {
     pub(crate) fn arguments(&self) -> Result<Vec<sequence::Sequence>, Error> {
         let mut arguments = Vec::new();
         for variable_name in self.static_context().variable_names() {
-            let items = self.variables.get(variable_name).ok_or(Error::XPDY0002)?;
+            let items = self
+                .variables
+                .get(variable_name)
+                .ok_or(Error::new(ErrorCode::XPDY0002))?;
             arguments.push(items.clone());
         }
         Ok(arguments)

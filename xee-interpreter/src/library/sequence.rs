@@ -62,7 +62,9 @@ fn insert_before(
     } else {
         position
     };
-    let position: usize = position.try_into().map_err(|_| error::Error::FOAR0002)?;
+    let position: usize = position
+        .try_into()
+        .map_err(|_| error::Error::new(error::ErrorCode::FOAR0002))?;
     let position = position.saturating_sub(1);
     let position = if position > target.len() {
         target.len()
@@ -98,7 +100,9 @@ fn remove(target: &sequence::Sequence, position: IBig) -> error::Result<sequence
     } else {
         position
     };
-    let position: usize = position.try_into().map_err(|_| error::Error::FOAR0002)?;
+    let position: usize = position
+        .try_into()
+        .map_err(|_| error::Error::new(error::ErrorCode::FOAR0002))?;
     if position == 0 || position > target.len() {
         return Ok(target.clone());
     }
@@ -247,14 +251,14 @@ fn zero_or_one(arg: &sequence::Sequence) -> error::Result<Option<sequence::Item>
     match arg.len() {
         0 => Ok(None),
         1 => Ok(arg.iter().next()),
-        _ => Err(error::Error::FORG0003),
+        _ => Err(error::Error::new(error::ErrorCode::FORG0003)),
     }
 }
 
 #[xpath_fn("fn:one-or-more($arg as item()*) as item()+")]
 fn one_or_more(arg: &sequence::Sequence) -> error::Result<sequence::Sequence> {
     if arg.is_empty() {
-        Err(error::Error::FORG0004)
+        Err(error::Error::new(error::ErrorCode::FORG0004))
     } else {
         Ok(arg.clone())
     }
@@ -265,7 +269,7 @@ fn exactly_one(arg: &sequence::Sequence) -> error::Result<sequence::Item> {
     if arg.len() == 1 {
         Ok(arg.iter().next().unwrap().clone())
     } else {
-        Err(error::Error::FORG0005)
+        Err(error::Error::new(error::ErrorCode::FORG0005))
     }
 }
 
@@ -372,7 +376,7 @@ where
         let mut extreme = atom?;
         // if extreme is not comparable, then we fail
         if !extreme.is_comparable() {
-            return Err(error::Error::FORG0006);
+            return Err(error::Error::new(error::ErrorCode::FORG0006));
         }
 
         let collation = context
@@ -396,7 +400,7 @@ where
                     collation.as_ref(),
                     default_offset,
                 )
-                .map_err(|_| error::Error::FORG0006)?)
+                .map_err(|_| error::Error::new(error::ErrorCode::FORG0006))?)
                 && !extreme.is_nan()
             {
                 extreme = atom;
@@ -464,14 +468,15 @@ fn sum_atoms(
         let mut total = total?;
         let mut atoms = atoms.peekable();
         if atoms.peek().is_none() && !total.is_addable() {
-            return Err(error::Error::FORG0006);
+            return Err(error::Error::new(error::ErrorCode::FORG0006));
         }
         let mut count = 1;
         // now add all the further atoms
         for atom in atoms {
             let atom = atom?;
             count += 1;
-            total = op_add(total, atom, default_offset).map_err(|_| error::Error::FORG0006)?;
+            total = op_add(total, atom, default_offset)
+                .map_err(|_| error::Error::new(error::ErrorCode::FORG0006))?;
         }
         Ok(Some((total, count)))
     } else {

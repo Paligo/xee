@@ -25,7 +25,7 @@ impl TryFrom<Value> for sequence::Sequence {
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
-            Value::Absent => Err(error::Error::XPDY0002),
+            Value::Absent => Err(error::Error::new(error::ErrorCode::XPDY0002)),
             Value::Sequence(sequence) => Ok(sequence),
         }
     }
@@ -36,7 +36,7 @@ impl TryFrom<&Value> for sequence::Sequence {
 
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         match value {
-            Value::Absent => Err(error::Error::XPDY0002),
+            Value::Absent => Err(error::Error::new(error::ErrorCode::XPDY0002)),
             Value::Sequence(sequence) => Ok(sequence.clone()),
         }
     }

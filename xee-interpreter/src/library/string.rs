@@ -26,12 +26,14 @@ const MAX_CONCAT_ARITY: usize = 99;
 fn codepoints_to_string(arg: impl Iterator<Item = error::Result<IBig>>) -> error::Result<String> {
     arg.map(|c| {
         let c = c?;
-        let c: u32 = c.try_into().map_err(|_| error::Error::FOCH0001)?;
-        let c = char::from_u32(c).ok_or(error::Error::FOCH0001)?;
+        let c: u32 = c
+            .try_into()
+            .map_err(|_| error::Error::new(error::ErrorCode::FOCH0001))?;
+        let c = char::from_u32(c).ok_or(error::Error::new(error::ErrorCode::FOCH0001))?;
         if is_valid_xml_char(c) {
             Ok(c)
         } else {
-            Err(error::Error::FOCH0001)
+            Err(error::Error::new(error::ErrorCode::FOCH0001))
         }
     })
     .collect::<error::Result<String>>()
@@ -282,7 +284,7 @@ fn normalize_unicode(arg: Option<&str>, normalization_form: &str) -> error::Resu
                 Ok(normalizer.normalize(arg))
             }
             // TODO: FULLY-NORMALIZED
-            _ => Err(error::Error::FOCH0003),
+            _ => Err(error::Error::new(error::ErrorCode::FOCH0003)),
         }
     } else {
         Ok("".to_string())
@@ -383,7 +385,7 @@ fn contains(
         }
         // for now, icu4x does not yet support collation units (actually named collation elements)
         // https://github.com/unicode-org/icu4x/discussions/3981
-        Collation::Uca(_) => Err(error::Error::FOCH0004),
+        Collation::Uca(_) => Err(error::Error::new(error::ErrorCode::FOCH0004)),
     }
 }
 
@@ -414,7 +416,7 @@ fn starts_with(
         }
         // for now, icu4x does not yet support collation units (actually named collation elements)
         // https://github.com/unicode-org/icu4x/discussions/3981
-        Collation::Uca(_) => Err(error::Error::FOCH0004),
+        Collation::Uca(_) => Err(error::Error::new(error::ErrorCode::FOCH0004)),
     }
 }
 
@@ -448,7 +450,7 @@ fn ends_with(
         }
         // for now, icu4x does not yet support collation units (actually named collation elements)
         // https://github.com/unicode-org/icu4x/discussions/3981
-        Collation::Uca(_) => Err(error::Error::FOCH0004),
+        Collation::Uca(_) => Err(error::Error::new(error::ErrorCode::FOCH0004)),
     }
 }
 
@@ -481,7 +483,7 @@ fn substring_before(
         }
         // for now, icu4x does not yet support collation units (actually named collation elements)
         // https://github.com/unicode-org/icu4x/discussions/3981
-        Collation::Uca(_) => Err(error::Error::FOCH0004),
+        Collation::Uca(_) => Err(error::Error::new(error::ErrorCode::FOCH0004)),
     }
 }
 
@@ -520,7 +522,7 @@ fn substring_after(
         }
         // for now, icu4x does not yet support collation units (actually named collation elements)
         // https://github.com/unicode-org/icu4x/discussions/3981
-        Collation::Uca(_) => Err(error::Error::FOCH0004),
+        Collation::Uca(_) => Err(error::Error::new(error::ErrorCode::FOCH0004)),
     }
 }
 

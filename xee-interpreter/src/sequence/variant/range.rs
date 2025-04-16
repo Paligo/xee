@@ -18,7 +18,7 @@ impl Range {
     pub(crate) fn new(start: IBig, end: IBig) -> error::Result<Self> {
         let length: IBig = &end - &start;
         if length > MAXIMUM_RANGE_SIZE.into() {
-            return Err(error::Error::FOAR0002);
+            return Err(error::Error::new(error::ErrorCode::FOAR0002));
         }
 
         Ok(Range {
@@ -94,12 +94,12 @@ impl<'a> SequenceCore<'a, RangeIterator> for Range {
     #[inline]
     fn one(self) -> error::Result<Item> {
         match self.len() {
-            0 => Err(error::Error::XPTY0004),
+            0 => Err(error::Error::new(error::ErrorCode::XPTY0004)),
             1 => {
                 let i: IBig = self.start.as_ref().clone();
                 Ok(i.into())
             }
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -111,7 +111,7 @@ impl<'a> SequenceCore<'a, RangeIterator> for Range {
                 let i: IBig = self.start.as_ref().clone();
                 Ok(Some(i.into()))
             }
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -129,7 +129,7 @@ impl<'a> SequenceCore<'a, RangeIterator> for Range {
         match self.len() {
             0 => Ok(false),
             1 => Ok(true),
-            _ => Err(error::Error::FORG0006),
+            _ => Err(error::Error::new(error::ErrorCode::FORG0006)),
         }
     }
 
@@ -138,7 +138,7 @@ impl<'a> SequenceCore<'a, RangeIterator> for Range {
         match self.len() {
             0 => Ok(String::new()),
             1 => Ok(self.start.to_string()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -202,6 +202,6 @@ where
 {
     fn one_node(&self) -> error::Result<xot::Node> {
         // a range never contains nodes
-        Err(error::Error::XPTY0004)
+        Err(error::Error::new(error::ErrorCode::XPTY0004))
     }
 }

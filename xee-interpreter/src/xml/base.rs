@@ -37,7 +37,7 @@ impl<'a> BaseUriResolver<'a> {
                     let base: &IriReferenceStr = base
                         .as_str()
                         .try_into()
-                        .map_err(|_| error::Error::FORG0002)?;
+                        .map_err(|_| error::Error::new(error::ErrorCode::FORG0002))?;
                     match base.to_iri() {
                         Ok(iri) => Some(iri.to_owned()),
                         Err(iri) => {
@@ -47,16 +47,18 @@ impl<'a> BaseUriResolver<'a> {
                                 let base = self.base_uri(parent)?;
                                 if let Some(base) = base {
                                     let base: IriAbsoluteString =
-                                        base.try_into().map_err(|_| error::Error::FORG0002)?;
+                                        base.try_into().map_err(|_| {
+                                            error::Error::new(error::ErrorCode::FORG0002)
+                                        })?;
                                     let iri = iri.resolve_against(&base);
                                     Some(iri.into())
                                 } else {
                                     // no base URI, so how to resolve?
-                                    return Err(error::Error::FORG0009);
+                                    return Err(error::Error::new(error::ErrorCode::FORG0009));
                                 }
                             } else {
                                 // no parent, so how to resolve?
-                                return Err(error::Error::FORG0002);
+                                return Err(error::Error::new(error::ErrorCode::FORG0002));
                             }
                         }
                     }

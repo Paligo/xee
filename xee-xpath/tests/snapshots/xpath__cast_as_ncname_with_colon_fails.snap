@@ -1,10 +1,13 @@
 ---
-source: xee-xpath-compiler/tests/xpath.rs
+source: xee-xpath/tests/xpath.rs
 expression: "run(\"'foo:bar' cast as xs:NCName\")"
 ---
 Err(
     SpannedError {
-        error: FORG0001,
+        error: Error {
+            code: FORG0001,
+            message: None,
+        },
         span: Some(
             SourceSpan(
                 0,

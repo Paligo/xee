@@ -54,7 +54,7 @@ impl AtomicCompare for OpEq {
             (Binary(BinaryType::Hex, a), Binary(BinaryType::Hex, b)) => Ok(a == b),
             (Binary(BinaryType::Base64, a), Binary(BinaryType::Base64, b)) => Ok(a == b),
             (QName(a), QName(b)) => Ok(a == b),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 

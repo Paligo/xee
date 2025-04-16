@@ -125,7 +125,7 @@ impl CollatorQuery {
                 } else if fallback {
                     Ok(default)
                 } else {
-                    Err(error::Error::FOCH0002)
+                    Err(error::Error::new(error::ErrorCode::FOCH0002))
                 }
             } else {
                 Ok(default)
@@ -134,7 +134,7 @@ impl CollatorQuery {
 
         // if fallback is no we don't recognize any unrecognized keys
         if !fallback && has_unrecognized_key {
-            return Err(error::Error::FOCH0002);
+            return Err(error::Error::new(error::ErrorCode::FOCH0002));
         }
 
         Ok(CollatorQuery {
@@ -180,11 +180,14 @@ impl Collation {
             let uri: IriString = uri.resolve_against(base_uri).into();
             uri
         } else {
-            let uri: IriString = uri.to_iri().map_err(|_| error::Error::FOCH0002)?.to_owned();
+            let uri: IriString = uri
+                .to_iri()
+                .map_err(|_| error::Error::new(error::ErrorCode::FOCH0002))?
+                .to_owned();
             uri
         };
         if uri.scheme_str() != "http" || uri.authority_str() != Some("www.w3.org") {
-            return Err(error::Error::FOCH0002);
+            return Err(error::Error::new(error::ErrorCode::FOCH0002));
         }
         let path = uri.path_str();
         Ok(match path {
@@ -196,7 +199,7 @@ impl Collation {
             "/2005/xpath-functions/collation/html-ascii-case-insensitive" => Collation::HtmlAscii,
             // TODO: a bit of a hack, we support the qt3 caseblind collation too so that the test suite will work
             "/2010/09/qt-fots-catalog/collation/caseblind" => Collation::HtmlAscii,
-            _ => return Err(error::Error::FOCH0002),
+            _ => return Err(error::Error::new(error::ErrorCode::FOCH0002)),
         })
     }
 
@@ -209,7 +212,7 @@ impl Collation {
                         // in case of fallback, get a locale anyway
                         Locale::UND
                     } else {
-                        return Err(error::Error::FOCH0002);
+                        return Err(error::Error::new(error::ErrorCode::FOCH0002));
                     }
                 }
             }
@@ -222,7 +225,8 @@ impl Collation {
         let locale = locale.into();
         let options = collator_query.into();
 
-        Collator::try_new(&locale, options).map_err(|_| error::Error::FOCH0002)
+        Collator::try_new(&locale, options)
+            .map_err(|_| error::Error::new(error::ErrorCode::FOCH0002))
     }
 
     pub(crate) fn compare(&self, a: &str, b: &str) -> Ordering {

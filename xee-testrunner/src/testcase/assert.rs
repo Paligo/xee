@@ -617,7 +617,7 @@ impl AssertError {
         }
         // all errors are officially a pass, but we check whether the error
         // code matches too
-        let code = error.code_qname();
+        let code = error.code.code_qname();
         // FIXME: there is no checking for the correct namespace here, should
         // there be?
         if code.local_name() == self.0 {

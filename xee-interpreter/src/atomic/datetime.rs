@@ -108,7 +108,7 @@ impl TryFrom<Atomic> for Duration {
             Atomic::Duration(d) => Ok(d.as_ref().clone()),
             Atomic::YearMonthDuration(d) => Ok(Duration::from_year_month(d)),
             Atomic::DayTimeDuration(d) => Ok(Duration::from_day_time(*d)),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -119,7 +119,7 @@ impl TryFrom<Atomic> for chrono::Duration {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::DayTimeDuration(d) => Ok(*d.as_ref()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -162,7 +162,7 @@ impl TryFrom<Atomic> for NaiveDateTimeWithOffset {
         match a {
             Atomic::DateTime(d) => Ok(d.as_ref().clone()),
             Atomic::DateTimeStamp(d) => Ok((*d.as_ref()).into()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -202,7 +202,7 @@ impl TryFrom<Atomic> for NaiveTimeWithOffset {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Time(d) => Ok(d.as_ref().clone()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -249,7 +249,7 @@ impl TryFrom<Atomic> for NaiveDateWithOffset {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Date(d) => Ok(d.as_ref().clone()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }

@@ -5,7 +5,11 @@ use xee_schema_type::Xs;
 use xee_xpath_ast::ast;
 use xot::Xot;
 
-use crate::{atomic, context, error, sequence, string};
+use crate::{
+    atomic, context,
+    error,
+    sequence, string,
+};
 
 /// An XPath Map (a collection of key-value pairs).
 #[derive(Debug, Clone, PartialEq)]
@@ -453,7 +457,7 @@ impl ManyMap {
         for (key, value) in entries {
             let map_key = atomic::MapKey::new(key.clone())?;
             if map.contains_key(&map_key) {
-                return Err(error::Error::XQDY0137);
+                return Err(error::Error::new(error::ErrorCode::XQDY0137));
             }
             map.insert(map_key, (key, value));
         }

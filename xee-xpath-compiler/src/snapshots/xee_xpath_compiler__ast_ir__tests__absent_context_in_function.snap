@@ -4,7 +4,10 @@ expression: "convert_xpath(\"function() { . }\")"
 ---
 Err(
     SpannedError {
-        error: XPDY0002,
+        error: Error {
+            code: XPDY0002,
+            message: None,
+        },
         span: Some(
             SourceSpan(
                 13,

@@ -9,7 +9,8 @@ use super::StaticFunctionDescription;
 #[xpath_fn("fn:parse-json($json_text as xs:string?) as item()?")]
 fn parse_json1(json_text: Option<&str>) -> error::Result<Option<sequence::Item>> {
     if let Some(json_text) = json_text {
-        let value = json::parse(json_text).map_err(|_| error::Error::FOJS0001)?;
+        let value =
+            json::parse(json_text).map_err(|_| error::Error::new(error::ErrorCode::FOJS0001))?;
         // the spec seems to imply escape should be true by default, but then
         // various tests fail (and escape false by default seems more
         // reasonable) See https://github.com/w3c/qt3tests/issues/65
@@ -30,7 +31,8 @@ fn parse_json2(
         ParseJsonParameters::from_map(&options, context.static_context(), interpreter.xot())?;
 
     if let Some(json_text) = json_text {
-        let value = json::parse(json_text).map_err(|_| error::Error::FOJS0001)?;
+        let value =
+            json::parse(json_text).map_err(|_| error::Error::new(error::ErrorCode::FOJS0001))?;
         Ok(parse_json_value(&value, parameters.escape)?)
     } else {
         Ok(None)
@@ -67,15 +69,15 @@ impl ParseJsonParameters {
 
         let liberal = c
             .option_with_default("liberal", Xs::Boolean, false)
-            .map_err(|_| error::Error::FOJS0005)?;
+            .map_err(|_| error::Error::new(error::ErrorCode::FOJS0005))?;
         let duplicates = c
             .option_with_default("duplicates", Xs::String, "use-first".to_string())
-            .map_err(|_| error::Error::FOJS0005)?;
+            .map_err(|_| error::Error::new(error::ErrorCode::FOJS0005))?;
         let duplicates = match duplicates.as_str() {
             "reject" => Duplicates::Reject,
             "use-first" => Duplicates::UseFirst,
             "use-last" => Duplicates::UseLast,
-            _ => return Err(error::Error::FOJS0005),
+            _ => return Err(error::Error::new(error::ErrorCode::FOJS0005)),
         };
         // the escape is true by default, weird but following the spec.
         // weirdly enough the default is `false` (contrary to the spec) in
@@ -83,7 +85,7 @@ impl ParseJsonParameters {
         // See https://github.com/w3c/qt3tests/issues/65
         let escape = c
             .option_with_default("escape", Xs::Boolean, true)
-            .map_err(|_| error::Error::FOJS0005)?;
+            .map_err(|_| error::Error::new(error::ErrorCode::FOJS0005))?;
 
         Ok(Self {
             liberal,

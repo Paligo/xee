@@ -4,7 +4,10 @@ expression: "convert_expr_single(\"1 cast as xs:untyped\")"
 ---
 Err(
     SpannedError {
-        error: XQST0052,
+        error: Error {
+            code: XQST0052,
+            message: None,
+        },
         span: Some(
             SourceSpan(
                 0,

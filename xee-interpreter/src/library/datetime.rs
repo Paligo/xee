@@ -24,7 +24,7 @@ fn date_time(
                     if arg1 == arg2 {
                         Some(arg1)
                     } else {
-                        return Err(error::Error::FORG0008);
+                        return Err(error::Error::new(error::ErrorCode::FORG0008));
                     }
                 }
                 (Some(arg1), None) => Some(arg1),
@@ -310,7 +310,7 @@ fn duration_to_offset(
             || duration < chrono::Duration::hours(-14)
             || duration.num_seconds() % (60 * 60) != 0
         {
-            return Err(error::Error::FODT0003);
+            return Err(error::Error::new(error::ErrorCode::FODT0003));
         }
         Ok(Some(
             chrono::FixedOffset::east_opt(
@@ -331,7 +331,7 @@ fn parse_ietf_date(value: Option<&str>) -> error::Result<Option<NaiveDateTimeWit
     if let Some(value) = value {
         match chrono::DateTime::parse_from_rfc2822(value.trim()) {
             Ok(date_time) => Ok(Some(date_time.into())),
-            Err(_) => Err(error::Error::FORG0010),
+            Err(_) => Err(error::Error::new(error::ErrorCode::FORG0010)),
         }
     } else {
         Ok(None)

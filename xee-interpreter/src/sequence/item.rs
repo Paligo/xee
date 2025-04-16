@@ -30,7 +30,7 @@ impl Item {
     pub fn to_atomic(&self) -> error::Result<atomic::Atomic> {
         match self {
             Item::Atomic(a) => Ok(a.clone()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -38,7 +38,7 @@ impl Item {
     pub fn to_node(&self) -> error::Result<xot::Node> {
         match self {
             Item::Node(n) => Ok(*n),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -46,7 +46,7 @@ impl Item {
     pub fn to_function(&self) -> error::Result<function::Function> {
         match self {
             Item::Function(f) => Ok(f.clone()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -55,7 +55,7 @@ impl Item {
         if let Item::Function(function::Function::Map(map)) = self {
             Ok(map.clone())
         } else {
-            Err(error::Error::XPTY0004)
+            Err(error::Error::new(error::ErrorCode::XPTY0004))
         }
     }
 
@@ -64,7 +64,7 @@ impl Item {
         if let Item::Function(function::Function::Array(array)) = self {
             Ok(array.clone())
         } else {
-            Err(error::Error::XPTY0004)
+            Err(error::Error::new(error::ErrorCode::XPTY0004))
         }
     }
 
@@ -88,7 +88,7 @@ impl Item {
             // this is the case when a single node is on the stack, just like if it
             // were in a sequence.
             Item::Node(_) => Ok(true),
-            Item::Function(_) => Err(error::Error::FORG0006),
+            Item::Function(_) => Err(error::Error::new(error::ErrorCode::FORG0006)),
         }
     }
 
@@ -100,7 +100,7 @@ impl Item {
         match self {
             Item::Atomic(a) => a.clone().try_into(),
             // atomic::Atomic::try_from(a.clone()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -117,7 +117,7 @@ impl Item {
         match self {
             Item::Atomic(atomic) => Ok(atomic.string_value()),
             Item::Node(node) => Ok(xot.string_value(*node)),
-            Item::Function(_) => Err(error::Error::FOTY0014),
+            Item::Function(_) => Err(error::Error::new(error::ErrorCode::FOTY0014)),
         }
     }
 
@@ -202,7 +202,7 @@ impl TryFrom<Item> for atomic::Atomic {
     fn try_from(item: Item) -> error::Result<atomic::Atomic> {
         match item {
             Item::Atomic(a) => Ok(a),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -213,7 +213,7 @@ impl TryFrom<&Item> for atomic::Atomic {
     fn try_from(item: &Item) -> error::Result<atomic::Atomic> {
         match item {
             Item::Atomic(a) => Ok(a.clone()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -230,7 +230,7 @@ impl TryFrom<Item> for xot::Node {
     fn try_from(item: Item) -> error::Result<Self> {
         match item {
             Item::Node(node) => Ok(node),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -241,7 +241,7 @@ impl TryFrom<&Item> for xot::Node {
     fn try_from(item: &Item) -> error::Result<Self> {
         match item {
             Item::Node(node) => Ok(*node),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -252,7 +252,7 @@ impl TryFrom<Item> for function::Function {
     fn try_from(item: Item) -> error::Result<Self> {
         match item {
             Item::Function(f) => Ok(f.clone()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -263,7 +263,7 @@ impl TryFrom<&Item> for function::Function {
     fn try_from(item: &Item) -> error::Result<Self> {
         match item {
             Item::Function(f) => Ok(f.clone()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 }
@@ -305,7 +305,9 @@ impl<'a> AtomizedItemIter<'a> {
             }
             Item::Function(function) => match function {
                 function::Function::Array(a) => Self::Array(AtomizedArrayIter::new(a, xot)),
-                _ => Self::Erroring(std::iter::once(Err(error::Error::FOTY0013))),
+                _ => Self::Erroring(std::iter::once(Err(error::Error::new(
+                    error::ErrorCode::FOTY0013,
+                )))),
             },
         }
     }

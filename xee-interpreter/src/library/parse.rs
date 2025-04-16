@@ -17,11 +17,11 @@ fn parse_xml(
         let handle = documents
             .borrow_mut()
             .add_string(interpreter.xot_mut(), None, arg)
-            .map_err(|_| error::Error::FODC0006)?;
+            .map_err(|_| error::Error::new(error::ErrorCode::FODC0006))?;
         let doc = documents
             .borrow()
             .get_node_by_handle(handle)
-            .ok_or(error::Error::FODC0006)?;
+            .ok_or(error::Error::new(error::ErrorCode::FODC0006))?;
         Ok(Some(doc))
     } else {
         Ok(None)
@@ -39,11 +39,11 @@ fn parse_xml_fragment(
         let handle = documents
             .borrow_mut()
             .add_fragment_string(interpreter.xot_mut(), arg)
-            .map_err(|_| error::Error::FODC0006)?;
+            .map_err(|_| error::Error::new(error::ErrorCode::FODC0006))?;
         let doc = documents
             .borrow()
             .get_node_by_handle(handle)
-            .ok_or(error::Error::FODC0006)?;
+            .ok_or(error::Error::new(error::ErrorCode::FODC0006))?;
         Ok(Some(doc))
     } else {
         Ok(None)
@@ -77,7 +77,7 @@ fn serialize2(
             map.clone()
         } else {
             // TODO: handle element(output::serialization-parameters)
-            return Err(error::Error::XPTY0004);
+            return Err(error::Error::new(error::ErrorCode::XPTY0004));
         }
     } else {
         function::Map::new(vec![])?

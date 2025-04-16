@@ -1,10 +1,13 @@
 ---
-source: xee-xpath-compiler/tests/xpath.rs
+source: xee-xpath/tests/xpath.rs
 expression: "run(\". + 1\")"
 ---
 Err(
     SpannedError {
-        error: XPDY0002,
+        error: Error {
+            code: XPDY0002,
+            message: None,
+        },
         span: Some(
             SourceSpan(
                 0,

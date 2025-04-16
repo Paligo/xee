@@ -4,7 +4,10 @@ expression: "convert_expr_single(\"$unknown\")"
 ---
 Err(
     SpannedError {
-        error: XPST0008,
+        error: Error {
+            code: XPST0008,
+            message: None,
+        },
         span: Some(
             SourceSpan(
                 0,

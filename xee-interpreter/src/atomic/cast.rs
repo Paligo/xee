@@ -22,7 +22,7 @@ impl atomic::Atomic {
         // not
         s.parse::<Parsed<V>>()
             .map(|p| p.into_inner().into())
-            .map_err(|_| error::Error::FORG0001)
+            .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
     }
 
     pub(crate) fn parse_boolean(s: &str) -> error::Result<bool> {
@@ -31,7 +31,7 @@ impl atomic::Atomic {
             "false" => Ok(false),
             "1" => Ok(true),
             "0" => Ok(false),
-            _ => Err(error::Error::FORG0001),
+            _ => Err(error::Error::new(error::ErrorCode::FORG0001)),
         }
     }
 
@@ -177,13 +177,15 @@ impl atomic::Atomic {
             let b = other.cast_to_schema_type_of(&self, context)?;
             Ok((self, b))
         } else {
-            Err(error::Error::XPTY0004)
+            Err(error::Error::new(error::ErrorCode::XPTY0004))
         }
     }
 
     pub(crate) fn cast_to_boolean(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::XPTY0004),
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
+                Err(error::Error::new(error::ErrorCode::XPTY0004))
+            }
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => {
                 Self::parse_atomic::<bool>(&s)
             }
@@ -192,7 +194,7 @@ impl atomic::Atomic {
             atomic::Atomic::Integer(_, i) => Ok(atomic::Atomic::Boolean(!i.is_zero())),
             atomic::Atomic::Double(d) => Ok(atomic::Atomic::Boolean(!(d.is_nan() || d.is_zero()))),
             atomic::Atomic::Boolean(_) => Ok(self.clone()),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -214,7 +216,9 @@ impl atomic::Atomic {
         F: Fn(&str) -> error::Result<Vec<u8>>,
     {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::XPTY0004),
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
+                Err(error::Error::new(error::ErrorCode::XPTY0004))
+            }
             atomic::Atomic::String(_, s) | atomic::Atomic::Untyped(s) => {
                 let s = s.as_ref();
                 let s = whitespace_remove(s);
@@ -222,14 +226,14 @@ impl atomic::Atomic {
                 Ok(atomic::Atomic::Binary(binary_type, data.into()))
             }
             atomic::Atomic::Binary(_, data) => Ok(atomic::Atomic::Binary(binary_type, data)),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
     pub(crate) fn cast_to_hex_binary(self) -> error::Result<atomic::Atomic> {
         self.cast_to_binary(atomic::BinaryType::Hex, |s: &str| {
             let data = hex::decode(s);
-            data.map_err(|_| error::Error::FORG0001)
+            data.map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
         })
     }
 
@@ -238,7 +242,7 @@ impl atomic::Atomic {
             use base64::Engine;
             base64::engine::general_purpose::STANDARD
                 .decode(s)
-                .map_err(|_| error::Error::FORG0001)
+                .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
         })
     }
 }

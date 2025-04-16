@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use xee_name::Name;
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorCode, Result};
 
 type Resolver<'a, V> = dyn Fn(Box<dyn Fn(&'a Name) -> Result<V> + 'a>) -> Result<V> + 'a;
 
@@ -56,7 +56,7 @@ impl<'a, V: Clone + 'a> GlobalVariables<'a, V> {
         }
         let resolve = self.resolvers.get(name).unwrap();
         if seen.contains(name) {
-            return Err(Error::XTDE0640);
+            return Err(Error::new(ErrorCode::XTDE0640));
         }
 
         let value = resolve(self.get_resolve(name, seen))?;
@@ -106,7 +106,10 @@ mod tests {
 
         // now we can resolve foo but resolution fails as there is a circular dependency
         let global_variables = Rc::new(global_variables);
-        assert_eq!(global_variables.get(&foo), Err(Error::XTDE0640));
+        assert_eq!(
+            global_variables.get(&foo),
+            Err(Error::new(ErrorCode::XTDE0640))
+        );
     }
 
     #[test]

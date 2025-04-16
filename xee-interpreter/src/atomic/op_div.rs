@@ -57,22 +57,29 @@ pub(crate) fn op_div(a: atomic::Atomic, b: atomic::Atomic) -> error::Result<atom
         (Atomic::DayTimeDuration(a), Atomic::DayTimeDuration(b)) => {
             Ok(op_divide_day_time_duration_by_day_time_duration(a, b)?)
         }
-        _ => Err(error::Error::XPTY0004),
+        _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
     }
 }
 
 pub(crate) fn op_div_decimal(a: Rc<Decimal>, b: Rc<Decimal>) -> error::Result<Decimal> {
     if b.is_zero() {
-        return Err(error::Error::FOAR0001);
+        return Err(error::Error::new(error::ErrorCode::FOAR0001));
     }
-    a.checked_div(*b.as_ref()).ok_or(error::Error::FOAR0002)
+    a.checked_div(*b.as_ref())
+        .ok_or(error::Error::new(error::ErrorCode::FOAR0002))
 }
 
 fn op_div_integer(a: Rc<IBig>, b: Rc<IBig>) -> error::Result<atomic::Atomic> {
     // As a special case, if the types of both $arg1 and $arg2 are
     // xs:integer, then the return type is xs:decimal.
-    let a: i128 = a.as_ref().try_into().map_err(|_| error::Error::FOCA0001)?;
-    let b: i128 = b.as_ref().try_into().map_err(|_| error::Error::FOCA0001)?;
+    let a: i128 = a
+        .as_ref()
+        .try_into()
+        .map_err(|_| error::Error::new(error::ErrorCode::FOCA0001))?;
+    let b: i128 = b
+        .as_ref()
+        .try_into()
+        .map_err(|_| error::Error::new(error::ErrorCode::FOCA0001))?;
     let a: Decimal = a.into();
     let b: Decimal = b.into();
     let v = op_div_decimal(a.into(), b.into())?;
@@ -103,7 +110,7 @@ fn op_divide_year_month_duration_by_double(
     b: f64,
 ) -> error::Result<atomic::Atomic> {
     if b.is_nan() {
-        return Err(error::Error::FOCA0005);
+        return Err(error::Error::new(error::ErrorCode::FOCA0005));
     }
     let total = duration_i64(a.months as f64 / b)?;
     Ok(YearMonthDuration::new(total).into())
@@ -126,10 +133,10 @@ fn op_divide_day_time_duration_by_double(
     b: f64,
 ) -> error::Result<atomic::Atomic> {
     if b.is_nan() {
-        return Err(error::Error::FOCA0005);
+        return Err(error::Error::new(error::ErrorCode::FOCA0005));
     }
     if b.is_zero() {
-        return Err(error::Error::FODT0001);
+        return Err(error::Error::new(error::ErrorCode::FODT0001));
     }
     let a = a.num_milliseconds() as f64;
     let total = duration_i64(a / b)?;
@@ -141,7 +148,7 @@ fn op_divide_year_month_duration_by_year_month_duration(
     b: YearMonthDuration,
 ) -> error::Result<atomic::Atomic> {
     if b.months == 0 {
-        return Err(error::Error::FOAR0001);
+        return Err(error::Error::new(error::ErrorCode::FOAR0001));
     }
     let a: Decimal = a.months.into();
     let b: Decimal = b.months.into();
@@ -155,7 +162,7 @@ fn op_divide_day_time_duration_by_day_time_duration(
     let a = a.num_milliseconds();
     let b = b.num_milliseconds();
     if b == 0 {
-        return Err(error::Error::FODT0002);
+        return Err(error::Error::new(error::ErrorCode::FODT0002));
     }
     let a: Decimal = a.into();
     let b: Decimal = b.into();

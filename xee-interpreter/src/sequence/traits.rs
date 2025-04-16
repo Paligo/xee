@@ -111,7 +111,7 @@ where
                 if xot.is_element(n) {
                     Ok(n)
                 } else {
-                    Err(error::Error::XPTY0004)
+                    Err(error::Error::new(error::ErrorCode::XPTY0004))
                 }
             }
             Err(n) => Err(n),

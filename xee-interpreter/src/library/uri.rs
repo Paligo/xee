@@ -60,7 +60,7 @@ fn resolve_uri1(
         Ok(resolve_uri(relative, base.as_str())?
             .map(|resolved| atomic::Atomic::String(atomic::StringType::AnyURI, resolved.into())))
     } else {
-        Err(error::Error::FONS0005)
+        Err(error::Error::new(error::ErrorCode::FONS0005))
     }
 }
 
@@ -72,8 +72,9 @@ fn resolve_uri2(relative: Option<&str>, base: &str) -> error::Result<Option<atom
 
 pub(crate) fn resolve_uri(relative: Option<&str>, base: &str) -> error::Result<Option<String>> {
     if let Some(relative) = relative {
-        let iri_reference: &IriReferenceStr =
-            relative.try_into().map_err(|_e| error::Error::FORG0002)?;
+        let iri_reference: &IriReferenceStr = relative
+            .try_into()
+            .map_err(|_e| error::Error::new(error::ErrorCode::FORG0002))?;
         // a shortcut here: if iri_reference is an absolute IRI, we can
         // just return it.
         let relative_iri = match iri_reference.to_iri() {
@@ -87,7 +88,9 @@ pub(crate) fn resolve_uri(relative: Option<&str>, base: &str) -> error::Result<O
         };
 
         // note that this means base isn't validated if it's not needed
-        let base: &IriAbsoluteStr = base.try_into().map_err(|_| error::Error::FORG0002)?;
+        let base: &IriAbsoluteStr = base
+            .try_into()
+            .map_err(|_| error::Error::new(error::ErrorCode::FORG0002))?;
         // now resolve the iri against base
         let resolved_iri = relative_iri.resolve_against(base);
 

@@ -1,5 +1,5 @@
 use ahash::{HashMap, HashMapExt};
-use xee_interpreter::error::{self, Error};
+use xee_interpreter::error;
 use xee_xpath_ast::{
     ast::{self, Span},
     span::Spanned,
@@ -83,7 +83,7 @@ impl Variables {
         let ir_name = self
             .variables
             .get(name)
-            .ok_or(Error::XPST0008.with_ast_span(span))?;
+            .ok_or(error::Error::new(error::ErrorCode::XPST0008).with_ast_span(span))?;
         Ok(Bindings::new(Binding::new(
             ir_name.clone(),
             ir::Expr::Atom(Spanned::new(ir::Atom::Variable(ir_name.clone()), span)),
@@ -118,10 +118,12 @@ impl Variables {
                 }
                 // we can detect statically that the context is absent if it's in
                 // a function definition
-                ContextItem::Absent => Err(Error::XPDY0002.with_ast_span(span)),
+                ContextItem::Absent => {
+                    Err(error::Error::new(error::ErrorCode::XPDY0002).with_ast_span(span))
+                }
             }
         } else {
-            Err(Error::XPDY0002.with_ast_span(span))
+            Err(error::Error::new(error::ErrorCode::XPDY0002).with_ast_span(span))
         }
     }
 

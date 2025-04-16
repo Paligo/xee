@@ -49,7 +49,7 @@ impl Sequence {
                     }
                     (function::Function::Map(_), function::Function::Array(_)) => return Ok(false),
                     (function::Function::Array(_), function::Function::Map(_)) => return Ok(false),
-                    _ => return Err(error::Error::FOTY0015),
+                    _ => return Err(error::Error::new(error::ErrorCode::FOTY0015)),
                 },
                 _ => {
                     return Ok(false);

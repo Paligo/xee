@@ -411,7 +411,7 @@ impl<'a> Interpreter<'a> {
                     } else if cast_type.empty_sequence_allowed {
                         self.state.push(sequence::Sequence::default());
                     } else {
-                        Err(error::Error::XPTY0004)?;
+                        Err(error::Error::new(error::ErrorCode::XPTY0004))?;
                     }
                 }
                 EncodedInstruction::Castable => {
@@ -455,7 +455,7 @@ impl<'a> Interpreter<'a> {
                         &|function| self.runnable.function_info(function).signature(),
                     );
                     if matches.is_err() {
-                        Err(error::Error::XPDY0050)?;
+                        Err(error::Error::new(error::ErrorCode::XPDY0050))?;
                     }
                 }
                 EncodedInstruction::Range => {
@@ -498,10 +498,12 @@ impl<'a> Interpreter<'a> {
                     let value = self.state.pop()?;
                     let index = self.pop_atomic()?;
                     let index = index.cast_to_integer_value::<i64>()? as usize;
-                    // substract 1 as Xpath is 1-indexed
-                    let item = value.get(index - 1).ok_or(error::Error::XPTY0004)?;
+                    // subtract 1 as XPath is 1-indexed
+                    let item = value
+                        .get(index - 1)
+                        .ok_or(error::Error::new(error::ErrorCode::XPTY0004))?;
                     let sequence: sequence::Sequence = item.into();
-                    self.state.push(sequence)
+                    self.state.push(sequence);
                 }
                 EncodedInstruction::BuildNew => {
                     self.state.build_new();
@@ -599,7 +601,7 @@ impl<'a> Interpreter<'a> {
                         continue;
                     }
                     if value.len() > 1 {
-                        Err(error::Error::XTTE3180)?;
+                        Err(error::Error::new(error::ErrorCode::XTTE3180))?;
                     }
                     let item = value.iter().next().unwrap();
                     let copy = match &item {
@@ -758,7 +760,7 @@ impl<'a> Interpreter<'a> {
     ) -> error::Result<()> {
         let static_function = self.runnable.program().static_function(static_function_id);
         if arity as usize != static_function.arity() {
-            return Err(error::Error::XPTY0004);
+            return Err(error::Error::new(error::ErrorCode::XPTY0004));
         }
         let parameter_types = static_function.signature().parameter_types();
         let arguments = self.coerce_arguments(parameter_types, arity)?;
@@ -779,7 +781,7 @@ impl<'a> Interpreter<'a> {
         let function = self.runnable.program().inline_function(function_id);
         let parameter_types = &function.signature.parameter_types();
         if arity as usize != parameter_types.len() {
-            return Err(error::Error::XPTY0004);
+            return Err(error::Error::new(error::ErrorCode::XPTY0004));
         }
 
         let arguments = self.coerce_arguments(parameter_types, arity)?;
@@ -832,7 +834,7 @@ impl<'a> Interpreter<'a> {
 
     fn call_array(&mut self, array: &function::Array, arity: usize) -> error::Result<()> {
         if arity != 1 {
-            return Err(error::Error::XPTY0004);
+            return Err(error::Error::new(error::ErrorCode::XPTY0004));
         }
         // the argument
         let position = self.pop_atomic()?;
@@ -850,19 +852,21 @@ impl<'a> Interpreter<'a> {
     ) -> error::Result<sequence::Sequence> {
         let position = position
             .cast_to_integer_value::<i64>()
-            .map_err(|_| error::Error::XPTY0004)?;
+            .map_err(|_| error::Error::new(error::ErrorCode::XPTY0004))?;
         let position = position as usize;
         if position == 0 {
-            return Err(error::Error::FOAY0001);
+            return Err(error::Error::new(error::ErrorCode::FOAY0001));
         }
         let position = position - 1;
         let sequence = array.index(position);
-        sequence.cloned().ok_or(error::Error::FOAY0001)
+        sequence
+            .cloned()
+            .ok_or(error::Error::new(error::ErrorCode::FOAY0001))
     }
 
     fn call_map(&mut self, map: &function::Map, arity: usize) -> error::Result<()> {
         if arity != 1 {
-            return Err(error::Error::XPTY0004);
+            return Err(error::Error::new(error::ErrorCode::XPTY0004));
         }
         let key = self.pop_atomic()?;
         let value = map.get(&key);
@@ -894,7 +898,7 @@ impl<'a> Interpreter<'a> {
         match function {
             function::Function::Map(map) => self.lookup_map(map, key_specifier),
             function::Function::Array(array) => self.lookup_array(array, key_specifier),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         }
     }
 
@@ -915,7 +919,7 @@ impl<'a> Interpreter<'a> {
     ) -> error::Result<Vec<sequence::Item>> {
         self.lookup_helper(key_specifier, array, |array, atomic| match atomic {
             atomic::Atomic::Integer(..) => Self::array_get(array, atomic),
-            _ => Err(error::Error::XPTY0004),
+            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
         })
     }
 
@@ -960,7 +964,7 @@ impl<'a> Interpreter<'a> {
                 }
                 result
             }
-            _ => return Err(error::Error::XPTY0004),
+            _ => return Err(error::Error::new(error::ErrorCode::XPTY0004)),
         };
         let sequence: sequence::Sequence = value.into();
         self.state.push(sequence);
@@ -1126,9 +1130,9 @@ impl<'a> Interpreter<'a> {
                     match self.state.xot.value(node) {
                         xot::Value::Document => {
                             // TODO: Handle adding all the children instead
-                            return Err(error::Error::Unsupported(
+                            return Err(error::Error::new(error::ErrorCode::Unsupported(
                                 "Cannot append document node yet".to_string(),
-                            ));
+                            )));
                         }
                         xot::Value::Text(text) => {
                             // zero length text nodes are skipped
@@ -1153,7 +1157,9 @@ impl<'a> Interpreter<'a> {
                     self.state.xot.any_append(parent_node, node).unwrap();
                 }
                 sequence::Item::Atomic(atomic) => string_values.push(atomic.string_value()),
-                sequence::Item::Function(_) => return Err(error::Error::XTDE0450),
+                sequence::Item::Function(_) => {
+                    return Err(error::Error::new(error::ErrorCode::XTDE0450))
+                }
             }
         }
         // if there are any string values left in the end

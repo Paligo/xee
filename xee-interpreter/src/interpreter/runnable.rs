@@ -71,7 +71,7 @@ impl<'a> Runnable<'a> {
         let value = state.stack().last().unwrap().clone();
         match value {
             stack::Value::Absent => Err(SpannedError {
-                error: error::Error::XPDY0002,
+                error: error::Error::new(error::ErrorCode::XPDY0002),
                 span: Some(self.program.span().into()),
             }),
             _ => Ok(value),

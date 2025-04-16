@@ -4,7 +4,10 @@ expression: "convert_expr_single(\"1 cast as xs:NOTATION\")"
 ---
 Err(
     SpannedError {
-        error: XPST0080,
+        error: Error {
+            code: XPST0080,
+            message: None,
+        },
         span: Some(
             SourceSpan(
                 0,

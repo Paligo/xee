@@ -58,7 +58,7 @@ impl MergeDuplicates {
             "use-last" => Ok(MergeDuplicates::UseLast),
             "use-any" => Ok(MergeDuplicates::UseAny),
             "combine" => Ok(MergeDuplicates::Combine),
-            _ => Err(error::Error::FOJS0005),
+            _ => Err(error::Error::new(error::ErrorCode::FOJS0005)),
         }
     }
 }
@@ -118,7 +118,9 @@ fn merge(
     options: MergeOptions,
 ) -> error::Result<function::Map> {
     match options.duplicates {
-        MergeDuplicates::Reject => function::Map::combine(maps, |_, _| Err(error::Error::FOJS0003)),
+        MergeDuplicates::Reject => function::Map::combine(maps, |_, _| {
+            Err(error::Error::new(error::ErrorCode::FOJS0003))
+        }),
         MergeDuplicates::UseFirst => function::Map::combine(maps, |a, _| Ok(a)),
         MergeDuplicates::UseLast => function::Map::combine(maps, |_, b| Ok(b)),
         MergeDuplicates::UseAny => function::Map::combine(maps, |a, _| Ok(a)),

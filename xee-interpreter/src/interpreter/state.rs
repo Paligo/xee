@@ -160,7 +160,7 @@ impl<'a> State<'a> {
         let value = &self.stack[self.frame().base - 1];
         match value {
             stack::Value::Sequence(sequence) => sequence.clone().try_into(),
-            stack::Value::Absent => Err(error::Error::XPDY0002),
+            stack::Value::Absent => Err(error::Error::new(error::ErrorCode::XPDY0002)),
         }
     }
 
@@ -178,7 +178,7 @@ impl<'a> State<'a> {
         arity: usize,
     ) -> error::Result<()> {
         if self.frames.len() >= self.frames.capacity() {
-            return Err(error::Error::StackOverflow);
+            return Err(error::Error::new(error::ErrorCode::StackOverflow));
         }
         self.frames.push(Frame {
             function: function_id,
@@ -204,7 +204,7 @@ impl<'a> State<'a> {
         let value = &self.stack[self.stack.len() - (arity + 1)];
         match value {
             stack::Value::Sequence(sequence) => sequence.clone().try_into(),
-            stack::Value::Absent => Err(error::Error::XPDY0002),
+            stack::Value::Absent => Err(error::Error::new(error::ErrorCode::XPDY0002)),
         }
     }
 
