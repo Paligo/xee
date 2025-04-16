@@ -6,7 +6,9 @@ Err(
     SpannedError {
         error: Error {
             code: XPST0080,
-            message: None,
+            message: Some(
+                "Invalid target type of cast or castable expression.",
+            ),
         },
         span: Some(
             SourceSpan(

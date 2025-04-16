@@ -359,6 +359,12 @@ impl Xs {
     }
 }
 
+impl std::fmt::Display for Xs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "xs:{}", self.local_name())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

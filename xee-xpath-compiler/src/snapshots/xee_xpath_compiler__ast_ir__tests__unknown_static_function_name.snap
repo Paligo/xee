@@ -6,7 +6,9 @@ Err(
     SpannedError {
         error: Error {
             code: XPST0017,
-            message: None,
+            message: Some(
+                "Type error: incorrect function name or number of arguments.",
+            ),
         },
         span: Some(
             SourceSpan(

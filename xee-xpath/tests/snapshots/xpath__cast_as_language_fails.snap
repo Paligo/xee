@@ -6,7 +6,9 @@ Err(
     SpannedError {
         error: Error {
             code: FORG0001,
-            message: None,
+            message: Some(
+                "Invalid value for cast/constructor.",
+            ),
         },
         span: Some(
             SourceSpan(

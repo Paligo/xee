@@ -55,10 +55,17 @@ impl atomic::Atomic {
 
     pub(crate) fn parse_decimal(s: &str) -> error::Result<Decimal> {
         if s.contains('_') {
-            return Err(error::Error::new(error::ErrorCode::FORG0001));
+            return Err(error::Error::new2(
+                error::ErrorCode::FORG0001,
+                format!("{} is not a valid decimal", s),
+            ));
         }
-        s.parse::<Decimal>()
-            .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
+        s.parse::<Decimal>().map_err(|_| {
+            error::Error::new2(
+                error::ErrorCode::FORG0001,
+                format!("{} is not a valid decimal", s),
+            )
+        })
     }
 
     pub(crate) fn parse_integer_number<V>(s: &str) -> error::Result<V>
@@ -68,8 +75,13 @@ impl atomic::Atomic {
         // -0 should count as a 0, so it doesn't fail even for unsigned
         // numbers. There doesn't appear to be a configuration option for
         // lexical for this.
-        let s = if s == "-0" { "0" } else { s };
-        lexical::parse::<V, _>(s).map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
+        let s0 = if s == "-0" { "0" } else { s };
+        lexical::parse::<V, _>(s0).map_err(|_| {
+            error::Error::new2(
+                error::ErrorCode::FORG0001,
+                format!("{} is not a valid integer", s),
+            )
+        })
     }
 
     // we can't use lexical::parse_float_options::XML as it doesn't allow INF
@@ -80,8 +92,12 @@ impl atomic::Atomic {
             .inf_string(Some(b"INF"))
             .build()
             .unwrap();
-        lexical::parse_with_options::<f32, _, { lexical::format::XML }>(s, &options)
-            .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
+        lexical::parse_with_options::<f32, _, { lexical::format::XML }>(s, &options).map_err(|_| {
+            error::Error::new2(
+                error::ErrorCode::FORG0001,
+                format!("{} is not a valid float", s),
+            )
+        })
     }
 
     pub(crate) fn parse_double(s: &str) -> error::Result<f64> {
@@ -89,8 +105,12 @@ impl atomic::Atomic {
             .inf_string(Some(b"INF"))
             .build()
             .unwrap();
-        lexical::parse_with_options::<f64, _, { lexical::format::XML }>(s, &options)
-            .map_err(|_| error::Error::new(error::ErrorCode::FORG0001))
+        lexical::parse_with_options::<f64, _, { lexical::format::XML }>(s, &options).map_err(|_| {
+            error::Error::new2(
+                error::ErrorCode::FORG0001,
+                format!("{} is not a valid double", s),
+            )
+        })
     }
 
     pub(crate) fn cast_to_numeric(self) -> error::Result<atomic::Atomic> {
@@ -111,16 +131,24 @@ impl atomic::Atomic {
             // we know xs:boolean is castable to double, so we don't even
             // try the other options
             atomic::Atomic::Boolean(_) => self.cast_to_double(),
-            _ => Err(error::Error::new(error::ErrorCode::FORG0001)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::FORG0001,
+                format!(
+                    "{} ({}) cannot be cast to a numeric type",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_float(self) -> error::Result<atomic::Atomic> {
         match self {
             atomic::Atomic::Untyped(s) => Self::parse_atomic::<f32>(&s),
-            atomic::Atomic::String(StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                "xs:anyURI cannot be cast to xs:float",
+            )),
             atomic::Atomic::String(_, s) => Self::parse_atomic::<f32>(&s),
             atomic::Atomic::Float(_) => Ok(self.clone()),
             // TODO: this should implement the rule in 19.1.2.1

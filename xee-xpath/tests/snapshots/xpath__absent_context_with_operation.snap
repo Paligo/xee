@@ -6,7 +6,9 @@ Err(
     SpannedError {
         error: Error {
             code: XPDY0002,
-            message: None,
+            message: Some(
+                "Component absent in dynamic context.",
+            ),
         },
         span: Some(
             SourceSpan(

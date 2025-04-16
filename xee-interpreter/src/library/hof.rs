@@ -194,56 +194,56 @@ fn sort3(
     })
 }
 
-fn sort_without_key(
-    context: &context::DynamicContext,
-    interpreter: &Interpreter,
-    input: &sequence::Sequence,
-    collation: Rc<Collation>,
-) -> error::Result<sequence::Sequence> {
-    sort_by_sequence(context, input, collation, |item| {
-        // the equivalent of fn:data()
-        let seq: sequence::Sequence = item.clone().into();
-        let atoms = seq
-            .atomized(interpreter.xot())
-            .collect::<error::Result<Vec<_>>>()?;
-        Ok(atoms.into())
-    })
-}
+// fn sort_without_key(
+//     context: &context::DynamicContext,
+//     interpreter: &Interpreter,
+//     input: &sequence::Sequence,
+//     collation: Rc<Collation>,
+// ) -> error::Result<sequence::Sequence> {
+//     sort_by_sequence(context, input, collation, |item| {
+//         // the equivalent of fn:data()
+//         let seq: sequence::Sequence = item.clone().into();
+//         let atoms = seq
+//             .atomized(interpreter.xot())
+//             .collect::<error::Result<Vec<_>>>()?;
+//         Ok(atoms.into())
+//     })
+// }
 
-fn sort_by_sequence<F>(
-    context: &context::DynamicContext,
-    input: &sequence::Sequence,
-    collation: Rc<Collation>,
-    mut get: F,
-) -> error::Result<sequence::Sequence>
-where
-    F: FnMut(&sequence::Item) -> error::Result<sequence::Sequence>,
-{
-    // see also sort_by_sequence in array.rs. The signatures are
-    // sufficiently different we don't want to try to unify them.
-    let mut keys_and_items = input
-        .clone()
-        .iter()
-        .map(|item| Ok((get(&item)?, item)))
-        .collect::<error::Result<Vec<_>>>()?;
-    // sort by key. unfortunately sort_by requires the compare function
-    // to be infallible. It's not in reality, so we make any failures
-    // sort less, so they appear early on in the sequence.
-    keys_and_items.sort_by(|(a_key, _), (b_key, _)| {
-        a_key.compare(b_key, &collation, context.implicit_timezone())
-    });
-    // a pass to detect any errors; if sorting between two items is
-    // impossible we want to raise a type error
-    for ((a_key, _), (b_key, _)) in keys_and_items.iter().zip(keys_and_items.iter().skip(1)) {
-        a_key.fallible_compare(b_key, &collation, context.implicit_timezone())?;
-    }
-    // now pick up items again
-    let items = keys_and_items
-        .into_iter()
-        .map(|(_, item)| item.clone())
-        .collect::<Vec<_>>();
-    Ok(items.into())
-}
+// fn sort_by_sequence<F>(
+//     context: &context::DynamicContext,
+//     input: &sequence::Sequence,
+//     collation: Rc<Collation>,
+//     mut get: F,
+// ) -> error::Result<sequence::Sequence>
+// where
+//     F: FnMut(&sequence::Item) -> error::Result<sequence::Sequence>,
+// {
+//     // see also sort_by_sequence in array.rs. The signatures are
+//     // sufficiently different we don't want to try to unify them.
+//     let mut keys_and_items = input
+//         .clone()
+//         .iter()
+//         .map(|item| Ok((get(&item)?, item)))
+//         .collect::<error::Result<Vec<_>>>()?;
+//     // sort by key. unfortunately sort_by requires the compare function
+//     // to be infallible. It's not in reality, so we make any failures
+//     // sort less, so they appear early on in the sequence.
+//     keys_and_items.sort_by(|(a_key, _), (b_key, _)| {
+//         a_key.compare(b_key, &collation, context.implicit_timezone())
+//     });
+//     // a pass to detect any errors; if sorting between two items is
+//     // impossible we want to raise a type error
+//     for ((a_key, _), (b_key, _)) in keys_and_items.iter().zip(keys_and_items.iter().skip(1)) {
+//         a_key.fallible_compare(b_key, &collation, context.implicit_timezone())?;
+//     }
+//     // now pick up items again
+//     let items = keys_and_items
+//         .into_iter()
+//         .map(|(_, item)| item.clone())
+//         .collect::<Vec<_>>();
+//     Ok(items.into())
+// }
 
 #[xpath_fn("fn:apply($function as function(*), $array as array(*)) as item()*")]
 fn apply(

@@ -31,9 +31,18 @@ impl std::error::Error for Error {}
 
 impl Error {
     pub fn new(code: ErrorCode) -> Self {
+        // fallback to default message
+        let message = code.message().to_string();
         Self {
             code,
-            message: None,
+            message: Some(message),
+        }
+    }
+
+    pub fn new2(code: ErrorCode, message: impl AsRef<str>) -> Self {
+        Self {
+            code,
+            message: Some(message.as_ref().to_string()),
         }
     }
 
@@ -46,6 +55,22 @@ impl Error {
 
     pub fn with_ast_span(self, span: xee_xpath_ast::ast::Span) -> SpannedError {
         Self::with_span(self, span.into())
+    }
+
+    pub fn code(&self) -> String {
+        self.code.code()
+    }
+
+    pub fn code_qname(&self) -> xot::xmlname::OwnedName {
+        self.code.code_qname()
+    }
+
+    pub fn message(&self) -> &str {
+        self.message.as_deref().unwrap_or("")
+    }
+
+    pub fn note(&self) -> &str {
+        self.code.note()
     }
 }
 

@@ -6,7 +6,9 @@ Err(
     SpannedError {
         error: Error {
             code: XQST0052,
-            message: None,
+            message: Some(
+                "Invalid type named in cast or castable expression.",
+            ),
         },
         span: Some(
             SourceSpan(

@@ -249,9 +249,14 @@ impl atomic::Atomic {
 
     pub(crate) fn cast_to_duration(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:duration",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => Self::parse_duration(&s),
             atomic::Atomic::Duration(_) => Ok(self.clone()),
             atomic::Atomic::YearMonthDuration(year_month_duration) => Ok(atomic::Atomic::Duration(
@@ -260,15 +265,27 @@ impl atomic::Atomic {
             atomic::Atomic::DayTimeDuration(duration) => Ok(atomic::Atomic::Duration(
                 Duration::from_day_time(*duration.as_ref()).into(),
             )),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:duration",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_year_month_duration(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:yearMonthDuration",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => {
                 Self::parse_year_month_duration(&s)
             }
@@ -279,15 +296,27 @@ impl atomic::Atomic {
             atomic::Atomic::DayTimeDuration(_) => {
                 Ok(atomic::Atomic::YearMonthDuration(YearMonthDuration::new(0)))
             }
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:yearMonthDuration",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_day_time_duration(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:dayTimeDuration",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => {
                 Self::parse_day_time_duration(&s)
             }
@@ -298,15 +327,27 @@ impl atomic::Atomic {
                 chrono::Duration::zero().into(),
             )),
             atomic::Atomic::DayTimeDuration(_) => Ok(self.clone()),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:dayTimeDuration",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_date_time(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:dateTime",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => Self::parse_date_time(&s),
             atomic::Atomic::DateTime(_) => Ok(self.clone()),
             atomic::Atomic::DateTimeStamp(date_time) => Ok(atomic::Atomic::DateTime(
@@ -324,15 +365,27 @@ impl atomic::Atomic {
                 )
                 .into(),
             )),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:dateTime",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_date_time_stamp(self) -> error::Result<atomic::Atomic> {
-        match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+        match &self {
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:dateTimeStamp",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => {
                 Self::parse_date_time_stamp(&s)
             }
@@ -343,20 +396,39 @@ impl atomic::Atomic {
                             .into(),
                     ))
                 } else {
-                    Err(error::Error::new(error::ErrorCode::XPTY0004))
+                    Err(error::Error::new2(
+                        error::ErrorCode::XPTY0004,
+                        format!(
+                            "{} ({}) cannot be cast to a xs:dateTimeStamp",
+                            self.string_value(),
+                            self.schema_type()
+                        ),
+                    ))
                 }
             }
             atomic::Atomic::DateTimeStamp(_) => Ok(self.clone()),
 
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:dateTimeStamp",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_time(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:time",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => Self::parse_time(&s),
             atomic::Atomic::DateTime(date_time) => Ok(atomic::Atomic::Time(
                 NaiveTimeWithOffset::new(date_time.date_time.time(), date_time.offset).into(),
@@ -365,15 +437,27 @@ impl atomic::Atomic {
                 NaiveTimeWithOffset::new(date_time.time(), Some(date_time.offset().fix())).into(),
             )),
             atomic::Atomic::Time(_) => Ok(self.clone()),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:time",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_date(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:date",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => Self::parse_date(&s),
             atomic::Atomic::DateTime(date_time) => Ok(atomic::Atomic::Date(
                 NaiveDateWithOffset::new(date_time.date_time.date(), date_time.offset).into(),
@@ -386,15 +470,27 @@ impl atomic::Atomic {
                 .into(),
             )),
             atomic::Atomic::Date(_) => Ok(self.clone()),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:date",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_g_year_month(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gYearMonth",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => {
                 Self::parse_g_year_month(&s)
             }
@@ -418,15 +514,27 @@ impl atomic::Atomic {
                 GYearMonth::new(date.date.year(), date.date.month(), date.offset).into(),
             )),
             atomic::Atomic::GYearMonth(_) => Ok(self.clone()),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gYearMonth",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_g_year(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gYear",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => Self::parse_g_year(&s),
             atomic::Atomic::DateTime(date_time) => Ok(atomic::Atomic::GYear(
                 GYear::new(date_time.date_time.year(), date_time.offset).into(),
@@ -438,15 +546,27 @@ impl atomic::Atomic {
                 GYear::new(date.date.year(), date.offset).into(),
             )),
             atomic::Atomic::GYear(_) => Ok(self.clone()),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gYear",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_g_month_day(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gMonthDay",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => {
                 Self::parse_g_month_day(&s)
             }
@@ -470,15 +590,27 @@ impl atomic::Atomic {
                 GMonthDay::new(date.date.month(), date.date.day(), date.offset).into(),
             )),
             atomic::Atomic::GMonthDay(_) => Ok(self.clone()),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gMonthDay",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_g_day(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gDay",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => Self::parse_g_day(&s),
             atomic::Atomic::DateTime(date_time) => Ok(atomic::Atomic::GDay(
                 GDay::new(date_time.date_time.day(), date_time.offset).into(),
@@ -490,15 +622,27 @@ impl atomic::Atomic {
                 GDay::new(date.date.day(), date.offset).into(),
             )),
             atomic::Atomic::GDay(_) => Ok(self.clone()),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gDay",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
     pub(crate) fn cast_to_g_month(self) -> error::Result<atomic::Atomic> {
         match self {
-            atomic::Atomic::String(atomic::StringType::AnyURI, _) => {
-                Err(error::Error::new(error::ErrorCode::XPTY0004))
-            }
+            atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gMonth",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => Self::parse_g_month(&s),
             atomic::Atomic::DateTime(date_time) => Ok(atomic::Atomic::GMonth(
                 GMonth::new(date_time.date_time.month(), date_time.offset).into(),
@@ -510,7 +654,14 @@ impl atomic::Atomic {
                 GMonth::new(date.date.month(), date.offset).into(),
             )),
             atomic::Atomic::GMonth(_) => Ok(self.clone()),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new2(
+                error::ErrorCode::XPTY0004,
+                format!(
+                    "{} ({}) cannot be cast to a xs:gMonth",
+                    self.string_value(),
+                    self.schema_type()
+                ),
+            )),
         }
     }
 
@@ -521,7 +672,10 @@ impl atomic::Atomic {
         match parser.parse(s).into_result() {
             Ok(value) => Ok(value.into()),
             Err(e) => Err(match &e[0] {
-                ParserError::ExpectedFound { .. } => error::Error::new(error::ErrorCode::FORG0001),
+                ParserError::ExpectedFound { .. } => error::Error::new2(
+                    error::ErrorCode::FORG0001,
+                    format!("Invalid value for {}", s),
+                ),
                 ParserError::Error(e) => e.clone(),
             }),
         }
@@ -663,7 +817,10 @@ fn number_parser<'a>() -> impl Parser<'a, &'a str, u32, MyExtra> {
         if let Ok(parsed) = s.parse() {
             parsed
         } else {
-            emitter.emit(error::Error::new(error::ErrorCode::FODT0002).into());
+            emitter.emit(
+                error::Error::new2(error::ErrorCode::FODT0002, "Duration underflow or overflow")
+                    .into(),
+            );
             0
         }
     })
@@ -685,12 +842,12 @@ fn duration_second_parser<'a>() -> impl Parser<'a, &'a str, (u32, u32), MyExtra>
             let b = if b.len() > 3 { &b[..3] } else { &b };
             let l = b.len();
 
-            let a = a
-                .parse::<u32>()
-                .map_err(|_| error::Error::new(error::ErrorCode::FODT0002))?;
-            let b = b
-                .parse::<u32>()
-                .map_err(|_| error::Error::new(error::ErrorCode::FODT0002))?;
+            let a = a.parse::<u32>().map_err(|_| {
+                error::Error::new2(error::ErrorCode::FODT0002, "Duration underflow or overflow")
+            })?;
+            let b = b.parse::<u32>().map_err(|_| {
+                error::Error::new2(error::ErrorCode::FODT0002, "Duration underflow or overflow")
+            })?;
             Ok((a, b * 10u32.pow(3 - l as u32)))
         })
 }
@@ -707,9 +864,12 @@ fn time_second_parser<'a>() -> impl Parser<'a, &'a str, (u32, u32), MyExtra> {
             let b = if b.len() > 3 { &b[..3] } else { &b };
             let l = b.len();
 
-            let b = b
-                .parse::<u32>()
-                .map_err(|_| error::Error::new(error::ErrorCode::FODT0001))?;
+            let b = b.parse::<u32>().map_err(|_| {
+                error::Error::new2(
+                    error::ErrorCode::FODT0001,
+                    "Date/time underflow or overflow",
+                )
+            })?;
             Ok((a, b * 10u32.pow(3 - l as u32)))
         })
 }
@@ -749,7 +909,11 @@ fn day_time_fragment_parser<'a>() -> impl Parser<'a, &'a str, chrono::Duration, 
         .then(second_s.or_not())
         .try_map(|((hours, minutes), s_ms), _| {
             if hours.is_none() && minutes.is_none() && s_ms.is_none() {
-                return Err(error::Error::new(error::ErrorCode::FORG0001).into());
+                return Err(error::Error::new2(
+                    error::ErrorCode::FORG0001,
+                    "Missing hours/minutes/s/ms",
+                )
+                .into());
             }
             let hours = hours.unwrap_or(0);
             let minutes = minutes.unwrap_or(0);
@@ -792,7 +956,9 @@ fn duration_parser<'a>() -> impl Parser<'a, &'a str, Duration, MyExtra> {
         .then_ignore(end())
         .try_map(|((sign, months), duration), _| {
             if months.is_none() && duration.is_none() {
-                return Err(error::Error::new(error::ErrorCode::FORG0001).into());
+                return Err(
+                    error::Error::new2(error::ErrorCode::FORG0001, "Missing months").into(),
+                );
             }
             let months = months.unwrap_or(0);
             let duration = duration.unwrap_or(chrono::Duration::seconds(0));
@@ -808,7 +974,7 @@ fn year_parser<'a>() -> impl Parser<'a, &'a str, i32, MyExtra> {
     let digits = digits_parser();
     let sign = sign_parser();
 
-    // the year may have 0 prefixes, unless it's larger than 4, in
+    // the year may have 0 prefixes, unless it's larger than 4 digits, in
     // which case we don't allow any prefixes
 
     // we use validate here otherwise different parser paths eradicate
@@ -819,12 +985,20 @@ fn year_parser<'a>() -> impl Parser<'a, &'a str, i32, MyExtra> {
             Ordering::Greater => {
                 // cannot have any 0 prefix
                 if digits.starts_with('0') {
-                    emitter.emit(error::Error::new(error::ErrorCode::FORG0001).into());
+                    emitter.emit(
+                        error::Error::new2(
+                            error::ErrorCode::FORG0001,
+                            "Year cannot start with 0 if it has more than 4 digits",
+                        )
+                        .into(),
+                    );
                     0
                 } else if let Ok(year) = digits.parse::<i32>() {
                     year
                 } else {
-                    emitter.emit(error::Error::new(error::ErrorCode::FODT0001).into());
+                    emitter.emit(
+                        error::Error::new2(error::ErrorCode::FODT0001, "Illegal year").into(),
+                    );
                     0
                 }
             }
@@ -832,12 +1006,14 @@ fn year_parser<'a>() -> impl Parser<'a, &'a str, i32, MyExtra> {
                 if let Ok(year) = digits.parse::<i32>() {
                     year
                 } else {
-                    emitter.emit(error::Error::new(error::ErrorCode::FODT0001).into());
+                    emitter.emit(
+                        error::Error::new2(error::ErrorCode::FODT0001, "Illegal year").into(),
+                    );
                     0
                 }
             }
             Ordering::Less => {
-                emitter.emit(error::Error::new(error::ErrorCode::FORG0001).into());
+                emitter.emit(error::Error::new2(error::ErrorCode::FORG0001, "Illegal year").into());
                 0
             }
         }
@@ -859,12 +1035,20 @@ fn year_for_g_parser<'a>() -> impl Parser<'a, &'a str, i32, MyExtra> {
             Ordering::Greater => {
                 // cannot have any 0 prefix
                 if digits.starts_with('0') {
-                    emitter.emit(error::Error::new(error::ErrorCode::FORG0001).into());
+                    emitter.emit(
+                        error::Error::new2(
+                            error::ErrorCode::FORG0001,
+                            "Year cannot start with 0 if it has more than 4 digits",
+                        )
+                        .into(),
+                    );
                     0
                 } else if let Ok(year) = digits.parse::<i32>() {
                     year
                 } else {
-                    emitter.emit(error::Error::new(error::ErrorCode::FORG0001).into());
+                    emitter.emit(
+                        error::Error::new2(error::ErrorCode::FORG0001, "Illegal year").into(),
+                    );
                     0
                 }
             }
@@ -872,12 +1056,14 @@ fn year_for_g_parser<'a>() -> impl Parser<'a, &'a str, i32, MyExtra> {
                 if let Ok(year) = digits.parse::<i32>() {
                     year
                 } else {
-                    emitter.emit(error::Error::new(error::ErrorCode::FORG0001).into());
+                    emitter.emit(
+                        error::Error::new2(error::ErrorCode::FORG0001, "Illegal year").into(),
+                    );
                     0
                 }
             }
             Ordering::Less => {
-                emitter.emit(error::Error::new(error::ErrorCode::FORG0001).into());
+                emitter.emit(error::Error::new2(error::ErrorCode::FORG0001, "Illegal year").into());
                 0
             }
         }
@@ -898,7 +1084,13 @@ fn two_digit_parser<'a>() -> impl Parser<'a, &'a str, u32, MyExtra> {
 fn month_parser<'a>() -> impl Parser<'a, &'a str, u32, MyExtra> {
     two_digit_parser().validate(|month, _, emitter| {
         if month == 0 || month > 12 {
-            emitter.emit(error::Error::new(error::ErrorCode::FORG0001).into());
+            emitter.emit(
+                error::Error::new2(
+                    error::ErrorCode::FORG0001,
+                    "Month must be between 1 and 12 (inclusive)",
+                )
+                .into(),
+            );
             0
         } else {
             month
@@ -909,7 +1101,11 @@ fn month_parser<'a>() -> impl Parser<'a, &'a str, u32, MyExtra> {
 fn day_parser<'a>() -> impl Parser<'a, &'a str, u32, MyExtra> {
     two_digit_parser().try_map(|day, _| {
         if day == 0 || day > 31 {
-            Err(error::Error::new(error::ErrorCode::FORG0001).into())
+            Err(error::Error::new2(
+                error::ErrorCode::FORG0001,
+                "Day must be between 1 and 31 (inclusive)",
+            )
+            .into())
         } else {
             Ok(day)
         }
@@ -926,7 +1122,7 @@ fn date_fragment_parser<'a>() -> impl Parser<'a, &'a str, chrono::NaiveDate, MyE
         .then(day)
         .try_map(|((year, month), day), _| {
             chrono::NaiveDate::from_ymd_opt(year, month, day)
-                .ok_or(error::Error::new(error::ErrorCode::FORG0001).into())
+                .ok_or(error::Error::new2(error::ErrorCode::FORG0001, "Illegal date").into())
         })
 }
 
@@ -941,7 +1137,7 @@ fn date_parser<'a>() -> impl Parser<'a, &'a str, NaiveDateWithOffset, MyExtra> {
 fn hour_parser<'a>() -> impl Parser<'a, &'a str, u32, MyExtra> {
     two_digit_parser().try_map(|hour, _| {
         if hour > 24 {
-            Err(error::Error::new(error::ErrorCode::FORG0001).into())
+            Err(error::Error::new2(error::ErrorCode::FORG0001, "Illegal hour").into())
         } else {
             Ok(hour)
         }
@@ -951,7 +1147,7 @@ fn hour_parser<'a>() -> impl Parser<'a, &'a str, u32, MyExtra> {
 fn minute_parser<'a>() -> impl Parser<'a, &'a str, u32, MyExtra> {
     two_digit_parser().try_map(|minute, _| {
         if minute > 59 {
-            Err(error::Error::new(error::ErrorCode::FORG0001).into())
+            Err(error::Error::new2(error::ErrorCode::FORG0001, "Illegal minute").into())
         } else {
             Ok(minute)
         }
@@ -974,8 +1170,9 @@ fn time_fragment_parser<'a>() -> impl Parser<'a, &'a str, (chrono::NaiveTime, bo
                 (hour, false)
             };
             let time = chrono::NaiveTime::from_hms_milli_opt(hour, minute, second, millisecond)
-                .ok_or(ParserError::Error(error::Error::new(
+                .ok_or(ParserError::Error(error::Error::new2(
                     error::ErrorCode::FORG0001,
+                    "Illegal time",
                 )))?;
             Ok((time, twentyfour))
         })
@@ -1030,7 +1227,7 @@ fn offset_time_parser<'a>() -> impl Parser<'a, &'a str, i32, MyExtra> {
         .then(minute)
         .try_map(|(hour, minute), _| {
             if hour > 14 || hour == 14 && minute > 0 {
-                Err(error::Error::new(error::ErrorCode::FORG0001).into())
+                Err(error::Error::new2(error::ErrorCode::FORG0001, "Illegal offset").into())
             } else {
                 Ok(hour as i32 * 60 + minute as i32)
             }
@@ -1104,7 +1301,7 @@ fn g_month_day_parser<'a>() -> impl Parser<'a, &'a str, GMonthDay, MyExtra> {
             if date.is_some() {
                 Ok(GMonthDay::new(month, day, tz))
             } else {
-                Err(error::Error::new(error::ErrorCode::FORG0001).into())
+                Err(error::Error::new2(error::ErrorCode::FORG0001, "Illegal month or day").into())
             }
         })
 }
@@ -1113,7 +1310,7 @@ fn g_year_month_parser<'a>() -> impl Parser<'a, &'a str, GYearMonth, MyExtra> {
     let year = year_for_g_parser().boxed();
     let month = month_parser().boxed();
     let tz = tz_parser().boxed();
-    year.map_err(|_| error::Error::new(error::ErrorCode::FORG0001).into())
+    year.map_err(|_| error::Error::new2(error::ErrorCode::FORG0001, "Illegal year").into())
         .then_ignore(just('-'))
         .then(month)
         .then(tz.or_not())
@@ -1123,7 +1320,7 @@ fn g_year_month_parser<'a>() -> impl Parser<'a, &'a str, GYearMonth, MyExtra> {
             if date.is_some() {
                 Ok(GYearMonth::new(year, month, tz))
             } else {
-                Err(error::Error::new(error::ErrorCode::FODT0001).into())
+                Err(error::Error::new2(error::ErrorCode::FODT0001, "Illegal year and month").into())
             }
         })
 }
@@ -1564,8 +1761,9 @@ mod tests {
                 .parse("1000000000000000000")
                 .errors()
                 .collect::<Vec<_>>(),
-            vec![&ParserError::Error(error::Error::new(
-                error::ErrorCode::FODT0001
+            vec![&ParserError::Error(error::Error::new2(
+                error::ErrorCode::FODT0001,
+                "Illegal year"
             ))]
         );
     }
@@ -1577,8 +1775,9 @@ mod tests {
                 .parse("-1000000000000000000")
                 .errors()
                 .collect::<Vec<_>>(),
-            vec![&ParserError::Error(error::Error::new(
-                error::ErrorCode::FODT0001
+            vec![&ParserError::Error(error::Error::new2(
+                error::ErrorCode::FODT0001,
+                "Illegal year"
             ))]
         );
     }
@@ -1590,8 +1789,9 @@ mod tests {
                 .parse("1000000000000000000-01-01")
                 .errors()
                 .collect::<Vec<_>>(),
-            vec![&ParserError::Error(error::Error::new(
-                error::ErrorCode::FODT0001
+            vec![&ParserError::Error(error::Error::new2(
+                error::ErrorCode::FODT0001,
+                "Illegal year"
             ))]
         );
     }

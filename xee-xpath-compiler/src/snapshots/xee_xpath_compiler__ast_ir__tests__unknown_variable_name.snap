@@ -6,7 +6,9 @@ Err(
     SpannedError {
         error: Error {
             code: XPST0008,
-            message: None,
+            message: Some(
+                "Name not defined.",
+            ),
         },
         span: Some(
             SourceSpan(

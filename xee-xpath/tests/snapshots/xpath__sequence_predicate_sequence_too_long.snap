@@ -6,7 +6,9 @@ Err(
     SpannedError {
         error: Error {
             code: XPTY0004,
-            message: None,
+            message: Some(
+                "Type error.",
+            ),
         },
         span: Some(
             SourceSpan(
