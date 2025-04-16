@@ -252,7 +252,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:duration",
+                    "{} ({}) cannot be cast as xs:duration",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -268,7 +268,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:duration",
+                    "{} ({}) cannot be cast as xs:duration",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -281,7 +281,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:yearMonthDuration",
+                    "{} ({}) cannot be cast as xs:yearMonthDuration",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -299,7 +299,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:yearMonthDuration",
+                    "{} ({}) cannot be cast as xs:yearMonthDuration",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -312,7 +312,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:dayTimeDuration",
+                    "{} ({}) cannot be cast as xs:dayTimeDuration",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -330,7 +330,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:dayTimeDuration",
+                    "{} ({}) cannot be cast as xs:dayTimeDuration",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -343,7 +343,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:dateTime",
+                    "{} ({}) cannot be cast as xs:dateTime",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -368,7 +368,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:dateTime",
+                    "{} ({}) cannot be cast as xs:dateTime",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -381,13 +381,13 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:dateTimeStamp",
+                    "{} ({}) cannot be cast as xs:dateTimeStamp",
                     self.string_value(),
                     self.schema_type()
                 ),
             )),
             atomic::Atomic::Untyped(s) | atomic::Atomic::String(_, s) => {
-                Self::parse_date_time_stamp(&s)
+                Self::parse_date_time_stamp(s)
             }
             atomic::Atomic::DateTime(date_time) => {
                 if let Some(offset) = date_time.offset {
@@ -399,7 +399,7 @@ impl atomic::Atomic {
                     Err(error::Error::new2(
                         error::ErrorCode::XPTY0004,
                         format!(
-                            "{} ({}) cannot be cast to a xs:dateTimeStamp",
+                            "{} ({}) cannot be cast as xs:dateTimeStamp",
                             self.string_value(),
                             self.schema_type()
                         ),
@@ -411,7 +411,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:dateTimeStamp",
+                    "{} ({}) cannot be cast as xs:dateTimeStamp",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -424,7 +424,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:time",
+                    "{} ({}) cannot be cast as xs:time",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -440,7 +440,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:time",
+                    "{} ({}) cannot be cast as xs:time",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -453,7 +453,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:date",
+                    "{} ({}) cannot be cast as xs:date",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -473,7 +473,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:date",
+                    "{} ({}) cannot be cast as xs:date",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -486,7 +486,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gYearMonth",
+                    "{} ({}) cannot be cast as xs:gYearMonth",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -517,7 +517,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gYearMonth",
+                    "{} ({}) cannot be cast as xs:gYearMonth",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -530,7 +530,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gYear",
+                    "{} ({}) cannot be cast as xs:gYear",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -549,7 +549,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gYear",
+                    "{} ({}) cannot be cast as xs:gYear",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -562,7 +562,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gMonthDay",
+                    "{} ({}) cannot be cast as xs:gMonthDay",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -593,7 +593,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gMonthDay",
+                    "{} ({}) cannot be cast as xs:gMonthDay",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -606,7 +606,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gDay",
+                    "{} ({}) cannot be cast as xs:gDay",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -625,7 +625,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gDay",
+                    "{} ({}) cannot be cast as xs:gDay",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -638,7 +638,7 @@ impl atomic::Atomic {
             atomic::Atomic::String(atomic::StringType::AnyURI, _) => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gMonth",
+                    "{} ({}) cannot be cast as xs:gMonth",
                     self.string_value(),
                     self.schema_type()
                 ),
@@ -657,7 +657,7 @@ impl atomic::Atomic {
             _ => Err(error::Error::new2(
                 error::ErrorCode::XPTY0004,
                 format!(
-                    "{} ({}) cannot be cast to a xs:gMonth",
+                    "{} ({}) cannot be cast as xs:gMonth",
                     self.string_value(),
                     self.schema_type()
                 ),
