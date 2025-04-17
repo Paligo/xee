@@ -1,7 +1,7 @@
 use ibig::error::OutOfBoundsError;
 use xee_xpath_ast::ParserError;
 
-use crate::span::SourceSpan;
+use crate::{atomic, span::SourceSpan};
 
 use super::code::ErrorCode;
 
@@ -43,6 +43,19 @@ impl Error {
         Self {
             code,
             message: Some(message.as_ref().to_string()),
+        }
+    }
+
+    pub fn new3(code: ErrorCode, wrong_atomic: &atomic::Atomic, message: impl AsRef<str>) -> Self {
+        let message = format!(
+            "{}: {} ({})",
+            message.as_ref(),
+            wrong_atomic.string_value(),
+            wrong_atomic.schema_type(),
+        );
+        Self {
+            code,
+            message: Some(message),
         }
     }
 

@@ -126,13 +126,10 @@ impl Atomic {
             Atomic::Float(f) => Ok(!f.is_zero() && !f.is_nan()),
             Atomic::Double(d) => Ok(!d.is_zero() && !d.is_nan()),
             // point 6
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::FORG0006,
-                format!(
-                    "Cannot turn {} ({}) into a boolean",
-                    self.string_value(),
-                    self.schema_type()
-                ),
+                self,
+                "Cannot take effective boolean value",
             )),
         }
     }
@@ -142,13 +139,10 @@ impl Atomic {
     pub(crate) fn to_str(&self) -> error::Result<&str> {
         match self {
             Atomic::String(_, s) => Ok(s),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a string",
-                    self.string_value(),
-                    self.schema_type(),
-                ),
+                self,
+                "Not a string",
             )),
         }
     }
@@ -285,14 +279,10 @@ impl Atomic {
         if self.schema_type().derives_from(xs) {
             Ok(())
         } else {
-            Err(error::Error::new2(
+            Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a {}",
-                    self.string_value(),
-                    self.schema_type(),
-                    xs
-                ),
+                self,
+                format!("not an {}", xs),
             ))
         }
     }
@@ -453,9 +443,10 @@ impl TryFrom<Atomic> for String {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::String(_, s) => Ok(s.to_string()),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!("{} ({}) is not a string", a.string_value(), a.schema_type()),
+                &a,
+                "Not a string",
             )),
         }
     }
@@ -475,13 +466,10 @@ impl TryFrom<Atomic> for bool {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Boolean(b) => Ok(b),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:boolean",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a boolean",
             )),
         }
     }
@@ -501,13 +489,10 @@ impl TryFrom<Atomic> for Decimal {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Decimal(d) => Ok(*d.as_ref()),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:decimal",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not an xs:decimal",
             )),
         }
     }
@@ -539,22 +524,12 @@ impl TryFrom<Atomic> for IriReferenceString {
     fn try_from(a: Atomic) -> Result<Self, error::Error> {
         match &a {
             Atomic::String(_, s) => Ok(s.as_ref().try_into().map_err(|_| {
-                error::Error::new2(
-                    error::ErrorCode::FORG0002,
-                    format!(
-                        "{} ({}) is not a valid URI",
-                        a.string_value(),
-                        a.schema_type()
-                    ),
-                )
+                error::Error::new3(error::ErrorCode::FORG0002, &a, "Not a valid URI")
             })?),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a string and therefore cannot be converted to a URI",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a string and cannot be converted to an URI",
             )),
         }
     }
@@ -580,13 +555,10 @@ impl TryFrom<Atomic> for Rc<IBig> {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(_, i) => Ok(i),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:integer",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not an integer",
             )),
         }
     }
@@ -598,13 +570,10 @@ impl TryFrom<Atomic> for IBig {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(_, i) => Ok(i.as_ref().clone()),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:integer",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:integer",
             )),
         }
     }
@@ -623,13 +592,10 @@ impl TryFrom<Atomic> for i64 {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(IntegerType::Long, i) => Ok(i.as_ref().clone().try_into()?),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:long",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:long",
             )),
         }
     }
@@ -648,9 +614,10 @@ impl TryFrom<Atomic> for i32 {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(IntegerType::Int, i) => Ok(i.as_ref().clone().try_into()?),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!("{} ({}) is not a xs:int", a.string_value(), a.schema_type()),
+                &a,
+                "Not a xs:int",
             )),
         }
     }
@@ -669,13 +636,10 @@ impl TryFrom<Atomic> for i16 {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(IntegerType::Short, i) => Ok(i.as_ref().clone().try_into()?),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:short",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:short",
             )),
         }
     }
@@ -694,13 +658,10 @@ impl TryFrom<Atomic> for i8 {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(IntegerType::Byte, i) => Ok(i.as_ref().clone().try_into()?),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:byte",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:byte",
             )),
         }
     }
@@ -719,13 +680,10 @@ impl TryFrom<Atomic> for u64 {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(IntegerType::UnsignedLong, i) => Ok(i.as_ref().clone().try_into()?),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:unsignedLong",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:unsignedLong",
             )),
         }
     }
@@ -744,13 +702,10 @@ impl TryFrom<Atomic> for u32 {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(IntegerType::UnsignedInt, i) => Ok(i.as_ref().clone().try_into()?),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:unsignedInt",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:unsignedInt",
             )),
         }
     }
@@ -769,13 +724,10 @@ impl TryFrom<Atomic> for u16 {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(IntegerType::UnsignedShort, i) => Ok(i.as_ref().clone().try_into()?),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:unsignedShort",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:unsignedShort",
             )),
         }
     }
@@ -794,13 +746,10 @@ impl TryFrom<Atomic> for u8 {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::Integer(IntegerType::UnsignedByte, i) => Ok(i.as_ref().clone().try_into()?),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:unsignedByte",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:unsignedByte",
             )),
         }
     }
@@ -831,13 +780,10 @@ impl TryFrom<Atomic> for f32 {
                 let f: f32 = a.cast_to_float()?.try_into()?;
                 Ok(f)
             }
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:float or xs:decimal or xs:integer",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:float or xs:decimal, xs:decimal or xs:integer",
             )),
         }
     }
@@ -867,13 +813,10 @@ impl TryFrom<Atomic> for f64 {
                 let f: f64 = a.cast_to_double()?.try_into()?;
                 Ok(f)
             }
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:double or xs:decimal or xs:integer",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:double or xs:decimal or xs:integer",
             )),
         }
     }
@@ -891,13 +834,10 @@ impl TryFrom<Atomic> for Name {
     fn try_from(a: Atomic) -> Result<Self, Self::Error> {
         match a {
             Atomic::QName(n) => Ok(n.as_ref().clone()),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) is not a xs:QName",
-                    a.string_value(),
-                    a.schema_type()
-                ),
+                &a,
+                "Not a xs:QName",
             )),
         }
     }

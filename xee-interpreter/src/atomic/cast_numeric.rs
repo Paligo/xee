@@ -57,13 +57,13 @@ impl atomic::Atomic {
         if s.contains('_') {
             return Err(error::Error::new2(
                 error::ErrorCode::FORG0001,
-                format!("{} is not a valid decimal", s),
+                format!("Not a valid decimal: {}", s),
             ));
         }
         s.parse::<Decimal>().map_err(|_| {
             error::Error::new2(
                 error::ErrorCode::FORG0001,
-                format!("{} is not a valid decimal", s),
+                format!("Not a valid decimal: {}", s),
             )
         })
     }
@@ -79,7 +79,7 @@ impl atomic::Atomic {
         lexical::parse::<V, _>(s0).map_err(|_| {
             error::Error::new2(
                 error::ErrorCode::FORG0001,
-                format!("{} is not a valid integer", s),
+                format!("Not a valid integer: {}", s),
             )
         })
     }
@@ -95,7 +95,7 @@ impl atomic::Atomic {
         lexical::parse_with_options::<f32, _, { lexical::format::XML }>(s, &options).map_err(|_| {
             error::Error::new2(
                 error::ErrorCode::FORG0001,
-                format!("{} is not a valid float", s),
+                format!("Not a valid float: {}", s),
             )
         })
     }
@@ -108,7 +108,7 @@ impl atomic::Atomic {
         lexical::parse_with_options::<f64, _, { lexical::format::XML }>(s, &options).map_err(|_| {
             error::Error::new2(
                 error::ErrorCode::FORG0001,
-                format!("{} is not a valid double", s),
+                format!("Not a valid double: {}", s),
             )
         })
     }
@@ -131,13 +131,10 @@ impl atomic::Atomic {
             // we know xs:boolean is castable to double, so we don't even
             // try the other options
             atomic::Atomic::Boolean(_) => self.cast_to_double(),
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::FORG0001,
-                format!(
-                    "{} ({}) cannot be cast as numeric type",
-                    self.string_value(),
-                    self.schema_type()
-                ),
+                &self,
+                "Cannot be cast as numeric type",
             )),
         }
     }
@@ -145,12 +142,10 @@ impl atomic::Atomic {
     pub(crate) fn cast_to_float(self) -> error::Result<atomic::Atomic> {
         match self {
             atomic::Atomic::Untyped(s) => Self::parse_atomic::<f32>(&s),
-            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::new2(
+            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} (xs:anyURI) cannot be cast as xs:float",
-                    self.string_value()
-                ),
+                &self,
+                "Cannot be cast as xs:float",
             )),
             atomic::Atomic::String(_, s) => Self::parse_atomic::<f32>(&s),
             atomic::Atomic::Float(_) => Ok(self.clone()),
@@ -177,13 +172,10 @@ impl atomic::Atomic {
                     Ok(atomic::Atomic::Float(OrderedFloat(0.0)))
                 }
             }
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) cannot be cast as xs:float",
-                    self.string_value(),
-                    self.schema_type()
-                ),
+                &self,
+                "Cannot be cast as xs:float",
             )),
         }
     }
@@ -191,12 +183,10 @@ impl atomic::Atomic {
     pub(crate) fn cast_to_double(self) -> error::Result<atomic::Atomic> {
         match self {
             atomic::Atomic::Untyped(s) => Self::parse_atomic::<f64>(s.trim()),
-            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::new2(
+            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} (xs:anyURI) cannot be cast as xs:double",
-                    self.string_value()
-                ),
+                &self,
+                "Cannot be cast as xs:double",
             )),
             atomic::Atomic::String(_, s) => Self::parse_atomic::<f64>(s.trim()),
             atomic::Atomic::Float(OrderedFloat(f)) => {
@@ -213,13 +203,10 @@ impl atomic::Atomic {
                     Ok(atomic::Atomic::Double(OrderedFloat(0.0)))
                 }
             }
-            _ => Err(error::Error::new2(
+            _ => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} ({}) cannot be cast as xs:double",
-                    self.string_value(),
-                    self.schema_type()
-                ),
+                &self,
+                "Cannot be cast as xs:double",
             )),
         }
     }
@@ -227,34 +214,28 @@ impl atomic::Atomic {
     pub(crate) fn cast_to_decimal(self) -> error::Result<atomic::Atomic> {
         match self {
             atomic::Atomic::Untyped(s) => Self::parse_atomic::<Decimal>(&s),
-            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::new2(
+            atomic::Atomic::String(StringType::AnyURI, _) => Err(error::Error::new3(
                 error::ErrorCode::XPTY0004,
-                format!(
-                    "{} (xs:anyURI) cannot be cast as xs:decimal",
-                    self.string_value()
-                ),
+                &self,
+                "Cannot be cast as xs:decimal",
             )),
             atomic::Atomic::String(_, s) => Self::parse_atomic::<Decimal>(&s),
             atomic::Atomic::Float(OrderedFloat(f)) => {
                 if f.is_nan() || f.is_infinite() {
-                    return Err(error::Error::new2(
+                    return Err(error::Error::new3(
                         error::ErrorCode::FOCA0002,
-                        format!(
-                            "{} (xs:float) cannot be cast as xs:decimal",
-                            self.string_value()
-                        ),
+                        &self,
+                        "Cannot be cast as xs:decimal",
                     ));
                 }
 
                 Ok(atomic::Atomic::Decimal(
                     Decimal::try_from(f)
                         .map_err(|_| {
-                            error::Error::new2(
+                            error::Error::new3(
                                 error::ErrorCode::FOCA0001,
-                                format!(
-                                    "{} (xs:float) out of range for decimal",
-                                    self.string_value()
-                                ),
+                                &self,
+                                "Out of range for decimal",
                             )
                         })?
                         .into(),
@@ -262,24 +243,20 @@ impl atomic::Atomic {
             }
             atomic::Atomic::Double(OrderedFloat(f)) => {
                 if f.is_nan() || f.is_infinite() {
-                    return Err(error::Error::new2(
+                    return Err(error::Error::new3(
                         error::ErrorCode::FOCA0002,
-                        format!(
-                            "{} (xs:double) cannot be cast as xs:decimal",
-                            self.string_value()
-                        ),
+                        &self,
+                        "Cannot be cast as xs:decimal",
                     ));
                 }
 
                 Ok(atomic::Atomic::Decimal(
                     Decimal::try_from(f)
                         .map_err(|_| {
-                            error::Error::new2(
+                            error::Error::new3(
                                 error::ErrorCode::FOCA0001,
-                                format!(
-                                    "{} (xs:double) out of range for decimal",
-                                    self.string_value()
-                                ),
+                                &self,
+                                "Out of range for decimal",
                             )
                         })?
                         .into(),
@@ -293,25 +270,19 @@ impl atomic::Atomic {
                     // if this is bigger than an i128, it certainly can't be
                     // an integer
                     i.as_ref().try_into().map_err(|_| {
-                        error::Error::new2(
+                        error::Error::new3(
                             error::ErrorCode::FOAR0002,
-                            format!(
-                                "{} ({}) out of range for decimal",
-                                self.string_value(),
-                                self.schema_type()
-                            ),
+                            &self,
+                            "Out of range for decimal",
                         )
                     })?,
                     0,
                 )
                 .map_err(|_| {
-                    error::Error::new2(
+                    error::Error::new3(
                         error::ErrorCode::FOAR0002,
-                        format!(
-                            "{} ({}) out of range for decimal",
-                            self.string_value(),
-                            self.schema_type()
-                        ),
+                        &self,
+                        "Out of range for decimal",
                     )
                 })?
                 .into(),
@@ -923,16 +894,22 @@ mod tests {
     #[test]
     fn test_cast_inf_float_to_decimal() {
         assert_eq!(
-            atomic::Atomic::Float(OrderedFloat(f32::INFINITY)).cast_to_decimal(),
-            Err(error::Error::new(error::ErrorCode::FOCA0002))
+            atomic::Atomic::Float(OrderedFloat(f32::INFINITY))
+                .cast_to_decimal()
+                .unwrap_err()
+                .code,
+            error::ErrorCode::FOCA0002
         );
     }
 
     #[test]
     fn test_cast_huge_float_to_decimal() {
         assert_eq!(
-            atomic::Atomic::Float(OrderedFloat(1.0e30)).cast_to_decimal(),
-            Err(error::Error::new(error::ErrorCode::FOCA0001))
+            atomic::Atomic::Float(OrderedFloat(1.0e30))
+                .cast_to_decimal()
+                .unwrap_err()
+                .code,
+            error::ErrorCode::FOCA0001
         );
     }
 

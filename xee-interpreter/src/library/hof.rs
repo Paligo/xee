@@ -1,7 +1,5 @@
 // https://www.w3.org/TR/xpath-functions-31/#higher-order-functions
 
-use std::rc::Rc;
-
 use ibig::IBig;
 
 use xee_name::Name;
@@ -14,7 +12,6 @@ use crate::function;
 use crate::function::StaticFunctionDescription;
 use crate::interpreter::Interpreter;
 use crate::sequence;
-use crate::string::Collation;
 use crate::wrap_xpath_fn;
 
 // we use the special marker context_last_optional here. The last node
