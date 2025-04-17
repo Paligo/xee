@@ -1,3 +1,4 @@
+use xee_interpreter::function::Annotations;
 use xee_xpath_ast::ast;
 
 use xee_interpreter::interpreter::instruction::{
@@ -25,7 +26,7 @@ pub(crate) enum JumpCondition {
 pub struct FunctionBuilder<'a> {
     program: &'a mut interpreter::Program,
     compiled: Vec<u8>,
-    spans: Vec<span::SourceSpan>,
+    annotations: Annotations<span::SourceSpan>,
     constants: Vec<sequence::Sequence>,
     steps: Vec<xml::Step>,
     cast_types: Vec<function::CastType>,
@@ -38,7 +39,7 @@ impl<'a> FunctionBuilder<'a> {
         FunctionBuilder {
             program,
             compiled: Vec::new(),
-            spans: Vec::new(),
+            annotations: Annotations::new(),
             constants: Vec::new(),
             steps: Vec::new(),
             cast_types: Vec::new(),
@@ -52,9 +53,7 @@ impl<'a> FunctionBuilder<'a> {
     }
 
     pub(crate) fn emit(&mut self, instruction: Instruction, span: span::SourceSpan) {
-        for _ in 0..instruction_size(&instruction) {
-            self.spans.push(span);
-        }
+        self.annotations.emit(instruction_size(&instruction), span);
         encode_instruction(instruction, &mut self.compiled);
     }
 
@@ -179,7 +178,7 @@ impl<'a> FunctionBuilder<'a> {
             name,
             signature: function_definition.signature(),
             chunk: self.compiled,
-            spans: self.spans,
+            annotations: self.annotations,
             closure_names: self.closure_names,
             constants: self.constants,
             steps: self.steps,

@@ -1,3 +1,4 @@
+mod annotation;
 /// XPath can be extended with both static functions as well as user defined
 /// functions.
 mod array;
@@ -7,6 +8,7 @@ mod map;
 mod signature;
 mod static_function;
 
+pub use annotation::Annotations;
 pub use array::Array;
 pub use function_core::Function;
 pub use function_core::{

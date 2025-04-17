@@ -5,6 +5,7 @@ use crate::sequence;
 use crate::span::SourceSpan;
 use crate::xml;
 
+use super::annotation::Annotations;
 use super::signature::Signature;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -32,9 +33,9 @@ pub struct InlineFunction {
     pub cast_types: Vec<CastType>,
     pub sequence_types: Vec<SequenceType>,
     pub closure_names: Vec<Name>,
-    // the compiled code, and the spans of each instruction
+    // the compiled code, and annotation with spans of each instruction
     pub chunk: Vec<u8>,
-    pub spans: Vec<SourceSpan>,
+    pub annotations: Annotations<SourceSpan>,
 }
 
 impl InlineFunction {

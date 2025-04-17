@@ -1252,19 +1252,19 @@ impl<'a> Interpreter<'a> {
     pub(crate) fn err(&self, value_error: error::Error) -> error::SpannedError {
         error::SpannedError {
             error: value_error,
-            span: Some(self.current_span()),
+            span: Some(*self.current_span()),
         }
     }
 
     // During the compilation process, spans became associated with each
     // compiled bytecode instruction. Here we take the current function and the
     // instruction in it to determine the span of the code that failed.
-    fn current_span(&self) -> SourceSpan {
+    fn current_span(&self) -> &SourceSpan {
         let frame = self.state.frame();
         let function = self.runnable.program().inline_function(frame.function());
         // we substract 1 to end up in the current instruction - this
         // because the ip is already on the next instruction
-        function.spans[frame.ip - 1]
+        function.annotations.get(frame.ip - 1).unwrap()
     }
 
     fn read_instruction(&mut self) -> EncodedInstruction {
