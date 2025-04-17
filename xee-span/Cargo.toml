@@ -1,0 +1,23 @@
+[package]
+name = "xee-span"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Xee Project Developers"]
+keywords = ["xml", "xpath"]
+license = "MIT"
+description = "Xee source span support"
+repository = "http://github.com/Paligo/xee"
+readme = "README.md"
+documentation = "https://docs.rs/xee-ast-base"
+homepage = "https://github.com/Paligo/xee"
+
+[features]
+serde = ["dep:serde"]
+ariadne = ["dep:ariadne"]
+chumsky = ["dep:chumsky"]
+
+[dependencies]
+ahash = { workspace = true }
+ariadne = { workspace = true, optional = true }
+chumsky = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }

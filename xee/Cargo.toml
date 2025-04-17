@@ -17,7 +17,7 @@ xee-xslt-compiler = { path = "../xee-xslt-compiler", version = "0.1.5" }
 xee-interpreter = { path = "../xee-interpreter", version = "0.1.5" }
 xot = { workspace = true }
 clap = { workspace = true, features = ["derive", "cargo"] }
-ariadne = "0.5.1"
+ariadne = { workspace = true } 
 anyhow.workspace = true
 regex = { workspace = true }
 rustyline = "15.0.0"
