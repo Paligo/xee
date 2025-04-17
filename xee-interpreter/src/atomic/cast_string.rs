@@ -152,19 +152,23 @@ impl atomic::Atomic {
         self,
         static_context: &context::StaticContext,
     ) -> error::Result<atomic::Atomic> {
-        match self {
+        match &self {
             atomic::Atomic::QName(_) => Ok(self.clone()),
             atomic::Atomic::String(_, s) | atomic::Atomic::Untyped(s) => {
                 // https://www.w3.org/TR/xpath-functions-31/#constructor-qname-notation
                 let namespaces = static_context.namespaces();
-                let name = parse_name(&s, namespaces);
+                let name = parse_name(s, namespaces);
                 match name {
                     Ok(name) => {
                         let name = name.value;
                         if name.in_default_namespace() {
                             // we deliberately do not parse Qualified names, as they are not
                             // legal for xs:QName
-                            Err(error::Error::new(error::ErrorCode::FORG0001))
+                            Err(error::Error::new3(
+                                error::ErrorCode::FORG0001,
+                                &self,
+                                "Cannot cast as xs:QName",
+                            ))
                         } else {
                             Ok(atomic::Atomic::QName(
                                 name.with_default_namespace(namespaces.default_element_namespace())
@@ -176,7 +180,11 @@ impl atomic::Atomic {
                     // and namespace lookup errors, which should be a FONS0004 error
                     // This requires the parser to be modified so it retains that
                     // information.
-                    Err(_) => Err(error::Error::new(error::ErrorCode::FORG0001)),
+                    Err(_) => Err(error::Error::new3(
+                        error::ErrorCode::FORG0001,
+                        &self,
+                        "Cannot cast as xs:QName",
+                    )),
                 }
             }
             _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
