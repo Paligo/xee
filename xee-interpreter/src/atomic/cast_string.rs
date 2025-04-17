@@ -1,5 +1,6 @@
 use regexml::Regex;
 use std::sync::LazyLock;
+use xee_schema_type::Xs;
 
 use xee_xpath_ast::parse_name;
 
@@ -74,7 +75,11 @@ impl atomic::Atomic {
                 whitespace_collapse(&s).into(),
             )),
             atomic::Atomic::Untyped(s) => Ok(atomic::Atomic::String(StringType::AnyURI, s.clone())),
-            _ => Err(error::Error::new(error::ErrorCode::XPTY0004)),
+            _ => Err(error::Error::new3(
+                error::ErrorCode::XPTY0004,
+                &self,
+                "Cannot cast to xs:anyURI",
+            )),
         }
     }
 
@@ -89,35 +94,40 @@ impl atomic::Atomic {
     }
 
     fn cast_to_regex(
-        self,
+        &self,
         string_type: atomic::StringType,
+        schema_type: Xs,
         regex: &LazyLock<Regex>,
     ) -> error::Result<atomic::Atomic> {
-        let s = whitespace_collapse(&self.into_canonical());
+        let s = whitespace_collapse(&self.clone().into_canonical());
         if regex.is_match(&s) {
             Ok(atomic::Atomic::String(string_type, s.into()))
         } else {
-            Err(error::Error::new(error::ErrorCode::FORG0001))
+            Err(error::Error::new3(
+                error::ErrorCode::FORG0001,
+                self,
+                format!("Cannot cast to {}", schema_type),
+            ))
         }
     }
 
     pub(crate) fn cast_to_language(self) -> error::Result<atomic::Atomic> {
-        self.cast_to_regex(atomic::StringType::Language, &LANGUAGE_REGEX)
+        self.cast_to_regex(atomic::StringType::Language, Xs::Language, &LANGUAGE_REGEX)
     }
 
     pub(crate) fn cast_to_nmtoken(self) -> error::Result<atomic::Atomic> {
-        self.cast_to_regex(atomic::StringType::NMTOKEN, &NMTOKEN_REGEX)
+        self.cast_to_regex(atomic::StringType::NMTOKEN, Xs::NMTOKEN, &NMTOKEN_REGEX)
     }
 
     pub(crate) fn cast_to_name(self) -> error::Result<atomic::Atomic> {
-        self.cast_to_regex(atomic::StringType::Name, &NAME_REGEX)
+        self.cast_to_regex(atomic::StringType::Name, Xs::Name, &NAME_REGEX)
     }
 
     fn cast_to_ncname_helper(
         self,
         string_type: atomic::StringType,
     ) -> error::Result<atomic::Atomic> {
-        self.cast_to_regex(string_type, &NC_NAME_REGEX)
+        self.cast_to_regex(string_type, Xs::NCName, &NC_NAME_REGEX)
     }
 
     pub(crate) fn cast_to_ncname(self) -> error::Result<atomic::Atomic> {

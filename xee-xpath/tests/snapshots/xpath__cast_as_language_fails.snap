@@ -7,7 +7,7 @@ Err(
         error: Error {
             code: FORG0001,
             message: Some(
-                "Invalid value for cast/constructor.",
+                "Cannot cast to xs:language: en us (xs:string)",
             ),
         },
         span: Some(
