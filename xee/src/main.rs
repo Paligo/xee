@@ -9,8 +9,10 @@ mod xslt;
 
 use clap::{Parser, Subcommand};
 
+pub(crate) const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), " ", env!("GIT_COMMIT"));
+
 #[derive(Parser)]
-#[command(author, about, version, long_about)]
+#[command(author, about, version=VERSION, long_about)]
 pub(crate) struct Cli {
     #[command(subcommand)]
     command: Commands,
