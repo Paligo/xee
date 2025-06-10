@@ -28,7 +28,6 @@ thiserror = { workspace = true }
 xot = { workspace = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 strum = { workspace = true }
-strum_macros = { workspace = true }
 blanket = { workspace = true }
 rust_decimal = { workspace = true }
 

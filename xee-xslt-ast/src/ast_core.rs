@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use strum_macros::{EnumDiscriminants, EnumString, VariantNames};
+use strum::{EnumDiscriminants, EnumString, VariantNames};
 
 pub use xee_name::Name;
 use xee_xpath_ast::ast as xpath_ast;

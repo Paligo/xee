@@ -1,6 +1,5 @@
 use ibig::error::OutOfBoundsError;
-use strum::EnumMessage;
-use strum_macros::{Display, EnumMessage};
+use strum::{Display, EnumMessage};
 use xee_xpath_ast::ParserError;
 use xot::xmlname::NameStrInfo;
 
