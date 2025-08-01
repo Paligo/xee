@@ -727,6 +727,14 @@ impl ApplicationError {
     pub fn new(qname: xot::xmlname::OwnedName, description: String) -> Self {
         Self { qname, description }
     }
+
+    pub fn qname(&self) -> &xot::xmlname::OwnedName {
+        &self.qname
+    }
+
+    pub fn description(&self) -> &str {
+        &self.description
+    }
 }
 
 impl Error {
@@ -761,7 +769,10 @@ impl Error {
     }
 
     pub fn message(&self) -> &str {
-        self.documentation_pieces().0
+        match self {
+            Error::Application(app_error) => &app_error.description(),
+            _ => self.documentation_pieces().0,
+        }
     }
 
     pub fn note(&self) -> &str {
