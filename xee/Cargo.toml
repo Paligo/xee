@@ -1,6 +1,6 @@
 [package]
 name = "xee"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["The Xee Project Developers"]
 keywords = ["xml", "xpath"]
@@ -12,9 +12,9 @@ documentation = "https://docs.rs/xee"
 homepage = "https://github.com/Paligo/xee"
 
 [dependencies]
-xee-xpath = { path = "../xee-xpath", version = "0.1.4" }
-xee-xslt-compiler = { path = "../xee-xslt-compiler", version = "0.1.5" }
-xee-interpreter = { path = "../xee-interpreter", version = "0.1.5" }
+xee-xpath = { path = "../xee-xpath", version = "0.1.5" }
+xee-xslt-compiler = { path = "../xee-xslt-compiler", version = "0.1.6" }
+xee-interpreter = { path = "../xee-interpreter", version = "0.2.0" }
 xot = { workspace = true }
 clap = { workspace = true, features = ["derive", "cargo"] }
 ariadne = "0.5.1"

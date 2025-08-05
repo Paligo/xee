@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5](https://github.com/Paligo/xee/compare/xee-ir-v0.1.4...xee-ir-v0.1.5) - 2025-08-05
+
+### Other
+
+- Minor change to use https in the github url in Cargo.toml
+- Fix the cause for flaky mode tests. ([#103](https://github.com/Paligo/xee/pull/103))
+- We can now get more tests to pass with the testrunner by enabling xsl:stylesheet. ([#96](https://github.com/Paligo/xee/pull/96))
+- Implement fn:random-number-generator.
+
 ## [0.1.4](https://github.com/Paligo/xee/compare/xee-ir-v0.1.3...xee-ir-v0.1.4) - 2025-03-24
 
 ### Other

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6](https://github.com/Paligo/xee/compare/xee-xslt-ast-v0.1.5...xee-xslt-ast-v0.1.6) - 2025-08-05
+
+### Other
+
+- Minor change to use https in the github url in Cargo.toml
+- Do not depend on strum_macros
+- We introduce a very basic default template rule. ([#99](https://github.com/Paligo/xee/pull/99))
+- We can now get more tests to pass with the testrunner by enabling xsl:stylesheet. ([#96](https://github.com/Paligo/xee/pull/96))
+- Moved snapshot tests from xee_xslt_ast::instruction module to integration test suite
+- Make the xslt test runner do something.
+
 ## [0.1.5](https://github.com/Paligo/xee/compare/xee-xslt-ast-v0.1.4...xee-xslt-ast-v0.1.5) - 2025-03-24
 
 ### Other

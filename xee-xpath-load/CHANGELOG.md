@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/Paligo/xee/compare/xee-xpath-load-v0.1.4...xee-xpath-load-v0.2.0) - 2025-08-05
+
+### Other
+
+- Minor change to use https in the github url in Cargo.toml
+- Clippy cleanup.
+- Load catalog_ns from context.
+- Establish a context for the loading that's used everywhere.
+- Make it so that static_context_builder in ContextLoadable gets context.
+
 ## [0.1.4](https://github.com/Paligo/xee/compare/xee-xpath-load-v0.1.3...xee-xpath-load-v0.1.4) - 2025-03-24
 
 ### Other
