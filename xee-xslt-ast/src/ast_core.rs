@@ -621,6 +621,7 @@ impl From<Evaluate> for SequenceConstructorItem {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[allow(clippy::large_enum_variant)]
 pub enum EvaluateContent {
     WithParam(WithParam),
     Fallback(Fallback),
@@ -707,6 +708,7 @@ impl From<Fork> for SequenceConstructorItem {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[allow(clippy::large_enum_variant)]
 pub enum ForkContent {
     SequenceFallbacks(Vec<(Sequence, Vec<Fallback>)>),
     ForEachGroup((ForEachGroup, Vec<Fallback>)),
@@ -1065,6 +1067,7 @@ impl From<NextMatch> for SequenceConstructorItem {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[allow(clippy::large_enum_variant)]
 pub enum NextMatchContent {
     WithParam(WithParam),
     Fallback(Fallback),
