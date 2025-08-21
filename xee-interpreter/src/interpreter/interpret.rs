@@ -59,7 +59,7 @@ impl<'a> Interpreter<'a> {
         self.state
     }
 
-    pub(crate) fn runnable(&self) -> &Runnable {
+    pub(crate) fn runnable(&self) -> &Runnable<'_> {
         self.runnable
     }
 

@@ -18,7 +18,7 @@ const STATIC_NAMESPACES: [(&str, &str); 7] = [
 ];
 
 /// Static default namespaces.
-pub static DEFAULT_NAMESPACES: LazyLock<Namespaces> = LazyLock::new(|| Default::default());
+pub static DEFAULT_NAMESPACES: LazyLock<Namespaces> = LazyLock::new(Default::default);
 
 /// Declared namespaces.
 #[derive(Debug, Clone)]

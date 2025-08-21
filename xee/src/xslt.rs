@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use crate::error::render_error;
 use anyhow::Context;
 use clap::Parser;
-use xee_xslt_compiler;
 use xot::Xot;
 use crate::common::input_xml;
 use xee_interpreter::sequence::SerializationParameters;

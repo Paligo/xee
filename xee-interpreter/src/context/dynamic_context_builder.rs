@@ -168,7 +168,7 @@ impl<'a> DynamicContextBuilder<'a> {
     }
 
     /// Build the `DynamicContext`.
-    pub fn build(&self) -> DynamicContext {
+    pub fn build(&self) -> DynamicContext<'_> {
         DynamicContext::new(
             self.program,
             self.context_item.clone(),

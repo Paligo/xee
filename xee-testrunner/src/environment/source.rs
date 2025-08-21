@@ -140,7 +140,7 @@ pub(crate) struct Sources {
 }
 
 impl ContextLoadable<LoadContext> for Sources {
-    fn static_context_builder(context: &LoadContext) -> context::StaticContextBuilder {
+    fn static_context_builder(context: &LoadContext) -> context::StaticContextBuilder<'_> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(context.catalog_ns);
         builder

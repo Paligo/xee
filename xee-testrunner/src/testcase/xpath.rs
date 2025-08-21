@@ -89,7 +89,7 @@ impl Runnable<XPathLanguage> for XPathTestCase {
             Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
         };
 
-        let variable_names: Vec<_> = variables.iter().map(|(name, _)| name.clone()).collect();
+        let variable_names: Vec<_> = variables.keys().cloned().collect();
         static_context_builder.variable_names(variable_names);
 
         // set up the namespaces
@@ -186,7 +186,7 @@ impl Runnable<XPathLanguage> for XPathTestCase {
 }
 
 impl ContextLoadable<LoadContext> for XPathTestCase {
-    fn static_context_builder(context: &LoadContext) -> context::StaticContextBuilder {
+    fn static_context_builder(context: &LoadContext) -> context::StaticContextBuilder<'_> {
         let mut builder = context::StaticContextBuilder::default();
         builder.default_element_namespace(context.catalog_ns);
         builder

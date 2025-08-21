@@ -770,7 +770,7 @@ impl Error {
 
     pub fn message(&self) -> &str {
         match self {
-            Error::Application(app_error) => &app_error.description(),
+            Error::Application(app_error) => app_error.description(),
             _ => self.documentation_pieces().0,
         }
     }

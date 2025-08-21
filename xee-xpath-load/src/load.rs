@@ -19,7 +19,7 @@ pub fn convert_boolean(documents: &mut Documents, item: &Item) -> XPathResult<bo
 }
 
 pub trait ContextLoadable<C: ?Sized>: Sized {
-    fn static_context_builder(context: &C) -> StaticContextBuilder;
+    fn static_context_builder(context: &C) -> StaticContextBuilder<'_>;
 
     fn load_with_context(queries: &Queries, context: &C) -> Result<impl Query<Self>>;
 
@@ -62,7 +62,7 @@ pub trait Loadable: Sized {
 }
 
 impl<T: Loadable> ContextLoadable<()> for T {
-    fn static_context_builder(_context: &()) -> StaticContextBuilder {
+    fn static_context_builder(_context: &()) -> StaticContextBuilder<'_> {
         T::static_context_builder()
     }
 

@@ -89,7 +89,7 @@ impl RunContext {
         self.document_handle = document_handle;
     }
 
-    fn queries(&self) -> xee_xpath::Queries {
+    fn queries(&self) -> xee_xpath::Queries<'_> {
         let mut static_context_builder = xee_xpath::context::StaticContextBuilder::default();
         if let Some(default_namespace_uri) = &self.default_namespace_uri {
             static_context_builder.default_element_namespace(default_namespace_uri);

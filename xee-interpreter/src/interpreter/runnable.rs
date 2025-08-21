@@ -106,7 +106,7 @@ impl<'a> Runnable<'a> {
         self.program
     }
 
-    pub fn dynamic_context(&self) -> &'a DynamicContext {
+    pub fn dynamic_context(&self) -> &'a DynamicContext<'_> {
         self.dynamic_context
     }
 

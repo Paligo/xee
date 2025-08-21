@@ -32,7 +32,7 @@ impl Program {
         &self.static_context
     }
 
-    pub fn dynamic_context_builder(&self) -> context::DynamicContextBuilder {
+    pub fn dynamic_context_builder(&self) -> context::DynamicContextBuilder<'_> {
         context::DynamicContextBuilder::new(self)
     }
 

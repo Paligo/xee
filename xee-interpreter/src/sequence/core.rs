@@ -102,7 +102,7 @@ impl Sequence {
     }
 
     /// Get the items from the sequence as an iterator
-    pub fn iter(&self) -> BoxedItemIter {
+    pub fn iter(&self) -> BoxedItemIter<'_> {
         match self {
             Sequence::Empty(inner) => Box::new(inner.iter()),
             Sequence::One(inner) => Box::new(inner.iter()),

@@ -41,7 +41,7 @@ pub trait Query<V> {
     ///
     /// You can use this if you want to construct your own dynamic context
     /// to use with `execute_with_context`.
-    fn dynamic_context_builder(&self, documents: &Documents) -> context::DynamicContextBuilder {
+    fn dynamic_context_builder(&self, documents: &Documents) -> context::DynamicContextBuilder<'_> {
         let mut context = self.program().dynamic_context_builder();
         context.documents(documents.documents().clone());
         context
@@ -116,7 +116,7 @@ pub trait RecurseQuery<C, V> {
     ///
     /// You can use this if you want to construct your own dynamic context
     /// to use with `execute_with_context`.
-    fn dynamic_context_builder(&self, document: &Documents) -> context::DynamicContextBuilder {
+    fn dynamic_context_builder(&self, document: &Documents) -> context::DynamicContextBuilder<'_> {
         let mut context = self.program().dynamic_context_builder();
         context.documents(document.documents.clone());
         context

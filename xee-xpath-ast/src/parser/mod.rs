@@ -26,7 +26,7 @@ use crate::Namespaces;
 use super::parser::parser_core::parser;
 use super::parser::types::{BoxedParser, State};
 
-fn create_token_iter(src: &str) -> impl Iterator<Item = (Token, SimpleSpan)> + '_ {
+fn create_token_iter(src: &str) -> impl Iterator<Item = (Token<'_>, SimpleSpan)> + '_ {
     lexer(src).map(|(tok, span)| (tok, span.into()))
 }
 

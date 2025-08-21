@@ -85,7 +85,7 @@ impl<'a> Iterator for DeliminationIterator<'a> {
     }
 }
 
-pub fn lexer(input: &str) -> DeliminationIterator {
+pub fn lexer(input: &str) -> DeliminationIterator<'_> {
     DeliminationIterator::from_str(input)
 }
 

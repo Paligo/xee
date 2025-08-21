@@ -188,7 +188,7 @@ impl<'a> FunctionBuilder<'a> {
         }
     }
 
-    pub(crate) fn builder(&mut self) -> FunctionBuilder {
+    pub(crate) fn builder(&mut self) -> FunctionBuilder<'_> {
         FunctionBuilder::new(self.program)
     }
 
