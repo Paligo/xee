@@ -9,14 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.5](https://github.com/Paligo/xee/compare/xee-xpath-v0.1.4...xee-xpath-v0.1.5) - 2025-08-05
 
-### Other
+### Features
 
-- Minor change to use https in the github url in Cargo.toml
-- remove unneeded reference
-- add example with namespaces and multiple XPath expressions
-- Use the sequence serialize function in the test runner. ([#102](https://github.com/Paligo/xee/pull/102))
-- Just in time document order ([#95](https://github.com/Paligo/xee/pull/95))
-- Further clarification.
+- Implement fn:trace as a NOOP ([#86](https://github.com/Paligo/xee/pull/86))
+
+- Implement fn:random-number-generator.
+
+- Define fn:concat with arity 99
+
+- Use arithmetic casting for op:numeric-subtract
 
 ## [0.1.4](https://github.com/Paligo/xee/compare/xee-xpath-v0.1.3...xee-xpath-v0.1.4) - 2025-03-24
 

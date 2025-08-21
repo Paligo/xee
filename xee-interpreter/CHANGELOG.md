@@ -9,24 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0](https://github.com/Paligo/xee/compare/xee-interpreter-v0.1.5...xee-interpreter-v0.2.0) - 2025-08-05
 
-### Added
+### Features
 
-- Adds static default namespaces
+- More XSLT works. Most doesn't though.
 
-### Other
-
-- Printing application error description when displaying error message
-- Minor change to use https in the github url in Cargo.toml
-- Do not depend on strum_macros
-- Use the sequence serialize function in the test runner. ([#102](https://github.com/Paligo/xee/pull/102))
-- Add "xee xlst" subcommand for CLI
-- More default template rules. ([#100](https://github.com/Paligo/xee/pull/100))
 - Implement fn:trace as a NOOP ([#86](https://github.com/Paligo/xee/pull/86))
-- We can now get more tests to pass with the testrunner by enabling xsl:stylesheet. ([#96](https://github.com/Paligo/xee/pull/96))
-- Just in time document order ([#95](https://github.com/Paligo/xee/pull/95))
+
 - Implement fn:random-number-generator.
-- Define concat with arity 99
+
+- Define fn:concat with arity 99
+
 - Use arithmetic casting for op:numeric-subtract
+
+### Packaging
+
+- Do not depend on strum_macro
+
+### Internals
+
+- Just in time document order ([#95](https://github.com/Paligo/xee/pull/95)) to
+  improve XSLT support.
 
 ## [0.1.5](https://github.com/Paligo/xee/compare/xee-interpreter-v0.1.4...xee-interpreter-v0.1.5) - 2025-03-24
 

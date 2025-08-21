@@ -9,15 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.6](https://github.com/Paligo/xee/compare/xee-v0.1.5...xee-v0.1.6) - 2025-08-05
 
-### Other
+### Features
+
+- Add "xee xlst" subcommand for CLI
+
+### Packaging
 
 - Minor change to use https in the github url in Cargo.toml
-- Readd git date and commit info to version
-- add namespace examples to readme
+
 - Removed build script from xee ([#104](https://github.com/Paligo/xee/pull/104))
-- Add "xee xlst" subcommand for CLI
-- add a note about stdin.
-- improve linking of xee tool.
+
+- Read git date and commit info to version
 
 ## [0.1.5](https://github.com/Paligo/xee/compare/xee-v0.1.4...xee-v0.1.5) - 2025-03-24
 
