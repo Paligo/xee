@@ -146,6 +146,7 @@ impl Runnable<XPathLanguage> for XPathTestCase {
             builder.context_item(context_item);
         }
         builder.variables(variables.clone());
+        builder.current_datetime(chrono::offset::Utc::now().into());
         // TODO: at present this doesn't load up any query results,
         // as those tests are gated to xquery only, but this might change
         // https://github.com/w3c/qt3tests/issues/66

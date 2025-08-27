@@ -132,6 +132,7 @@ impl Runnable<XsltLanguage> for XsltTestCase {
         }
         builder.documents(run_context.documents.documents().clone());
         // builder.variables(variables.clone());
+        builder.current_datetime(chrono::offset::Utc::now().into());
         let context = builder.build();
         let runnable = program.runnable(&context);
         let result = runnable.many(run_context.documents.xot_mut());
