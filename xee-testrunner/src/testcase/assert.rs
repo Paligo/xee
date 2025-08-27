@@ -1,6 +1,7 @@
 use ahash::AHashMap;
 use chrono::Offset;
 use std::fmt;
+use std::path::PathBuf;
 use xee_xpath::context::{Collation, DynamicContext};
 use xee_xpath::SerializationParameters;
 use xot::xmlname::{NameStrInfo, OwnedName as Name};
@@ -370,11 +371,17 @@ impl Assertable for AssertPermutation {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AssertXml(String);
+pub enum AssertXml {
+    MatchString(String),
+    MatchFile(PathBuf),
+}
 
 impl AssertXml {
     pub(crate) fn new(xml: String) -> Self {
-        Self(xml)
+        Self::MatchString(xml)
+    }
+    pub(crate) fn new_file(path: PathBuf) -> Self {
+        Self::MatchFile(path)
     }
 }
 
@@ -412,7 +419,25 @@ impl Assertable for AssertXml {
                 return TestOutcome::EnvironmentError("Cannot parse result XML".to_string());
             }
         };
-        let expected = compare_xot.parse_fragment(&self.0).unwrap();
+
+        let expected = match &self {
+            Self::MatchString(s) => compare_xot.parse_fragment(s).unwrap(),
+            Self::MatchFile(path) => {
+                let expected_xml = std::fs::File::open(path).and_then(std::io::read_to_string);
+
+                let expected_xml = match expected_xml {
+                    Ok(expected_xml) => expected_xml,
+                    Err(error) => {
+                        return TestOutcome::EnvironmentError(format!(
+                            "Error reading output xml: {}",
+                            error
+                        ))
+                    }
+                };
+
+                compare_xot.parse(&expected_xml).unwrap()
+            }
+        };
 
         // and compare
         let c = compare_xot.deep_equal(expected, found);
@@ -767,7 +792,7 @@ impl ContextLoadable<LoadContext> for TestCaseResult {
 
     fn load_with_context(
         queries: &Queries,
-        _context: &LoadContext,
+        context: &LoadContext,
     ) -> anyhow::Result<impl Query<Self>> {
         let code_query = queries.one("@code/string()", convert_string)?;
         let error_query = queries.one(".", move |documents, item| {
@@ -782,9 +807,21 @@ impl ContextLoadable<LoadContext> for TestCaseResult {
             Ok(TestCaseResult::AssertCount(AssertCount::new(count)))
         })?;
 
-        let assert_xml_query = queries.one("string()", |_, item| {
-            let xml: String = item.to_atomic()?.try_into()?;
-            Ok(TestCaseResult::AssertXml(AssertXml::new(xml)))
+        let file_query = queries.one("@file/string()", convert_string)?;
+        let contents_query = queries.one("string()", convert_string)?;
+
+        let assert_xml_query = queries.one(".", move |documents, item| {
+            match file_query.execute(documents, item) {
+                Ok(path) => {
+                    let base_dir = context.path.parent().unwrap();
+                    let path = base_dir.join(path);
+                    Ok(TestCaseResult::AssertXml(AssertXml::new_file(path)))
+                }
+                Err(_e) => {
+                    let xml: String = contents_query.execute(documents, item)?;
+                    Ok(TestCaseResult::AssertXml(AssertXml::new(xml)))
+                }
+            }
         })?;
 
         let assert_eq_query = queries.one("string()", |_, item| {
@@ -974,7 +1011,7 @@ impl fmt::Display for Failure {
             }
             Failure::Xml(a, failure) => {
                 writeln!(f, "xml:")?;
-                writeln!(f, "  expected: {:?}", a.0)?;
+                writeln!(f, "  expected: {:?}", a)?;
                 writeln!(f, "  actual: {:?}", failure)?;
                 Ok(())
             }
