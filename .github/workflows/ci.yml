@@ -5,11 +5,11 @@ name: Cargo Build & Test
 
 on:
   push:
-    branches: 
-      - main 
+    branches:
+      - main
   pull_request:
 
-env: 
+env:
   CARGO_TERM_COLOR: always
   # disable incremental compilation for faster from scratch builds
   CARGO_INCREMENTAL: 0
@@ -28,12 +28,18 @@ jobs:
         id: cache-dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Check Rust formatting
+        run: cargo fmt --check --all
+
+      - name: Check Rust lints
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
       - name: Build
         run: cargo build --verbose
-      
+
       - name: Test
         run: cargo test --verbose
-      
+
       # we run these conformance tests in debug mode. While the debug tests run
       # more slowly we catch some bounds check errors that release mode
       # doesn't.

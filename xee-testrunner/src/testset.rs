@@ -1,5 +1,7 @@
 use std::{
-    io::Stdout, panic::{catch_unwind, AssertUnwindSafe}, path::{Path, PathBuf}
+    io::Stdout,
+    panic::{catch_unwind, AssertUnwindSafe},
+    path::{Path, PathBuf},
 };
 
 use anyhow::Result;
@@ -72,9 +74,8 @@ impl<L: Language> TestSet<L> {
             }
             renderer.render_test_case(out, test_case)?;
 
-            let outcome = catch_unwind(AssertUnwindSafe(|| {
-                runner.run(run_context, catalog, self)
-            })).unwrap_or(TestOutcome::Panic);
+            let outcome = catch_unwind(AssertUnwindSafe(|| runner.run(run_context, catalog, self)))
+                .unwrap_or(TestOutcome::Panic);
 
             renderer.render_test_outcome(out, &outcome)?;
             test_set_outcomes.add_outcome(&test_case.name, outcome);

@@ -1,4 +1,3 @@
-
 use crate::lexer::Token;
 
 pub(crate) enum SymbolType {
@@ -20,9 +19,9 @@ impl Token<'_> {
             | Slash | DoubleSlash | Colon | ColonAsterisk | DoubleColon | ColonEqual | LessThan
             | Precedes | LessThanEqual | Equal | Arrow | GreaterThan | GreaterThanEqual
             | Follows | QuestionMark | At | BracedURILiteral(_) | LeftBracket | RightBracket
-            | LeftBrace | Pipe | DoublePipe | RightBrace | 
+            | LeftBrace | Pipe | DoublePipe | RightBrace |
             // starts with *: so is delimiting
-            PrefixWildcard(_) | 
+            PrefixWildcard(_) |
             // starts with BracedURILiteral so is delimiting
             BracedURILiteralWildcard(_)=> {
                 SymbolType::Delimiting
@@ -95,11 +94,11 @@ impl Token<'_> {
             | Then
             | To
             | Treat
-            | Union 
-            | Switch 
+            | Union
+            | Switch
             | Typeswitch => SymbolType::NonDelimiting,
 
-        
+
             Token::Whitespace => SymbolType::Whitespace,
             Token::CommentStart => SymbolType::CommentStart,
             Token::Error => SymbolType::Error,

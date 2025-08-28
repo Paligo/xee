@@ -1,10 +1,10 @@
+use crate::common::input_xml;
+use crate::error::render_error;
 use clap::Parser;
 use std::path::PathBuf;
 use xee_xpath::context::StaticContextBuilder;
 use xee_xpath::Itemable;
 use xee_xpath::Query;
-use crate::common::input_xml;
-use crate::error::render_error;
 
 #[derive(Debug, Parser)]
 pub(crate) struct XPath {

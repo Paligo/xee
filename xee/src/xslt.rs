@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
+use crate::common::input_xml;
 use crate::error::render_error;
 use anyhow::Context;
 use clap::Parser;
-use xot::Xot;
-use crate::common::input_xml;
 use xee_interpreter::sequence::SerializationParameters;
+use xot::Xot;
 
 #[derive(Debug, Parser)]
 pub(crate) struct Xslt {
@@ -44,7 +44,7 @@ impl Xslt {
         };
 
         // Convert result to string
-        let output_str = result.serialize(SerializationParameters::new(), &mut xot)?;//serialize_result(&mut xot, result)?;
+        let output_str = result.serialize(SerializationParameters::new(), &mut xot)?; //serialize_result(&mut xot, result)?;
 
         // Output the result
         if let Some(output_path) = &self.output {

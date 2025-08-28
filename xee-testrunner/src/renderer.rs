@@ -212,9 +212,7 @@ impl<L: Language> Renderer<L> for CharacterRenderer {
             TestOutcome::EnvironmentError(_) => {
                 render_error_code(stdout, "E", crossterm::style::Color::Red)
             }
-            TestOutcome::Panic => {
-                render_error_code(stdout, "E", crossterm::style::Color::Red)
-            }
+            TestOutcome::Panic => render_error_code(stdout, "E", crossterm::style::Color::Red),
         }
     }
 

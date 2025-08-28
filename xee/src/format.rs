@@ -1,8 +1,7 @@
-use std::{
-    fs::File,
-    path::PathBuf,
-};
+use std::{fs::File, path::PathBuf};
 
+use crate::common::input_xml;
+use crate::error::render_parse_error;
 use clap::Parser;
 use xot::{
     output::{
@@ -12,8 +11,6 @@ use xot::{
     NameId,
 };
 use xot::{xmlname::OwnedName, Xot};
-use crate::common::input_xml;
-use crate::error::render_parse_error;
 
 static URI_QUALIFIED_NAME_REGEX: std::sync::LazyLock<regex::Regex> =
     std::sync::LazyLock::new(|| regex::Regex::new(r"^Q\{(?P<ns>.*)\}(?P<name>.*)$").unwrap());

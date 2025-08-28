@@ -23,4 +23,3 @@ impl TestOutcome {
         matches!(self, Self::Passed)
     }
 }
-
