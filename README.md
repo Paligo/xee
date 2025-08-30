@@ -70,7 +70,7 @@ Xee.
 
 ## Testing
 
-This project undergoes extensive automated testing using using specific
+This project undergoes extensive automated testing using specific
 developer tests executed using `cargo test` as well as using the
 `xee-testrunner` infrastructure for running conformance tests. This is run in
 CI for PRS, and you can also run them locally. See [`hacking`](hacking.md) for
