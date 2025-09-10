@@ -1143,3 +1143,71 @@ fn test_generate_text_node() {
 
     assert_eq!(xml(&xot, output), r#"<out>test</out>"#);
 }
+
+#[test]
+fn test_basic_iterate() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><foo/><foo/><foo/></doc>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <o><xsl:iterate select="doc/foo"><bar/></xsl:iterate></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o><bar/><bar/><bar/></o>");
+}
+
+#[test]
+fn test_basic_iterate_on_complete() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><foo/><foo/><foo/></doc>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <o><xsl:iterate select="doc/foo"><xsl:on-completion><bar/></xsl:on-completion><baz/></xsl:iterate></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o><baz/><baz/><baz/><bar/></o>");
+}
+
+#[test]
+fn test_basic_iterate_on_complete_break() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><foo/><foo/><foo/></doc>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <o><xsl:iterate select="doc/foo"><xsl:on-completion><bar/></xsl:on-completion><xsl:break/></xsl:iterate></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o/>");
+}
+
+#[test]
+fn test_basic_iterate_if_break() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><foo/><foo><x/></foo><foo/></doc>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <o><xsl:iterate select="doc/foo"><baz/><xsl:if test="x"><xsl:break select="'exit at ' || position() || ' of ' || last()"/></xsl:if></xsl:iterate></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o><baz/><baz/>exit at 2 of 3</o>");
+}

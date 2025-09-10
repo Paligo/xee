@@ -55,6 +55,13 @@ impl<'a> FunctionCompiler<'a> {
             ir::Expr::If(if_) => self.compile_if(if_, span),
             ir::Expr::Map(map) => self.compile_map(map, span),
             ir::Expr::Filter(filter) => self.compile_filter(filter, span),
+            ir::Expr::Iterate(iterate) => self.compile_iterate(iterate, span),
+            ir::Expr::IterateBreak(iterate_break) => {
+                self.compile_iterate_break(iterate_break, span)
+            }
+            ir::Expr::IterateLetNext(iterate_let_next) => {
+                self.compile_iterate_let_next(iterate_let_next, span)
+            }
             ir::Expr::PatternPredicate(pattern_predicate) => {
                 self.compile_pattern_predicate(pattern_predicate, span)
             }
@@ -664,6 +671,88 @@ impl<'a> FunctionCompiler<'a> {
         self.scopes.pop_name();
         self.scopes.pop_name();
         Ok(())
+    }
+
+    fn compile_iterate(
+        &mut self,
+        iterate: &ir::Iterate,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        // create new build sequence on build stack
+        self.builder.emit(Instruction::BuildNew, span);
+
+        // Mark the loop as not yet broken
+        self.builder.emit_constant(false.into(), span);
+        self.scopes.push_name(&iterate.loop_name);
+
+        let (loop_start, loop_end) =
+            self.compile_sequence_loop_init(&iterate.var_atom, &iterate.context_names, span)?;
+
+        self.compile_sequence_get_item(&iterate.var_atom, &iterate.context_names, span)?;
+        // name it
+        self.scopes.push_name(&iterate.context_names.item);
+        // execute the iterate expression, placing result on stack
+        self.compile_expr(&iterate.expr)?;
+        self.scopes.pop_name();
+
+        // push result to build
+        self.builder.emit(Instruction::BuildPush, span);
+
+        // clean up the var_name item
+        self.builder.emit(Instruction::Pop, span);
+
+        // Check if we broke out of the loop
+        self.compile_variable(&iterate.loop_name, span)?;
+        let loop_break = self.builder.emit_jump_forward(JumpCondition::True, span);
+
+        self.compile_sequence_loop_iterate(loop_start, &iterate.context_names, span)?;
+
+        self.builder.patch_jump(loop_end);
+
+        // add the on_complete result after the loop is finished
+        if let Some(on_complete) = &iterate.on_complete {
+            self.compile_expr(on_complete)?;
+            self.builder.emit(Instruction::BuildPush, span);
+        }
+
+        self.builder.patch_jump(loop_break);
+
+        // process loop end after break completes
+        self.compile_sequence_loop_end(span);
+        // pop sequence length name & index;
+        self.scopes.pop_name();
+        self.scopes.pop_name();
+
+        // Remove the loop_name variable
+        self.builder.emit(Instruction::Pop, span);
+        self.scopes.pop_name();
+
+        self.builder.emit(Instruction::BuildComplete, span);
+        Ok(())
+    }
+
+    fn compile_iterate_break(
+        &mut self,
+        iterate_break: &ir::IterateBreak,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        // Mark the loop as breaking
+        self.builder.emit_constant(true.into(), span);
+        self.compile_variable_set(&iterate_break.loop_name, span)?;
+        // Return the contained expression
+        self.compile_expr(&iterate_break.return_expr)?;
+        Ok(())
+    }
+    fn compile_iterate_let_next(
+        &mut self,
+        _iterate_let_next: &ir::IterateLetNext,
+        _span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        // TODO Iterate params yet missing..
+        return Err(error::SpannedError {
+            error: Error::Unsupported,
+            span: None,
+        });
     }
 
     fn compile_quantified(

@@ -34,6 +34,9 @@ pub enum Expr {
     Deduplicate(Box<ExprS>),
     Map(Map),
     Filter(Filter),
+    Iterate(Iterate),
+    IterateBreak(IterateBreak),
+    IterateLetNext(IterateLetNext),
     PatternPredicate(PatternPredicate),
     Quantified(Quantified),
     Cast(Cast),
@@ -167,6 +170,34 @@ pub struct Map {
 pub struct Filter {
     pub context_names: ContextNames,
     pub var_atom: AtomS,
+    pub return_expr: Box<ExprS>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IterateParam {
+    pub name: Name,
+    pub value: Box<ExprS>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Iterate {
+    pub context_names: ContextNames,
+    pub loop_name: Name,
+    pub var_atom: AtomS,
+    // pub params: Vec<IterateParam>,
+    pub expr: Box<ExprS>,
+    pub on_complete: Option<Box<ExprS>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IterateBreak {
+    pub loop_name: Name,
+    pub return_expr: Box<ExprS>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IterateLetNext {
+    pub param: IterateParam,
     pub return_expr: Box<ExprS>,
 }
 

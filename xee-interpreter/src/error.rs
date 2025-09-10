@@ -547,6 +547,17 @@ pub enum Error {
     /// precedence, unless it also contains another binding with the same name
     /// and higher import precedence.
     XTSE0630,
+    /// xsl:break or xsl:next-iteration outside of xsl:iterate's tail position
+    ///
+    /// It is a static error if an xsl:break or xsl:next-iteration element
+    /// appears other than in a tail position within the sequence constructor
+    /// forming the body of an xsl:iterate instruction.
+    XTSE3120,
+    /// Both select attribute and sequence attriute present.
+    ///
+    /// It is a static error if the select attribute of xsl:break or
+    /// xsl:on-completion is present and the instruction has children.
+    XTSE3125,
     /// Circularity
     ///
     /// Circularity in global declarations is now allowed.

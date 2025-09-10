@@ -10,6 +10,7 @@ use crate::{ir, Binding, Bindings};
 #[derive(Debug)]
 enum ContextItem {
     Names(ir::ContextNames),
+    IterateNames(ir::ContextNames, ir::Name),
     Absent,
 }
 
@@ -63,6 +64,18 @@ impl Variables {
         names
     }
 
+    pub fn push_iterate_context(&mut self) -> (ir::ContextNames, ir::Name) {
+        let names = ir::ContextNames {
+            item: self.new_name(),
+            position: self.new_name(),
+            last: self.new_name(),
+        };
+        let loop_name = self.new_name();
+        self.context_scope
+            .push(ContextItem::IterateNames(names.clone(), loop_name.clone()));
+        (names, loop_name)
+    }
+
     pub fn push_absent_context(&mut self) {
         self.context_scope.push(ContextItem::Absent);
     }
@@ -93,9 +106,18 @@ impl Variables {
 
     pub fn current_context_names(&self) -> Option<ir::ContextNames> {
         match self.context_scope.last() {
-            Some(ContextItem::Names(names)) => Some(names.clone()),
+            Some(ContextItem::Names(names) | ContextItem::IterateNames(names, _)) => {
+                Some(names.clone())
+            }
             Some(ContextItem::Absent) => None,
             None => None,
+        }
+    }
+
+    pub fn current_iterate_loop_name(&self) -> Option<ir::Name> {
+        match self.context_scope.last() {
+            Some(ContextItem::IterateNames(_, loop_name)) => Some(loop_name.clone()),
+            _ => None,
         }
     }
 
@@ -108,7 +130,7 @@ impl Variables {
         let empty_span: Span = (0..0).into();
         if let Some(context_scope) = self.context_scope.last() {
             match context_scope {
-                ContextItem::Names(names) => {
+                ContextItem::Names(names) | ContextItem::IterateNames(names, _) => {
                     let ir_name = get_name(names);
                     Ok(Bindings::new(Binding::new(
                         ir_name.clone(),

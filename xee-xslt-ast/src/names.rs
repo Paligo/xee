@@ -67,6 +67,9 @@ impl SequenceConstructorName {
             }
             SequenceConstructorName::Fork => ast::Fork::parse_sequence_constructor_item(attributes),
             SequenceConstructorName::If => ast::If::parse_sequence_constructor_item(attributes),
+            SequenceConstructorName::Iterate => {
+                ast::Iterate::parse_sequence_constructor_item(attributes)
+            }
             SequenceConstructorName::Map => ast::Map::parse_sequence_constructor_item(attributes),
             SequenceConstructorName::MapEntry => {
                 ast::MapEntry::parse_sequence_constructor_item(attributes)
