@@ -1147,6 +1147,16 @@ pub struct OnCompletion {
     pub span: Span,
 }
 
+impl SelectOrSequenceConstructor for OnCompletion {
+    fn select(&self) -> Option<&Expression> {
+        self.select.as_ref()
+    }
+
+    fn sequence_constructor(&self) -> &SequenceConstructor {
+        &self.sequence_constructor
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct OnEmpty {
@@ -1354,6 +1364,16 @@ pub struct Param {
     pub sequence_constructor: SequenceConstructor,
 
     pub span: Span,
+}
+
+impl SelectOrSequenceConstructor for Param {
+    fn select(&self) -> Option<&Expression> {
+        self.select.as_ref()
+    }
+
+    fn sequence_constructor(&self) -> &SequenceConstructor {
+        &self.sequence_constructor
+    }
 }
 
 impl From<Param> for OverrideContent {
@@ -1714,6 +1734,16 @@ pub struct WithParam {
     pub sequence_constructor: SequenceConstructor,
 
     pub span: Span,
+}
+
+impl SelectOrSequenceConstructor for WithParam {
+    fn select(&self) -> Option<&Expression> {
+        self.select.as_ref()
+    }
+
+    fn sequence_constructor(&self) -> &SequenceConstructor {
+        &self.sequence_constructor
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

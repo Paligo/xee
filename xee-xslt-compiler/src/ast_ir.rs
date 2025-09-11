@@ -644,19 +644,26 @@ impl<'a> IrConverter<'a> {
     fn iterate(&mut self, iterate: &ast::Iterate) -> error::SpannedResult<Bindings> {
         let (var_atom, bindings) = self.expression(&iterate.select)?.atom_bindings();
 
-        if !iterate.params.is_empty() {
-            return Err(error::SpannedError {
-                error: error::Error::Unsupported,
-                span: None,
-            }); // TODO: span
-        }
+        let params = iterate
+            .params
+            .iter()
+            .map(|param| -> error::SpannedResult<ir::IterateParam> {
+                let param_bindings = self.select_or_sequence_constructor(param)?;
+                let name = self.variables.new_var_name(&param.name);
+                Ok(ir::IterateParam {
+                    name,
+                    value: Box::new(param_bindings.expr()),
+                    type_: param.as_.clone(),
+                })
+            })
+            .collect::<error::SpannedResult<Vec<_>>>()?;
 
         let (context_names, loop_name) = self.variables.push_iterate_context();
         let return_bindings = self.sequence_constructor(&iterate.sequence_constructor)?;
         let on_complete_bindings = iterate
             .on_completion
             .as_ref()
-            .map(|oc| self.on_completion(oc))
+            .map(|oc| self.select_or_sequence_constructor(oc))
             .transpose()?;
         self.variables.pop_context();
 
@@ -664,31 +671,12 @@ impl<'a> IrConverter<'a> {
             context_names,
             loop_name,
             var_atom,
+            params,
             expr: Box::new(return_bindings.expr()),
             on_complete: on_complete_bindings.map(|x| Box::new(x.expr())),
         });
 
         Ok(bindings.bind_expr_no_span(&mut self.variables, expr))
-    }
-
-    fn on_completion(
-        &mut self,
-        on_completion: &ast::OnCompletion,
-    ) -> error::SpannedResult<Bindings> {
-        if let Some(select) = &on_completion.select {
-            if !on_completion.sequence_constructor.is_empty() {
-                return Err(error::SpannedError {
-                    error: error::Error::XTSE3125,
-                    span: None,
-                }); // TODO: span
-            }
-            let bindings = self.expression(select)?;
-            Ok(bindings)
-        } else {
-            let return_bindings = self.sequence_constructor(&on_completion.sequence_constructor)?;
-
-            Ok(return_bindings)
-        }
     }
 
     fn break_(&mut self, break_: &ast::Break) -> error::SpannedResult<Bindings> {
@@ -712,18 +700,30 @@ impl<'a> IrConverter<'a> {
         &mut self,
         next_iteration: &ast::NextIteration,
     ) -> error::SpannedResult<Bindings> {
-        if !next_iteration.with_params.is_empty() {
-            return Err(error::SpannedError {
-                error: error::Error::Unsupported,
-                span: None,
-            }); // TODO: Iterate params unsupported
-        }
+        let params = next_iteration
+            .with_params
+            .iter()
+            .map(|param| {
+                let value_bind = self.select_or_sequence_constructor(param)?;
+                Ok(ir::IterateParam {
+                    name: self.variables.new_var_name(&param.name),
+                    value: Box::new(value_bind.expr()),
+                    type_: param.as_.clone(),
+                })
+            })
+            .collect::<error::SpannedResult<Vec<_>>>()?;
 
         let empty_sequence = self.empty_sequence();
-        Ok(Bindings::new(
+        let return_expr = Bindings::new(
             self.variables
                 .new_binding(empty_sequence.value, empty_sequence.span),
-        ))
+        );
+        let let_next = ir::Expr::IterateLetNext(ir::IterateLetNext {
+            params,
+            return_expr: Box::new(return_expr.expr()),
+        });
+        let result = return_expr.bind_expr_no_span(&mut self.variables, let_next);
+        Ok(result)
     }
 
     fn copy(&mut self, copy: &ast::Copy) -> error::SpannedResult<Bindings> {

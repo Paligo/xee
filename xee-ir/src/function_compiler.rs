@@ -681,6 +681,17 @@ impl<'a> FunctionCompiler<'a> {
         // create new build sequence on build stack
         self.builder.emit(Instruction::BuildNew, span);
 
+        // Add all the parameters
+        for param in iterate.params.iter() {
+            self.compile_expr(&param.value)?;
+            if let Some(type_) = &param.type_ {
+                let sequence_type_id = self.builder.add_sequence_type(type_.clone());
+                self.builder
+                    .emit(Instruction::Treat(sequence_type_id as u16), span);
+            }
+            self.scopes.push_name(&param.name);
+        }
+
         // Mark the loop as not yet broken
         self.builder.emit_constant(false.into(), span);
         self.scopes.push_name(&iterate.loop_name);
@@ -726,6 +737,11 @@ impl<'a> FunctionCompiler<'a> {
         // Remove the loop_name variable
         self.builder.emit(Instruction::Pop, span);
         self.scopes.pop_name();
+        // Remove all the param variables
+        for _param in iterate.params.iter() {
+            self.builder.emit(Instruction::Pop, span);
+            self.scopes.pop_name();
+        }
 
         self.builder.emit(Instruction::BuildComplete, span);
         Ok(())
@@ -743,16 +759,29 @@ impl<'a> FunctionCompiler<'a> {
         self.compile_expr(&iterate_break.return_expr)?;
         Ok(())
     }
+
     fn compile_iterate_let_next(
         &mut self,
-        _iterate_let_next: &ir::IterateLetNext,
-        _span: SourceSpan,
+        iterate_let_next: &ir::IterateLetNext,
+        span: SourceSpan,
     ) -> error::SpannedResult<()> {
-        // TODO Iterate params yet missing..
-        return Err(error::SpannedError {
-            error: Error::Unsupported,
-            span: None,
-        });
+        // First, calculate all parameter values and put them on the stack
+        for param in iterate_let_next.params.iter() {
+            self.compile_expr(&param.value)?;
+            if let Some(type_) = &param.type_ {
+                let sequence_type_id = self.builder.add_sequence_type(type_.clone());
+                self.builder
+                    .emit(Instruction::Treat(sequence_type_id as u16), span);
+            }
+        }
+        // Then, store them back into the variables (in reverse, so they match up)
+        for param in iterate_let_next.params.iter().rev() {
+            self.compile_variable_set(&param.name, span)?;
+        }
+        // Finally, emit a value as the result of IterateLetNext (typ. an empty sequence)
+        // self.builder.emit_constant(sequence::Sequence::default(), span);
+        self.compile_expr(&iterate_let_next.return_expr)?;
+        Ok(())
     }
 
     fn compile_quantified(

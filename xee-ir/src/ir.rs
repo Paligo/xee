@@ -177,6 +177,7 @@ pub struct Filter {
 pub struct IterateParam {
     pub name: Name,
     pub value: Box<ExprS>,
+    pub type_: Option<SequenceType>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -184,7 +185,7 @@ pub struct Iterate {
     pub context_names: ContextNames,
     pub loop_name: Name,
     pub var_atom: AtomS,
-    // pub params: Vec<IterateParam>,
+    pub params: Vec<IterateParam>,
     pub expr: Box<ExprS>,
     pub on_complete: Option<Box<ExprS>>,
 }
@@ -197,7 +198,7 @@ pub struct IterateBreak {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IterateLetNext {
-    pub param: IterateParam,
+    pub params: Vec<IterateParam>,
     pub return_expr: Box<ExprS>,
 }
 
