@@ -5,12 +5,16 @@ use xee_xpath_ast::{
     span::Spanned,
 };
 
-use crate::{ir, Binding, Bindings};
+use crate::{
+    ir::{self, TemplateNames},
+    Binding, Bindings,
+};
 
 #[derive(Debug)]
 enum ContextItem {
     Names(ir::ContextNames),
     IterateNames(ir::ContextNames, ir::Name),
+    TemplateNames(ir::ContextNames, ir::TemplateNames),
     Absent,
 }
 
@@ -76,6 +80,22 @@ impl Variables {
         (names, loop_name)
     }
 
+    pub fn push_template_context(&mut self) -> (ir::ContextNames, ir::TemplateNames) {
+        let names = ir::ContextNames {
+            item: self.new_name(),
+            position: self.new_name(),
+            last: self.new_name(),
+        };
+        let template_names = ir::TemplateNames {
+            named_params: self.new_name(),
+        };
+        self.context_scope.push(ContextItem::TemplateNames(
+            names.clone(),
+            template_names.clone(),
+        ));
+        (names, template_names)
+    }
+
     pub fn push_absent_context(&mut self) {
         self.context_scope.push(ContextItem::Absent);
     }
@@ -106,11 +126,20 @@ impl Variables {
 
     pub fn current_context_names(&self) -> Option<ir::ContextNames> {
         match self.context_scope.last() {
-            Some(ContextItem::Names(names) | ContextItem::IterateNames(names, _)) => {
-                Some(names.clone())
-            }
+            Some(
+                ContextItem::Names(names)
+                | ContextItem::IterateNames(names, _)
+                | ContextItem::TemplateNames(names, _),
+            ) => Some(names.clone()),
             Some(ContextItem::Absent) => None,
             None => None,
+        }
+    }
+
+    pub fn current_template_names(&self) -> Option<ir::TemplateNames> {
+        match self.context_scope.last() {
+            Some(ContextItem::TemplateNames(_, template_names)) => Some(template_names.clone()),
+            _ => None,
         }
     }
 
@@ -130,7 +159,9 @@ impl Variables {
         let empty_span: Span = (0..0).into();
         if let Some(context_scope) = self.context_scope.last() {
             match context_scope {
-                ContextItem::Names(names) | ContextItem::IterateNames(names, _) => {
+                ContextItem::Names(names)
+                | ContextItem::IterateNames(names, _)
+                | ContextItem::TemplateNames(names, _) => {
                     let ir_name = get_name(names);
                     Ok(Bindings::new(Binding::new(
                         ir_name.clone(),

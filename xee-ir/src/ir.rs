@@ -86,6 +86,11 @@ pub struct ContextNames {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TemplateNames {
+    pub named_params: Name,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Let {
     pub name: Name,
     pub var_expr: Box<ExprS>,
@@ -333,6 +338,7 @@ pub struct XmlAppend {
 pub struct ApplyTemplates {
     pub mode: ApplyTemplatesModeValue,
     pub select: AtomS,
+    pub named_params: AtomS,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

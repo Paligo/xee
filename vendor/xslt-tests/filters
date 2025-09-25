@@ -289,7 +289,6 @@ conflict-resolution-0702
 conflict-resolution-0801
 conflict-resolution-0802
 conflict-resolution-1001
-conflict-resolution-1101
 conflict-resolution-1102
 conflict-resolution-1201
 conflict-resolution-1202a
@@ -426,7 +425,6 @@ as-0149
 as-0150
 as-0151
 as-0152
-as-0201
 as-0301
 as-0302
 as-0303
@@ -985,7 +983,6 @@ boolean-047
 boolean-048
 boolean-066
 boolean-069
-boolean-070
 boolean-071
 boolean-072
 boolean-081
@@ -1065,7 +1062,6 @@ bug-5601
 bug-5701
 bug-5901
 bug-6001
-bug-6101
 bug-6201
 bug-6301
 bug-6401
@@ -2336,7 +2332,6 @@ error-XPST0081a
 error-XPST0081c
 error-XPST0081d
 error-XPTY0004a
-error-XPTY0004e
 error-XPTY0004f
 error-XPTY0004g
 error-XPTY0019a
@@ -5630,7 +5625,6 @@ param-0117
 param-0118
 param-0119
 param-0120
-param-0201
 param-0301
 param-0401
 param-0402
@@ -5713,7 +5707,6 @@ position-6802
 position-6901
 position-7101
 position-7801
-position-7901
 position-8001
 position-8201
 position-8202
@@ -5732,20 +5725,11 @@ predicate-057
 = regex
 regex-004
 regex-005
-regex-014
-regex-015
-regex-016
 regex-017
 regex-018
-regex-020
 regex-027
 regex-028
-regex-031
 regex-032
-regex-038
-regex-039
-regex-040
-regex-041
 regex-057
 regex-058
 regex-059
@@ -11449,7 +11433,6 @@ try-040
 try-041
 try-042
 = tunnel
-tunnel-0101
 tunnel-0102
 tunnel-0103
 tunnel-0104
@@ -11462,7 +11445,6 @@ tunnel-0110
 tunnel-0111
 tunnel-0112
 tunnel-0113
-tunnel-0114
 tunnel-0115
 tunnel-0116
 tunnel-0117
@@ -11470,7 +11452,6 @@ tunnel-0118
 tunnel-0119
 tunnel-0120
 tunnel-0201
-tunnel-0202
 tunnel-0203
 tunnel-0204
 tunnel-0205
@@ -11532,7 +11513,6 @@ type-0137
 type-0139
 type-0140
 type-0141
-type-0142
 type-0143
 type-0144
 type-0150
@@ -11549,7 +11529,6 @@ type-0160
 type-0161
 type-0163
 type-0164
-type-0165
 type-0166
 type-0168a
 type-0168b
@@ -13296,7 +13275,6 @@ variable-0102
 variable-0103
 variable-0104
 variable-0105
-variable-0106
 variable-0107
 variable-0108
 variable-0109
@@ -13327,7 +13305,6 @@ variable-0401
 variable-0501
 variable-0601
 variable-0701
-variable-0802
 variable-0901
 variable-1001
 variable-1003
@@ -13342,7 +13319,6 @@ variable-1301
 variable-1402
 variable-1501
 variable-1601
-variable-1801
 variable-1901
 variable-1902
 variable-1903
@@ -13366,11 +13342,6 @@ variable-3301
 variable-3501
 variable-3601
 variable-3701
-variable-3801
-variable-3802
-variable-3901
-variable-4001
-variable-4101
 variable-4201
 variable-4301
 variable-4401

@@ -1230,3 +1230,26 @@ fn test_basic_iterate_params() {
         "<o><baz>1</baz><baz>2</baz><baz>4</baz></o>"
     );
 }
+#[test]
+fn test_basic_template_params() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><foo/></doc>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="doc">
+    <xsl:apply-templates select="//foo">
+      <xsl:with-param name="a">Yay</xsl:with-param>
+    </xsl:apply-templates>
+  </xsl:template>
+  <xsl:template match="foo">
+    <xsl:param name="a">Nay</xsl:param>
+    <xsl:param name="b">Yay</xsl:param>
+    <o><xsl:value-of select="concat($a, $b)"/></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o>YayYay</o>");
+}

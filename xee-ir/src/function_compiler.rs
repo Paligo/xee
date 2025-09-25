@@ -1003,6 +1003,7 @@ impl<'a> FunctionCompiler<'a> {
         apply_templates: &ir::ApplyTemplates,
         span: SourceSpan,
     ) -> error::SpannedResult<()> {
+        self.compile_atom(&apply_templates.named_params)?;
         self.compile_atom(&apply_templates.select)?;
 
         let mode_id = if matches!(

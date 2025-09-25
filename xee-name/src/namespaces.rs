@@ -5,13 +5,15 @@ use std::sync::LazyLock;
 pub const FN_NAMESPACE: &str = "http://www.w3.org/2005/xpath-functions";
 /// The XML Schema XS namespace URI
 pub const XS_NAMESPACE: &str = "http://www.w3.org/2001/XMLSchema";
+/// The XPath Map namespace URI
+pub const MAP_NAMESPACE: &str = "http://www.w3.org/2005/xpath-functions/map";
 const XML_NAMESPACE: &str = "http://www.w3.org/XML/1998/namespace";
 
 const STATIC_NAMESPACES: [(&str, &str); 7] = [
     ("xs", XS_NAMESPACE),
     ("fn", FN_NAMESPACE),
     ("math", "http://www.w3.org/2005/xpath-functions/math"),
-    ("map", "http://www.w3.org/2005/xpath-functions/map"),
+    ("map", MAP_NAMESPACE),
     ("array", "http://www.w3.org/2005/xpath-functions/array"),
     ("err", "http://www.w3.org/2005/xqt-errors"),
     ("output", "http://www.w3.org/2010/xslt-xquery-serialization"),

@@ -1,5 +1,5 @@
 use ahash::HashSetExt;
-use xee_name::{Name, Namespaces, FN_NAMESPACE};
+use xee_name::{Name, Namespaces, FN_NAMESPACE, MAP_NAMESPACE};
 
 use xee_interpreter::{context::StaticContext, error, interpreter, sequence::QNameOrString};
 use xee_ir::{compile_xslt, ir, Bindings, Variables};
@@ -79,6 +79,10 @@ impl<'a> IrConverter<'a> {
         self.static_function_atom("concat", FN_NAMESPACE, arity)
     }
 
+    fn map_contains_atom(&mut self) -> ir::Atom {
+        self.static_function_atom("contains", MAP_NAMESPACE, 2)
+    }
+
     // fn error_atom(&mut self) -> ir::Atom {
     //     self.static_function_atom("error", Some(FN_NAMESPACE), 0)
     // }
@@ -108,7 +112,7 @@ impl<'a> IrConverter<'a> {
 
     fn transform(&mut self, transform: &ast::Transform) -> error::SpannedResult<ir::Declarations> {
         let main_sequence_constructor = self.main_sequence_constructor();
-        let main = self.sequence_constructor_function(&main_sequence_constructor)?;
+        let main = self.main_sequence_constructor_function(&main_sequence_constructor)?;
         let mut declarations = ir::Declarations::new(main);
 
         for declaration in &transform.declarations {
@@ -148,8 +152,8 @@ impl<'a> IrConverter<'a> {
                     default_priorities.first().unwrap().1
                 }
             };
-            let function_definition =
-                self.sequence_constructor_function(&template.sequence_constructor)?;
+            let function_definition = self
+                .sequence_constructor_function(&template.params, &template.sequence_constructor)?;
 
             let modes = template
                 .mode
@@ -258,7 +262,7 @@ impl<'a> IrConverter<'a> {
         }
     }
 
-    fn sequence_constructor_function(
+    fn main_sequence_constructor_function(
         &mut self,
         sequence_constructor: &ast::SequenceConstructor,
     ) -> error::SpannedResult<ir::FunctionDefinition> {
@@ -284,6 +288,95 @@ impl<'a> IrConverter<'a> {
             return_type: None,
             body: Box::new(bindings.expr()),
         })
+    }
+
+    fn sequence_constructor_function(
+        &mut self,
+        params: &Vec<ast::Param>,
+        sequence_constructor: &ast::SequenceConstructor,
+    ) -> error::SpannedResult<ir::FunctionDefinition> {
+        let (context_names, template_names) = self.variables.push_template_context();
+        let bindings = self.named_params(
+            ir::Atom::Variable(template_names.named_params.clone()),
+            &params,
+            sequence_constructor,
+        )?;
+        self.variables.pop_context();
+        let params = vec![
+            ir::Param {
+                name: template_names.named_params,
+                type_: None,
+            },
+            ir::Param {
+                name: context_names.item,
+                type_: None,
+            },
+            ir::Param {
+                name: context_names.position,
+                type_: None,
+            },
+            ir::Param {
+                name: context_names.last,
+                type_: None,
+            },
+        ];
+        Ok(ir::FunctionDefinition {
+            params,
+            return_type: None,
+            body: Box::new(bindings.expr()),
+        })
+    }
+
+    fn named_params(
+        &mut self,
+        named_params_map: ir::Atom,
+        params: &[ast::Param],
+        body: &ast::SequenceConstructor,
+    ) -> error::SpannedResult<Bindings> {
+        let mut params = params.iter();
+        if let Some(param) = params.next() {
+            let name = self.variables.new_var_name(&param.name);
+
+            let map_contains = self.map_contains_atom();
+            let param_name_const =
+                ir::Atom::Const(ir::Const::String(param.name.full_name().to_string()));
+            let (param_condition, bindings) = Bindings::new(self.variables.new_binding_no_span(
+                ir::Expr::FunctionCall(ir::FunctionCall {
+                    atom: Spanned::new(map_contains, (0..0).into()),
+                    args: vec![
+                        Spanned::new(named_params_map.clone(), (0..0).into()),
+                        Spanned::new(param_name_const.clone(), (0..0).into()),
+                    ],
+                }),
+            ))
+            .atom_bindings();
+            let param_from_map = ir::Expr::FunctionCall(ir::FunctionCall {
+                atom: Spanned::new(named_params_map.clone(), (0..0).into()),
+                args: vec![Spanned::new(param_name_const, (0..0).into())],
+            });
+            let param_default_binding = self.select_or_sequence_constructor(param)?;
+            let bindings = bindings.bind_expr_no_span(
+                &mut self.variables,
+                ir::Expr::If(ir::If {
+                    condition: param_condition,
+                    then: Box::new(Spanned::new(param_from_map, (0..0).into())),
+                    else_: Box::new(param_default_binding.expr()),
+                }),
+            );
+            let expr = ir::Expr::Let(ir::Let {
+                name,
+                var_expr: Box::new(bindings.expr()),
+                return_expr: Box::new(
+                    self.named_params(named_params_map, params.as_slice(), body)?
+                        .expr(),
+                ),
+            });
+            return Ok(Bindings::new(
+                self.variables.new_binding(expr, (0..0).into()),
+            ));
+        } else {
+            Ok(self.sequence_constructor(body)?)
+        }
     }
 
     fn sequence_constructor(
@@ -487,11 +580,42 @@ impl<'a> IrConverter<'a> {
             ast::ApplyTemplatesModeValue::Current => ir::ApplyTemplatesModeValue::Current,
         };
 
+        let mut bindings = bindings;
+        let mut named_params_map_members = Vec::new();
+
+        for content in apply_templates.content.iter() {
+            match content {
+                ast::ApplyTemplatesContent::WithParam(param) => {
+                    let param_name_const = Spanned::new(
+                        ir::Atom::Const(ir::Const::String(param.name.full_name().to_string())),
+                        (0..0).into(),
+                    );
+                    let (param_atom, param_bindings) =
+                        self.select_or_sequence_constructor(param)?.atom_bindings();
+                    named_params_map_members.push((param_name_const, param_atom));
+                    bindings = bindings.concat(param_bindings);
+                }
+                _ => {
+                    // Ignore for now
+                }
+            }
+        }
+
+        let (named_params_atom, bindings) = bindings
+            .bind_expr_no_span(
+                &mut self.variables,
+                ir::Expr::MapConstructor(ir::MapConstructor {
+                    members: named_params_map_members,
+                }),
+            )
+            .atom_bindings();
+
         Ok(bindings.bind_expr_no_span(
             &mut self.variables,
             ir::Expr::ApplyTemplates(ir::ApplyTemplates {
                 mode,
                 select: select_atom,
+                named_params: named_params_atom,
             }),
         ))
     }

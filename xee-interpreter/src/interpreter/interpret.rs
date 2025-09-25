@@ -632,9 +632,10 @@ impl<'a> Interpreter<'a> {
                 }
                 EncodedInstruction::ApplyTemplates => {
                     let value = self.state.pop()?;
+                    let params = self.state.pop()?;
                     let mode_id = self.read_u16();
                     let mode = pattern::ModeId::new(mode_id as usize);
-                    let value = self.apply_templates_sequence(mode, value)?;
+                    let value = self.apply_templates_sequence(mode, params, value)?;
                     self.state.push(value);
                 }
                 EncodedInstruction::PrintTop => {
@@ -1184,13 +1185,15 @@ impl<'a> Interpreter<'a> {
     fn apply_templates_sequence(
         &mut self,
         mode: pattern::ModeId,
+        params: sequence::Sequence,
         sequence: sequence::Sequence,
     ) -> error::Result<sequence::Sequence> {
         let mut r: Vec<sequence::Item> = Vec::new();
         let size: IBig = sequence.len().into();
 
         for (i, item) in sequence.iter().enumerate() {
-            let sequence = self.apply_templates_item(mode, item, i, size.clone())?;
+            let sequence =
+                self.apply_templates_item(mode, params.clone(), item, i, size.clone())?;
             if let Some(sequence) = sequence {
                 for item in sequence.iter() {
                     r.push(item.clone());
@@ -1203,6 +1206,7 @@ impl<'a> Interpreter<'a> {
     fn apply_templates_item(
         &mut self,
         mode: pattern::ModeId,
+        params: sequence::Sequence,
         item: sequence::Item,
         position: usize,
         size: IBig,
@@ -1212,6 +1216,7 @@ impl<'a> Interpreter<'a> {
         if let Some(function_id) = function_id {
             let position: IBig = (position + 1).into();
             let arguments: Vec<sequence::Sequence> = vec![
+                params,
                 item.into(),
                 atomic::Atomic::from(position).into(),
                 atomic::Atomic::from(size.clone()).into(),
