@@ -582,10 +582,16 @@ impl<'a> IrConverter<'a> {
 
         let mut bindings = bindings;
         let mut named_params_map_members = Vec::new();
+        let mut pass_all_named = false; // HACK
 
         for content in apply_templates.content.iter() {
             match content {
                 ast::ApplyTemplatesContent::WithParam(param) => {
+                    if param.name.local_name() == "HACKHACKPASSTHROUGH" {
+                        // HACK
+                        pass_all_named = true;
+                        continue;
+                    }
                     let param_name_const = Spanned::new(
                         ir::Atom::Const(ir::Const::String(param.name.full_name().to_string())),
                         (0..0).into(),
@@ -601,14 +607,24 @@ impl<'a> IrConverter<'a> {
             }
         }
 
-        let (named_params_atom, bindings) = bindings
-            .bind_expr_no_span(
-                &mut self.variables,
-                ir::Expr::MapConstructor(ir::MapConstructor {
-                    members: named_params_map_members,
-                }),
+        let parent_var_name = self.variables.current_template_names();
+        let (named_params_atom, bindings) = if pass_all_named && parent_var_name.is_some() {
+            // HACK
+            let var_name = parent_var_name.unwrap().named_params;
+            (
+                Spanned::new(ir::Atom::Variable(var_name), (0..0).into()),
+                bindings,
             )
-            .atom_bindings();
+        } else {
+            bindings
+                .bind_expr_no_span(
+                    &mut self.variables,
+                    ir::Expr::MapConstructor(ir::MapConstructor {
+                        members: named_params_map_members,
+                    }),
+                )
+                .atom_bindings()
+        };
 
         Ok(bindings.bind_expr_no_span(
             &mut self.variables,

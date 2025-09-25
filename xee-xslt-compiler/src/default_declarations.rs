@@ -6,10 +6,10 @@ use xee_xslt_ast::{ast, error, parse_transform};
 const TEXT_ONLY_COPY: &str = r#"
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
   <xsl:template match="document-node()">
-    <xsl:apply-templates />
+    <xsl:apply-templates><xsl:with-param name="HACKHACKPASSTHROUGH" select="*"/></xsl:apply-templates>
   </xsl:template>
   <xsl:template match="element()">
-    <xsl:apply-templates />
+    <xsl:apply-templates><xsl:with-param name="HACKHACKPASSTHROUGH" select="*"/></xsl:apply-templates>
   </xsl:template>
   <xsl:template match="text()">
     <xsl:value-of select="string(.)"/>
