@@ -1126,7 +1126,9 @@ impl<'a> Interpreter<'a> {
                     match self.state.xot.value(node) {
                         xot::Value::Document => {
                             // TODO: Handle adding all the children instead
-                            return Err(error::Error::Unsupported);
+                            return Err(error::Error::Unsupported(String::from(
+                                "Appending a whole document is not supported yet",
+                            )));
                         }
                         xot::Value::Text(text) => {
                             // zero length text nodes are skipped

@@ -35,7 +35,7 @@ pub enum Error {
     /// Unsupported XPath feature.
     ///
     /// This XPath feature is not supported by Xee.
-    Unsupported,
+    Unsupported(String),
 
     /// Used query with wrong queries.
     ///
@@ -782,6 +782,7 @@ impl Error {
     pub fn message(&self) -> &str {
         match self {
             Error::Application(app_error) => app_error.description(),
+            Error::Unsupported(reason) => reason,
             _ => self.documentation_pieces().0,
         }
     }
@@ -807,9 +808,16 @@ impl std::fmt::Display for SpannedError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(span) = self.span {
             let span = span.range();
-            write!(f, "{} ({}..{})", self.error, span.start, span.end)
+            write!(
+                f,
+                "{} {} ({}..{})",
+                self.error,
+                self.error.message(),
+                span.start,
+                span.end
+            )
         } else {
-            write!(f, "{}", self.error)
+            write!(f, "{} {}", self.error, self.error.message())
         }
     }
 }

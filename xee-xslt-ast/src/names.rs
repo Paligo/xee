@@ -118,7 +118,10 @@ impl SequenceConstructorName {
                 ast::WherePopulated::parse_sequence_constructor_item(attributes)
             }
 
-            _ => Err(ElementError::Unsupported),
+            _ => Err(ElementError::Unsupported(format!(
+                "Unknown sequence constructor: {:?}",
+                &self
+            ))),
         }
     }
 
@@ -138,7 +141,10 @@ impl DeclarationName {
         match self {
             DeclarationName::Accumulator => ast::Accumulator::parse_declaration(attributes),
             DeclarationName::Template => ast::Template::parse_declaration(attributes),
-            _ => Err(ElementError::Unsupported),
+            _ => Err(ElementError::Unsupported(format!(
+                "Unsupported declaration: {:?}",
+                &self
+            ))),
         }
     }
 
