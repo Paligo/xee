@@ -365,7 +365,6 @@ square-array-143
 square-array-201
 = as
 as-0101
-as-0102
 as-0103
 as-0104
 as-0105
@@ -404,9 +403,6 @@ as-0129
 as-0130
 as-0131
 as-0132
-as-0133
-as-0134
-as-0135
 as-0136
 as-0137
 as-0138
@@ -457,7 +453,6 @@ as-1207
 as-1208
 as-1209
 as-1210
-as-1211
 as-1212
 as-1213
 as-1214
@@ -1071,7 +1066,6 @@ built-in-templates-0202
 built-in-templates-0301
 built-in-templates-0302
 = call-template
-call-template-0001
 call-template-0101
 call-template-0102
 call-template-0103
@@ -1087,25 +1081,16 @@ call-template-0201
 call-template-0401
 call-template-0401a
 call-template-0402
-call-template-0501
 call-template-0601
 call-template-0701
 call-template-0702
 call-template-0703
-call-template-0801
-call-template-0802
 call-template-0901
 call-template-1001
 call-template-1002
 call-template-1003
-call-template-1101
-call-template-1102
 call-template-1201
-call-template-1301
 call-template-1401
-call-template-1501
-call-template-1601
-call-template-1701
 call-template-1801
 call-template-1802
 call-template-1803
@@ -1384,7 +1369,6 @@ copy-4302
 copy-4303
 copy-4304
 copy-4305
-copy-4306
 copy-4307
 copy-4308
 copy-4309
@@ -1732,7 +1716,6 @@ element-0107
 element-0108
 element-0110
 element-0111
-element-0201
 element-0301
 element-0302
 element-0303
@@ -2037,7 +2020,6 @@ error-0820b
 error-0820c
 error-0830a
 error-0830b
-error-0835a
 error-0840a
 error-0850a
 error-0855a
@@ -2290,7 +2272,6 @@ error-3520a
 error-3530a
 error-9000a
 error-9001a
-error-FOAR0001b
 error-FODC0002a
 error-FODC0002a-ignore
 error-FOER0001a
@@ -4112,7 +4093,6 @@ math-3311
 math-3313
 math-3314
 math-3315
-math-3316
 math-3317
 math-3318
 math-3319
@@ -4680,7 +4660,6 @@ next-match-039
 next-match-040
 = node
 node-0301
-node-0701
 node-1101
 node-1102
 node-1201
@@ -5605,8 +5584,6 @@ package-version-912a
 package-version-912b
 = param
 param-0101
-param-0102
-param-0103
 param-0104
 param-0105
 param-0106
@@ -8126,7 +8103,6 @@ select-5901
 select-6001
 select-6101
 select-6201
-select-6501
 select-6601
 select-6701
 select-6801
@@ -11372,7 +11348,6 @@ system-property-024
 system-property-025
 = template
 template-003
-template-005
 = transform
 transform-001
 transform-002
@@ -11434,10 +11409,8 @@ try-042
 = tunnel
 tunnel-0102
 tunnel-0103
-tunnel-0104
 tunnel-0105
 tunnel-0106
-tunnel-0107
 tunnel-0108
 tunnel-0109
 tunnel-0110
@@ -11482,7 +11455,6 @@ tunnel-0304
 tunnel-0401
 tunnel-0402
 tunnel-0403
-tunnel-0404
 tunnel-0405
 tunnel-0406
 tunnel-0501
@@ -11510,7 +11482,6 @@ type-0136
 type-0137
 type-0139
 type-0140
-type-0141
 type-0143
 type-0144
 type-0150
@@ -13169,8 +13140,6 @@ use-when-0225
 use-when-0226
 use-when-0227
 use-when-0301
-use-when-0401
-use-when-0402
 use-when-0403
 use-when-0404
 use-when-0405
@@ -13308,14 +13277,11 @@ variable-1003
 variable-1004
 variable-1005
 variable-1006
-variable-1010
 variable-1011
 variable-1012
 variable-1201
-variable-1301
 variable-1402
 variable-1501
-variable-1601
 variable-1901
 variable-1902
 variable-1903
@@ -13338,9 +13304,7 @@ variable-3201
 variable-3301
 variable-3501
 variable-3601
-variable-3701
 variable-4201
-variable-4301
 variable-4401
 variable-4402
 variable-4403

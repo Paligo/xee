@@ -168,6 +168,15 @@ impl<'a> IrConverter<'a> {
                 function_definition,
             });
             Ok(())
+        } else if let Some(name) = &template.name {
+            let function_definition = self
+                .sequence_constructor_function(&template.params, &template.sequence_constructor)?;
+
+            declarations.functions.push(ir::FunctionBinding {
+                name: name.clone(),
+                main: function_definition,
+            });
+            Ok(())
         } else {
             Err(error::Error::Unsupported(format!("Named templates not supported")).into())
         }
@@ -296,7 +305,7 @@ impl<'a> IrConverter<'a> {
         sequence_constructor: &ast::SequenceConstructor,
     ) -> error::SpannedResult<ir::FunctionDefinition> {
         let (context_names, template_names) = self.variables.push_template_context();
-        let bindings = self.named_params(
+        let bindings = self.unpack_named_params(
             ir::Atom::Variable(template_names.named_params.clone()),
             &params,
             sequence_constructor,
@@ -327,7 +336,7 @@ impl<'a> IrConverter<'a> {
         })
     }
 
-    fn named_params(
+    fn unpack_named_params(
         &mut self,
         named_params_map: ir::Atom,
         params: &[ast::Param],
@@ -367,7 +376,7 @@ impl<'a> IrConverter<'a> {
                 name,
                 var_expr: Box::new(bindings.expr()),
                 return_expr: Box::new(
-                    self.named_params(named_params_map, params.as_slice(), body)?
+                    self.unpack_named_params(named_params_map, params.as_slice(), body)?
                         .expr(),
                 ),
             });
@@ -446,6 +455,7 @@ impl<'a> IrConverter<'a> {
         use ast::SequenceConstructorInstruction::*;
         match instruction {
             ApplyTemplates(apply_templates) => self.apply_templates(apply_templates),
+            CallTemplate(call_template) => self.call_template(call_template),
             ValueOf(value_of) => self.value_of(value_of),
             If(if_) => self.if_(if_),
             Choose(choose) => self.choose(choose),
@@ -580,60 +590,92 @@ impl<'a> IrConverter<'a> {
             ast::ApplyTemplatesModeValue::Current => ir::ApplyTemplatesModeValue::Current,
         };
 
-        let mut bindings = bindings;
-        let mut named_params_map_members = Vec::new();
-        let mut pass_all_named = false; // HACK
+        let named_params_iter = apply_templates
+            .content
+            .iter()
+            .flat_map(|content| match content {
+                ast::ApplyTemplatesContent::WithParam(param) => Some(param),
+                _ => None,
+            });
 
-        for content in apply_templates.content.iter() {
-            match content {
-                ast::ApplyTemplatesContent::WithParam(param) => {
-                    if param.name.local_name() == "HACKHACKPASSTHROUGH" {
-                        // HACK
-                        pass_all_named = true;
-                        continue;
-                    }
-                    let param_name_const = Spanned::new(
-                        ir::Atom::Const(ir::Const::String(param.name.full_name().to_string())),
-                        (0..0).into(),
-                    );
-                    let (param_atom, param_bindings) =
-                        self.select_or_sequence_constructor(param)?.atom_bindings();
-                    named_params_map_members.push((param_name_const, param_atom));
-                    bindings = bindings.concat(param_bindings);
-                }
-                _ => {
-                    // Ignore for now
-                }
-            }
-        }
-
-        let parent_var_name = self.variables.current_template_names();
-        let (named_params_atom, bindings) = if pass_all_named && parent_var_name.is_some() {
-            // HACK
-            let var_name = parent_var_name.unwrap().named_params;
-            (
-                Spanned::new(ir::Atom::Variable(var_name), (0..0).into()),
-                bindings,
-            )
-        } else {
-            bindings
-                .bind_expr_no_span(
-                    &mut self.variables,
-                    ir::Expr::MapConstructor(ir::MapConstructor {
-                        members: named_params_map_members,
-                    }),
-                )
-                .atom_bindings()
-        };
+        let (named_params, named_params_bindings) =
+            self.pack_named_params(named_params_iter)?.atom_bindings();
+        let bindings = bindings.concat(named_params_bindings);
 
         Ok(bindings.bind_expr_no_span(
             &mut self.variables,
             ir::Expr::ApplyTemplates(ir::ApplyTemplates {
                 mode,
                 select: select_atom,
-                named_params: named_params_atom,
+                named_params,
             }),
         ))
+    }
+
+    fn call_template(
+        &mut self,
+        call_template: &ast::CallTemplate,
+    ) -> error::SpannedResult<Bindings> {
+        let (named_params, bindings) = self
+            .pack_named_params(call_template.with_params.iter())?
+            .atom_bindings();
+        let mode = ir::ApplyTemplatesModeValue::Named(call_template.name.clone()); // HACK
+
+        let select = self.empty_string();
+
+        Ok(bindings.bind_expr_no_span(
+            &mut self.variables,
+            // HACK
+            ir::Expr::ApplyTemplates(ir::ApplyTemplates {
+                mode,
+                select,
+                named_params,
+            }),
+        ))
+    }
+
+    fn pack_named_params<'b, I>(&mut self, with_params: I) -> error::SpannedResult<Bindings>
+    where
+        I: Iterator<Item = &'b ast::WithParam>,
+    {
+        let mut bindings = Bindings::empty();
+        let mut named_params_map_members = Vec::new();
+        let mut pass_all_named = false; // HACK
+
+        for param in with_params {
+            if param.name.local_name() == "HACKHACKPASSTHROUGH" {
+                // HACK
+                pass_all_named = true;
+                continue;
+            }
+            let param_name_const = Spanned::new(
+                ir::Atom::Const(ir::Const::String(param.name.full_name().to_string())),
+                (0..0).into(),
+            );
+            let (param_atom, param_bindings) =
+                self.select_or_sequence_constructor(param)?.atom_bindings();
+            named_params_map_members.push((param_name_const, param_atom));
+            bindings = bindings.concat(param_bindings);
+        }
+
+        let parent_var_name = self.variables.current_template_names();
+        let bindings = if pass_all_named && parent_var_name.is_some() {
+            // HACK
+            let var_name = parent_var_name.unwrap().named_params;
+            bindings.bind_expr_no_span(
+                &mut self.variables,
+                ir::Expr::Atom(Spanned::new(ir::Atom::Variable(var_name), (0..0).into())),
+            )
+        } else {
+            bindings.bind_expr_no_span(
+                &mut self.variables,
+                ir::Expr::MapConstructor(ir::MapConstructor {
+                    members: named_params_map_members,
+                }),
+            )
+        };
+
+        Ok(bindings)
     }
 
     fn select_or_sequence_constructor(

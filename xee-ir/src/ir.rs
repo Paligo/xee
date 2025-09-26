@@ -399,6 +399,6 @@ impl Declarations {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionBinding {
-    pub name: Name,
+    pub name: xmlname::OwnedName, // HACK
     pub main: FunctionDefinition,
 }

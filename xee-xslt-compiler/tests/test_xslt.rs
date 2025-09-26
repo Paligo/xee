@@ -1276,3 +1276,26 @@ fn test_builtin_passthrough_template_params() {
     .unwrap();
     assert_eq!(xml(&xot, output), "<o>YayYay</o>");
 }
+#[test]
+fn test_basic_call_template() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><foo/></doc>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="doc">
+    <xsl:call-template name="foo">
+      <xsl:with-param name="a">Yay</xsl:with-param>
+    </xsl:call-template>
+  </xsl:template>
+  <xsl:template name="foo">
+    <xsl:param name="a">Nay</xsl:param>
+    <xsl:param name="b">Yay</xsl:param>
+    <o><xsl:value-of select="concat($a, $b)"/></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o>YayYay</o>");
+}

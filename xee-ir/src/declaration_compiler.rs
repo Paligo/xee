@@ -1,4 +1,5 @@
 use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
+use rust_decimal::prelude::Zero;
 use rust_decimal::Decimal;
 use xee_interpreter::pattern::ModeId;
 use xee_xpath_ast::Pattern;
@@ -65,6 +66,9 @@ impl<'a> DeclarationCompiler<'a> {
         for rule in &declarations.rules {
             self.compile_rule(rule)?;
         }
+        for function in &declarations.functions {
+            self.compile_function(function)?;
+        }
         // now add compiled rules from builder to the program
         self.add_rules();
         let mut function_compiler = self.function_compiler();
@@ -90,6 +94,16 @@ impl<'a> DeclarationCompiler<'a> {
                 let mode_id = ModeId::new(self.mode_ids.len());
                 self.mode_ids.insert(apply_templates_mode_value, mode_id);
             }
+        }
+        // HACK
+        for function in &declarations.functions {
+            let call_template_mode_value =
+                ir::ApplyTemplatesModeValue::Named(function.name.clone());
+            if self.mode_ids.contains_key(&call_template_mode_value) {
+                continue;
+            }
+            let mode_id = ModeId::new(self.mode_ids.len()); // HACK
+            self.mode_ids.insert(call_template_mode_value, mode_id);
         }
     }
 
@@ -176,5 +190,21 @@ impl<'a> DeclarationCompiler<'a> {
                 .mode_lookup
                 .add_rules(mode_id, rules)
         }
+    }
+
+    fn compile_function(&mut self, function: &ir::FunctionBinding) -> error::SpannedResult<()> {
+        let mut function_compiler = self.function_compiler();
+        let function_id = function_compiler.compile_function_id(&function.main, (0..0).into())?;
+
+        // HACK
+        self.add_rule(
+            &[ir::ModeValue::Named(function.name.clone())],
+            Decimal::zero(),
+            &Pattern::Predicate(xee_xpath_ast::pattern::PredicatePattern {
+                predicates: Vec::new(),
+            }),
+            function_id,
+        );
+        Ok(())
     }
 }
