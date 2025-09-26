@@ -151,7 +151,7 @@ impl<'a> FunctionCompiler<'a> {
                 // the XSLT test suite for some reason triggers
                 // this condition, so for now we've hacked our way
                 // around it
-                Err(Error::Unsupported.into())
+                Err(Error::Unsupported(String::from("Internal bug: variable not found?")).into())
                 // unreachable!("variable not found: {:?}", name);
             }
         }

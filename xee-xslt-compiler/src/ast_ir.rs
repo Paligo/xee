@@ -32,7 +32,7 @@ pub fn parse(
     let mut transform = match transform {
         Ok(transform) => transform,
         Err(_e) => {
-            return Err(error::Error::Unsupported.into());
+            return Err(error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", _e)).into());
         }
     };
     // insert default rules early on in precedence order
@@ -126,7 +126,7 @@ impl<'a> IrConverter<'a> {
         match declaration {
             Template(template) => self.template(declarations, template),
             Mode(mode) => self.mode(declarations, mode),
-            _ => Err(error::Error::Unsupported.into()),
+            _ => Err(error::Error::Unsupported(format!("Declaration not supported: {:?}", declaration)).into()),
         }
     }
 
@@ -142,7 +142,7 @@ impl<'a> IrConverter<'a> {
                 let default_priorities = default_priority(&pattern.pattern).collect::<Vec<_>>();
                 if default_priorities.len() > 1 {
                     // for now, we can't deal with multiple registration yet
-                    return Err(error::Error::Unsupported.into());
+                    return Err(error::Error::Unsupported(format!("Default priorities splitting not supported")).into());
                 } else {
                     default_priorities.first().unwrap().1
                 }
@@ -164,7 +164,7 @@ impl<'a> IrConverter<'a> {
             });
             Ok(())
         } else {
-            Err(error::Error::Unsupported.into())
+            Err(error::Error::Unsupported(format!("Named templates not supported")).into())
         }
     }
 
@@ -299,8 +299,8 @@ impl<'a> IrConverter<'a> {
             // TODO: xsl:variable does not produce content and is handled
             // earlier already should be unreachable!() but at this point this
             // can be reached so return unsupported
-            Variable(_variable) => Err(error::Error::Unsupported.into()),
-            _ => Err(error::Error::Unsupported.into()),
+            Variable(_variable) => Err(error::Error::Unsupported(String::from("Internal bug: variable node should have been processed already")).into()),
+            _ => Err(error::Error::Unsupported(format!("Instruction not supported: {:?}", instruction)).into()),
         }
     }
 
