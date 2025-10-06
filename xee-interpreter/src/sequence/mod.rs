@@ -27,5 +27,6 @@ pub use item::{AtomizedItemIter, Item};
 pub use iter::AtomizedIter;
 pub(crate) use iter::{one, option};
 pub(crate) use opc::OptionParameterConverter;
+pub use opc::QNameOrString;
 pub use serialization::SerializationParameters;
 pub(crate) use variant::Range;
