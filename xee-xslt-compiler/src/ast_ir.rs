@@ -1,7 +1,7 @@
 use ahash::HashSetExt;
 use xee_name::{Name, Namespaces, FN_NAMESPACE};
 
-use xee_interpreter::{context::StaticContext, error, interpreter};
+use xee_interpreter::{context::StaticContext, error, interpreter, sequence::QNameOrString};
 use xee_ir::{compile_xslt, ir, Bindings, Variables};
 use xee_xpath_ast::{ast as xpath_ast, pattern::transform_pattern, span::Spanned};
 use xee_xslt_ast::{ast, parse_transform};
@@ -187,23 +187,11 @@ impl<'a> IrConverter<'a> {
         if output.name.is_some() {
             return Err(error::Error::Unsupported(String::from("Output: Named outputs are not supported yet")).into());
         }
-        if output.method.is_some() && output.method != Some(ast::OutputMethod::Xml) {
-            return Err(error::Error::Unsupported(String::from("Output: Non-XML output methods are not supported yet")).into());
-        }
-        if output.standalone.is_some() {
-            return Err(error::Error::Unsupported(String::from("Output: Standalone outputs are not supported yet")).into());
-        }
         if output.parameter_document.is_some() {
             return Err(error::Error::Unsupported(String::from("Output: Parameter documents are not supported yet")).into());
         }
-        if output.normalization_form.is_some() {
-            return Err(error::Error::Unsupported(String::from("Output: Normalization forms are not supported yet")).into());
-        }
         if !output.use_character_maps.is_empty() {
             return Err(error::Error::Unsupported(String::from("Output: Character maps are not supported yet")).into());
-        }
-        if output.json_node_output_method.is_some() {
-            return Err(error::Error::Unsupported(String::from("Output: JSON node output method option is not supported yet")).into());
         }
         if output.build_tree {
             return Err(error::Error::Unsupported(String::from("Output: Build tree is not supported yet")).into());
@@ -218,20 +206,46 @@ impl<'a> IrConverter<'a> {
         serialization.cdata_section_elements.extend(output.cdata_section_elements.clone());
         serialization.doctype_public = output.doctype_public.clone();
         serialization.doctype_system = output.doctype_system.clone();
+        match &output.method {
+            Some(ast::OutputMethod::Xml) => serialization.method = QNameOrString::String("xml".to_string()),
+            Some(ast::OutputMethod::Html) => serialization.method = QNameOrString::String("html".to_string()),
+            Some(ast::OutputMethod::Json) => serialization.method = QNameOrString::String("json".to_string()),
+            None => {},
+            method => {
+                return Err(error::Error::Unsupported(format!("Output method {:?} not supported yet", method)).into());
+            }
+        };
         assign_if_some(&mut serialization.encoding, output.encoding.clone());
         serialization.escape_uri_attributes = output.escape_uri_attributes;
         assign_if_some(&mut serialization.html_version, output.html_version);
         serialization.include_content_type = output.include_content_type;
         serialization.indent = output.indent;
         assign_if_some(&mut serialization.item_separator, output.item_separator.clone());
-        // assign_if_some(&mut serialization.json_node_output_method, output.json_node_output_method);
+        match &output.json_node_output_method {
+            Some(ast::JsonNodeOutputMethod::Xml) => serialization.json_node_output_method = QNameOrString::String("xml".to_string()),
+            Some(ast::JsonNodeOutputMethod::Html) => serialization.json_node_output_method = QNameOrString::String("html".to_string()),
+            None => {},
+            method => {
+                return Err(error::Error::Unsupported(format!("JSON node output method {:?} not supported yet", method)).into());
+            }
+        }
         serialization.media_type = output.media_type.clone();
-        // assign_if_some(&mut serialization.normalization_form, output.normalization_form);
+        serialization.normalization_form = output.normalization_form.as_ref().map(|nf| match nf {
+            ast::NormalizationForm::Nfc => Some(String::from("NFC")),
+            ast::NormalizationForm::Nfd => Some(String::from("NFD")),
+            ast::NormalizationForm::Nfkc => Some(String::from("NFKC")),
+            ast::NormalizationForm::Nfkd => Some(String::from("NFKD")),
+            ast::NormalizationForm::FullyNormalized => Some(String::from("fully-normalized")),
+            ast::NormalizationForm::NmToken(nm) => Some(nm.clone()),
+            ast::NormalizationForm::None => None,
+        }).flatten();
         serialization.omit_xml_declaration = output.omit_xml_declaration;
-        // assign_if_some(&mut serialization.standalone, output.standalone);
+        assign_if_some(&mut serialization.standalone, output.standalone.as_ref().map(|s| match s {
+            ast::Standalone::Bool(b) => Some(*b),
+            ast::Standalone::Omit => None,
+        }));
         serialization.suppress_indentation.extend(output.suppress_indentation.clone());
         serialization.undeclare_prefixes = output.undeclare_prefixes;
-        // serialization.use_character_maps.extend(output.use_character_maps.clone());
         assign_if_some(&mut serialization.version, output.version.clone());
         Ok(())
     }
