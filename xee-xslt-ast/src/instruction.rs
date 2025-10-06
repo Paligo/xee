@@ -1309,7 +1309,8 @@ impl InstructionParser for ast::Output {
             build_tree: attributes.boolean_with_default(names.build_tree, false)?,
             byte_order_mark: attributes.boolean_with_default(names.byte_order_mark, false)?,
             cdata_section_elements: attributes
-                .optional(names.cdata_section_elements, attributes.eqnames())?,
+                .optional(names.cdata_section_elements, attributes.eqnames())?
+                .unwrap_or_default(),
             doctype_public: attributes.optional(names.doctype_public, attributes.string())?,
             doctype_system: attributes.optional(names.doctype_system, attributes.string())?,
             encoding: attributes.optional(names.encoding, attributes.string())?,
@@ -1333,10 +1334,12 @@ impl InstructionParser for ast::Output {
             parameter_document: attributes.optional(names.parameter_document, attributes.uri())?,
             standalone: attributes.optional(names.standalone, attributes.standalone())?,
             suppress_indentation: attributes
-                .optional(names.suppress_indentation, attributes.eqnames())?,
+                .optional(names.suppress_indentation, attributes.eqnames())?
+                .unwrap_or_default(),
             undeclare_prefixes: attributes.boolean_with_default(names.undeclare_prefixes, false)?,
             use_character_maps: attributes
-                .optional(names.use_character_maps, attributes.eqnames())?,
+                .optional(names.use_character_maps, attributes.eqnames())?
+                .unwrap_or_default(),
             version: attributes.optional(names.version, attributes.nmtoken())?,
 
             span: content.span()?,

@@ -279,9 +279,7 @@ conflict-resolution-0110b
 conflict-resolution-0110c
 conflict-resolution-0112
 conflict-resolution-0201
-conflict-resolution-0401a
 conflict-resolution-0401b
-conflict-resolution-0401c
 conflict-resolution-0501
 conflict-resolution-0502
 conflict-resolution-0503
@@ -303,11 +301,6 @@ conflict-resolution-1301
 conflict-resolution-1401
 conflict-resolution-1402
 conflict-resolution-1501
-conflict-resolution-1601
-conflict-resolution-1602
-conflict-resolution-1603
-conflict-resolution-1701
-conflict-resolution-1801
 = arrays
 arrays-301
 arrays-302
@@ -713,7 +706,6 @@ avt-1205
 avt-1502
 avt-1701
 avt-2102
-avt-2103
 avt-2201
 avt-3201
 = axes
@@ -819,13 +811,9 @@ axes-115
 axes-116
 axes-117
 axes-118
-axes-119
 axes-120
-axes-121
-axes-122
 axes-123
 axes-129
-axes-131
 axes-132
 axes-133
 axes-134
@@ -942,7 +930,6 @@ base-uri-003
 base-uri-004
 base-uri-005
 base-uri-006
-base-uri-007
 base-uri-008
 base-uri-009
 base-uri-010
@@ -1008,10 +995,8 @@ boolean-084
 boolean-095
 boolean-096
 boolean-100
-boolean-109
 boolean-110
 boolean-111
-boolean-112
 = bug
 bug-0301
 bug-0302
@@ -1086,7 +1071,6 @@ bug-6301
 bug-6401
 = built-in-templates
 built-in-templates-0101
-built-in-templates-0102
 built-in-templates-0201
 built-in-templates-0202
 built-in-templates-0301
@@ -1267,23 +1251,15 @@ collection-006
 construct-node-006
 construct-node-007
 construct-node-008
-construct-node-009
-construct-node-010
-construct-node-011
 construct-node-012
-construct-node-013
-construct-node-014
-construct-node-015
 construct-node-016
 construct-node-017
 construct-node-018
 construct-node-019
 construct-node-020
-construct-node-021
 construct-node-022
 construct-node-023
 construct-node-024
-construct-node-025
 construct-node-026
 construct-node-027
 construct-node-028
@@ -1323,16 +1299,13 @@ context-item-911
 context-item-912
 = copy
 copy-0101
-copy-0102
 copy-0103
 copy-0104
 copy-0105
 copy-0501
-copy-0601
 copy-0602
 copy-0603
 copy-0604
-copy-0605
 copy-0606
 copy-0609
 copy-0610
@@ -1356,6 +1329,7 @@ copy-0627
 copy-0801
 copy-0901
 copy-1001
+copy-1002
 copy-1003
 copy-1201
 copy-1202
@@ -1380,11 +1354,8 @@ copy-1220
 copy-1221
 copy-1301
 copy-1401
-copy-1501
 copy-1601
 copy-1602
-copy-1701
-copy-2001
 copy-2101
 copy-2201
 copy-2202
@@ -1395,11 +1366,9 @@ copy-2502
 copy-2601
 copy-2701
 copy-2801
-copy-2901
 copy-3001
 copy-3002
 copy-3003
-copy-3101
 copy-3102
 copy-3301
 copy-3302
@@ -1407,13 +1376,11 @@ copy-3501
 copy-3601
 copy-3602
 copy-3603
-copy-3701
 copy-3702
 copy-3801
 copy-3802
 copy-3803
 copy-3804
-copy-3901
 copy-4001
 copy-4101
 copy-4102
@@ -1429,6 +1396,7 @@ copy-4308
 copy-4309
 copy-4401
 copy-4501
+copy-4502
 copy-4601
 copy-4701
 copy-4702
@@ -2333,7 +2301,6 @@ error-FODC0002a
 error-FODC0002a-ignore
 error-FOER0001a
 error-FORG0006b
-error-FORX0002a
 error-XPDY0002a
 error-XPDY0002b
 error-XPDY0002c
@@ -2962,7 +2929,6 @@ function-1035
 function-1101
 function-1201
 function-1301
-function-1401
 function-1501
 function-1601
 function-1701
@@ -3685,7 +3651,6 @@ load-xquery-module-004
 lre-003
 lre-005
 lre-006
-lre-009
 lre-010
 lre-011
 lre-012
@@ -3784,8 +3749,6 @@ match-025
 match-026
 match-027
 match-028
-match-029
-match-030
 match-031
 match-032
 match-033
@@ -4076,7 +4039,6 @@ math-1516
 math-1517
 math-1518
 math-1519
-math-1601
 math-1901
 math-1902
 math-1903
@@ -4168,7 +4130,6 @@ math-3501
 math-3601
 math-3701
 math-3702
-math-3801
 math-3901
 = merge
 merge-001
@@ -4512,9 +4473,6 @@ namespace-2501
 namespace-2503
 namespace-2601
 namespace-2602
-namespace-2603
-namespace-2604
-namespace-2605
 namespace-2606
 namespace-2607
 namespace-2608
@@ -4614,7 +4572,6 @@ namespace-3301
 namespace-3302
 namespace-3303
 namespace-3304
-namespace-3305
 namespace-3306
 namespace-3307
 namespace-3308
@@ -4632,7 +4589,6 @@ namespace-3503
 namespace-3504
 namespace-3505
 namespace-3601
-namespace-3801
 namespace-4001
 namespace-4002
 namespace-4003
@@ -4736,7 +4692,6 @@ node-1101
 node-1102
 node-1201
 node-1601
-node-1801
 node-1802
 node-1905
 node-1906
@@ -5749,17 +5704,7 @@ position-4102
 position-4103
 position-4104
 position-4105
-position-4201
-position-4301
-position-4401
-position-4501
-position-4601
-position-4602
-position-4701
-position-4702
 position-4901
-position-5001
-position-5002
 position-5501
 position-5801
 position-6002
@@ -5771,17 +5716,9 @@ position-6801
 position-6802
 position-6901
 position-7101
-position-7201
-position-7301
-position-7302
-position-7401
-position-7501
-position-7601
-position-7701
 position-7801
 position-7901
 position-8001
-position-8101
 position-8201
 position-8202
 position-8301
@@ -5791,8 +5728,6 @@ predicate-002
 predicate-003
 predicate-004
 predicate-005
-predicate-031
-predicate-050
 predicate-051
 predicate-052
 predicate-055
@@ -5806,14 +5741,7 @@ regex-015
 regex-016
 regex-017
 regex-018
-regex-019
 regex-020
-regex-021
-regex-022
-regex-023
-regex-024
-regex-025
-regex-026
 regex-027
 regex-028
 regex-031
@@ -5822,18 +5750,10 @@ regex-038
 regex-039
 regex-040
 regex-041
-regex-044
-regex-054
-regex-055
-regex-056
 regex-057
 regex-058
 regex-059
-regex-060
-regex-061
-regex-062
 regex-066
-regex-068
 regex-070a
 regex-070b
 regex-070c
@@ -8194,7 +8114,6 @@ select-2303
 select-2304
 select-2305
 select-2401
-select-2402
 select-3301
 select-3401
 select-3601
@@ -8232,10 +8151,6 @@ select-6501
 select-6601
 select-6701
 select-6801
-select-6901
-select-7001
-select-7101
-select-7201
 select-7301
 select-7401
 select-7501
@@ -8338,19 +8253,12 @@ sequence-0137
 sequence-0137a
 sequence-0138
 sequence-0139
-sequence-0201
-sequence-0202
-sequence-0301
-sequence-0302
 sequence-0303
 sequence-0304
-sequence-0305
 sequence-0306
 sequence-0307
-sequence-0403
 sequence-0601
 sequence-0705
-sequence-0706
 sequence-0901
 sequence-1001
 sequence-1002
@@ -8371,7 +8279,6 @@ sequence-1901
 sequence-2001
 sequence-2002
 sequence-2101
-sequence-2301
 sequence-2401a
 sequence-2401b
 sequence-2402a
@@ -10171,7 +10078,6 @@ sort-064
 sort-065
 sort-066
 sort-067
-sort-068
 sort-069
 sort-070
 sort-071
@@ -11645,12 +11551,10 @@ type-0158
 type-0159
 type-0160
 type-0161
-type-0162
 type-0163
 type-0164
 type-0165
 type-0166
-type-0167
 type-0168a
 type-0168b
 type-0169
@@ -13481,7 +13385,6 @@ variable-4601
 variable-4602
 variable-4701
 variable-4702
-variable-4801
 variable-4802
 = version
 version-001
@@ -13718,25 +13621,19 @@ xml-to-json-D509
 xml-to-json-D510
 xml-to-json-D511
 = xml-version
-xml-version-001
 xml-version-002
 xml-version-003
-xml-version-004
-xml-version-005
 xml-version-006
 xml-version-007
 xml-version-008
 xml-version-009
 xml-version-010
-xml-version-011
 xml-version-012
 xml-version-013
 xml-version-014
 xml-version-015
 xml-version-016
-xml-version-017
 xml-version-018
-xml-version-019
 xml-version-020
 xml-version-021
 xml-version-022
@@ -13750,8 +13647,6 @@ xml-version-029
 xml-version-030
 xml-version-031
 xml-version-032
-xml-version-033
-xml-version-034
 xml-version-035
 xml-version-036
 xml-version-037
@@ -13769,7 +13664,6 @@ xpath-compat-0105
 xpath-compat-0106
 xpath-compat-0107
 xpath-compat-0108
-xpath-compat-0109
 xpath-compat-0201
 xpath-compat-0202
 xpath-compat-0301
@@ -13778,7 +13672,6 @@ xpath-compat-0303
 xpath-compat-0401
 xpath-compat-0501
 xpath-compat-0601
-xpath-compat-0701
 = xpath-default-namespace
 xpath-default-namespace-0101
 xpath-default-namespace-0102
@@ -13799,7 +13692,6 @@ xpath-default-namespace-0702
 xpath-default-namespace-0703
 xpath-default-namespace-0801
 xpath-default-namespace-1001
-xpath-default-namespace-1101
 xpath-default-namespace-1102
 xpath-default-namespace-1201
 xpath-default-namespace-1202
@@ -13837,8 +13729,6 @@ xslt-compat-004
 xslt-compat-005
 xslt-compat-006
 xslt-compat-007
-xslt-compat-008
-xslt-compat-009
 xslt-compat-010
 xslt-compat-011
 xslt-compat-012
