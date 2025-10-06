@@ -1216,10 +1216,10 @@ impl<'a> Interpreter<'a> {
         if let Some(function_id) = function_id {
             let position: IBig = (position + 1).into();
             let arguments: Vec<sequence::Sequence> = vec![
-                params,
                 item.into(),
                 atomic::Atomic::from(position).into(),
                 atomic::Atomic::from(size.clone()).into(),
+                params,
             ];
             let function = function::InlineFunctionData::new(function_id, Vec::new()).into();
             self.call_function_with_arguments(&function, &arguments)

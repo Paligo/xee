@@ -5,10 +5,7 @@ use xee_xpath_ast::{
     span::Spanned,
 };
 
-use crate::{
-    ir::{self, TemplateNames},
-    Binding, Bindings,
-};
+use crate::{ir, Binding, Bindings};
 
 #[derive(Debug)]
 enum ContextItem {

@@ -1388,6 +1388,12 @@ impl From<Param> for OverrideContent {
     }
 }
 
+impl From<Param> for Declaration {
+    fn from(p: Param) -> Self {
+        Declaration::Param(Box::new(p))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PerformSort {

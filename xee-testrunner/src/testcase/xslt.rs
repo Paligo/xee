@@ -3,9 +3,11 @@ use std::path::PathBuf;
 use anyhow::Result;
 use iri_string::types::IriAbsoluteString;
 
+use xee_name::Name;
 use xee_xpath::{
-    context::{self, StaticContextBuilder},
-    Queries, Query,
+    context::{self, StaticContextBuilder, Variables},
+    function::{Function, Map},
+    Documents, Item, Queries, Query,
 };
 use xee_xpath_load::{convert_string, ContextLoadable};
 
@@ -33,11 +35,18 @@ impl XsltTestCase {}
 pub(crate) struct XsltTest {
     pub(crate) base_dir: PathBuf,
     pub(crate) stylesheets: Vec<Stylesheet>,
+    pub(crate) params: Vec<Param>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Stylesheet {
     pub(crate) path: Option<String>,
+}
+
+#[derive(Debug)]
+pub(crate) struct Param {
+    pub(crate) name: Option<String>,
+    pub(crate) select: Option<String>,
 }
 
 impl Runnable<XsltLanguage> for XsltTestCase {
@@ -70,7 +79,52 @@ impl Runnable<XsltLanguage> for XsltTestCase {
                 ))
             }
         };
-        let static_context_builder = StaticContextBuilder::default();
+        // HACK: collect param values into a map
+        let mut params = Vec::<(xee_xpath::Atomic, xee_xpath::Sequence)>::new();
+        {
+            let mut documents = Documents::new();
+            for param in &self.test.params {
+                let select = (param.select.as_ref()).expect("param: missing select not supported");
+                let name = (param.name.as_ref()).expect("param: missing name not supported");
+                let queries = Queries::default();
+
+                let query = queries.sequence(select);
+                let query = match query {
+                    Ok(query) => query,
+                    Err(_e) => {
+                        println!("param: select xpath parse failed: {}", select);
+                        continue;
+                    }
+                };
+                let dynamic_context_builder = query.dynamic_context_builder(&documents);
+                let dynamic_context = dynamic_context_builder.build();
+                let result = query.execute_with_context(&mut documents, &dynamic_context);
+                let result = match result {
+                    Ok(result) => result,
+                    Err(error) => {
+                        return TestOutcome::EnvironmentError(format!(
+                            "Error reading stylesheet: {}",
+                            error
+                        ))
+                    }
+                };
+                params.push((name.into(), result));
+            }
+        }
+
+        let params = Map::new(params).expect("Param names should be unique");
+
+        let mut variables = Variables::new();
+
+        variables.insert(
+            Name::name("params"),
+            Item::Function(Function::Map(params)).into(),
+        );
+
+        let mut static_context_builder = StaticContextBuilder::default();
+
+        static_context_builder.variable_names(variables.keys().cloned());
+
         let static_context = static_context_builder.build();
         let program = xee_xslt_compiler::parse(static_context, &xslt);
         let program = match program {
@@ -131,7 +185,7 @@ impl Runnable<XsltLanguage> for XsltTestCase {
             builder.context_item(context_item);
         }
         builder.documents(run_context.documents.documents().clone());
-        // builder.variables(variables.clone());
+        builder.variables(variables);
         builder.current_datetime(chrono::offset::Utc::now().into());
         let context = builder.build();
         let runnable = program.runnable(&context);
@@ -162,6 +216,13 @@ impl ContextLoadable<LoadContext> for XsltTestCase {
             let file = file_query.execute(documents, item)?;
             Ok(Stylesheet { path: file })
         })?;
+        let name_query = queries.option("@name/string()", convert_string)?;
+        let select_query = queries.option("@select/string()", convert_string)?;
+        let params_query = queries.many("param", move |params, item| {
+            let name = name_query.execute(params, item)?;
+            let select = select_query.execute(params, item)?;
+            Ok(Param { name, select })
+        })?;
 
         let xslt_test_query = queries.one("test", move |documents, item| {
             // the base dir is the same as the test set path, but
@@ -169,8 +230,10 @@ impl ContextLoadable<LoadContext> for XsltTestCase {
             let base_dir = context.path.parent().unwrap();
 
             let stylesheets = stylesheets_query.execute(documents, item)?;
+            let params = params_query.execute(documents, item)?;
             Ok(XsltTest {
                 stylesheets,
+                params,
                 base_dir: base_dir.to_path_buf(),
             })
         })?;

@@ -65,7 +65,14 @@ impl<'a> IrConverter<'a> {
                     .unwrap(),
                     span: xee_xslt_ast::ast::Span::new(0, 0),
                 },
-                content: vec![],
+                content: vec![ast::ApplyTemplatesContent::WithParam(ast::WithParam {
+                    name: xpath_ast::Name::name("HACKHACKPASSTHROUGH"), // HACK
+                    select: None,
+                    as_: None,
+                    tunnel: false,
+                    sequence_constructor: Vec::new(),
+                    span: xee_xslt_ast::ast::Span::new(0, 0),
+                })],
                 span: xee_xslt_ast::ast::Span::new(0, 0),
             })),
         )]
@@ -112,7 +119,11 @@ impl<'a> IrConverter<'a> {
 
     fn transform(&mut self, transform: &ast::Transform) -> error::SpannedResult<ir::Declarations> {
         let main_sequence_constructor = self.main_sequence_constructor();
-        let main = self.main_sequence_constructor_function(&main_sequence_constructor)?;
+        let params = transform.declarations.iter().flat_map(|x| match x {
+            ast::Declaration::Param(p) => Some(&**p),
+            _ => None,
+        });
+        let main = self.sequence_constructor_function(params, &main_sequence_constructor)?;
         let mut declarations = ir::Declarations::new(main);
 
         for declaration in &transform.declarations {
@@ -131,7 +142,13 @@ impl<'a> IrConverter<'a> {
             Template(template) => self.template(declarations, template),
             Mode(mode) => self.mode(declarations, mode),
             Output(output) => self.output(declarations, output),
-            _ => Err(error::Error::Unsupported(format!("Declaration not supported: {:?}", declaration)).into()),
+            // Already handled by self.transform
+            Param(_) => Ok(()),
+            _ => Err(error::Error::Unsupported(format!(
+                "Declaration not supported: {:?}",
+                declaration
+            ))
+            .into()),
         }
     }
 
@@ -141,19 +158,25 @@ impl<'a> IrConverter<'a> {
         template: &ast::Template,
     ) -> error::SpannedResult<()> {
         if let Some(pattern) = &template.match_ {
+            // TODO: Can have both name and pattern!
             let priority = if let Some(priority) = &template.priority {
                 *priority
             } else {
                 let default_priorities = default_priority(&pattern.pattern).collect::<Vec<_>>();
                 if default_priorities.len() > 1 {
                     // for now, we can't deal with multiple registration yet
-                    return Err(error::Error::Unsupported(format!("Default priorities splitting not supported")).into());
+                    return Err(error::Error::Unsupported(format!(
+                        "Default priorities splitting not supported"
+                    ))
+                    .into());
                 } else {
                     default_priorities.first().unwrap().1
                 }
             };
-            let function_definition = self
-                .sequence_constructor_function(&template.params, &template.sequence_constructor)?;
+            let function_definition = self.sequence_constructor_function(
+                template.params.iter(),
+                &template.sequence_constructor,
+            )?;
 
             let modes = template
                 .mode
@@ -169,8 +192,10 @@ impl<'a> IrConverter<'a> {
             });
             Ok(())
         } else if let Some(name) = &template.name {
-            let function_definition = self
-                .sequence_constructor_function(&template.params, &template.sequence_constructor)?;
+            let function_definition = self.sequence_constructor_function(
+                template.params.iter(),
+                &template.sequence_constructor,
+            )?;
 
             declarations.functions.push(ir::FunctionBinding {
                 name: name.clone(),
@@ -178,7 +203,11 @@ impl<'a> IrConverter<'a> {
             });
             Ok(())
         } else {
-            Err(error::Error::Unsupported(format!("Named templates not supported")).into())
+            // TODO: proper static error
+            Err(error::Error::Unsupported(format!(
+                "Templates without name and pattern not supported"
+            ))
+            .into())
         }
     }
 
@@ -271,51 +300,19 @@ impl<'a> IrConverter<'a> {
         }
     }
 
-    fn main_sequence_constructor_function(
+    fn sequence_constructor_function<'b>(
         &mut self,
-        sequence_constructor: &ast::SequenceConstructor,
-    ) -> error::SpannedResult<ir::FunctionDefinition> {
-        let context_names = self.variables.push_context();
-        let bindings = self.sequence_constructor(sequence_constructor)?;
-        self.variables.pop_context();
-        let params = vec![
-            ir::Param {
-                name: context_names.item,
-                type_: None,
-            },
-            ir::Param {
-                name: context_names.position,
-                type_: None,
-            },
-            ir::Param {
-                name: context_names.last,
-                type_: None,
-            },
-        ];
-        Ok(ir::FunctionDefinition {
-            params,
-            return_type: None,
-            body: Box::new(bindings.expr()),
-        })
-    }
-
-    fn sequence_constructor_function(
-        &mut self,
-        params: &Vec<ast::Param>,
+        mut params: impl Iterator<Item = &'b ast::Param>,
         sequence_constructor: &ast::SequenceConstructor,
     ) -> error::SpannedResult<ir::FunctionDefinition> {
         let (context_names, template_names) = self.variables.push_template_context();
         let bindings = self.unpack_named_params(
             ir::Atom::Variable(template_names.named_params.clone()),
-            &params,
+            &mut params,
             sequence_constructor,
         )?;
         self.variables.pop_context();
         let params = vec![
-            ir::Param {
-                name: template_names.named_params,
-                type_: None,
-            },
             ir::Param {
                 name: context_names.item,
                 type_: None,
@@ -328,6 +325,10 @@ impl<'a> IrConverter<'a> {
                 name: context_names.last,
                 type_: None,
             },
+            ir::Param {
+                name: template_names.named_params,
+                type_: None,
+            },
         ];
         Ok(ir::FunctionDefinition {
             params,
@@ -336,13 +337,12 @@ impl<'a> IrConverter<'a> {
         })
     }
 
-    fn unpack_named_params(
+    fn unpack_named_params<'b>(
         &mut self,
         named_params_map: ir::Atom,
-        params: &[ast::Param],
+        params: &mut impl Iterator<Item = &'b ast::Param>,
         body: &ast::SequenceConstructor,
     ) -> error::SpannedResult<Bindings> {
-        let mut params = params.iter();
         if let Some(param) = params.next() {
             let name = self.variables.new_var_name(&param.name);
 
@@ -376,7 +376,7 @@ impl<'a> IrConverter<'a> {
                 name,
                 var_expr: Box::new(bindings.expr()),
                 return_expr: Box::new(
-                    self.unpack_named_params(named_params_map, params.as_slice(), body)?
+                    self.unpack_named_params(named_params_map, params, body)?
                         .expr(),
                 ),
             });
