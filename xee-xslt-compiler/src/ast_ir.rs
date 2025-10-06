@@ -126,6 +126,7 @@ impl<'a> IrConverter<'a> {
         match declaration {
             Template(template) => self.template(declarations, template),
             Mode(mode) => self.mode(declarations, mode),
+            Output(output) => self.output(declarations, output),
             _ => Err(error::Error::Unsupported(format!("Declaration not supported: {:?}", declaration)).into()),
         }
     }
@@ -174,6 +175,64 @@ impl<'a> IrConverter<'a> {
         mode: &ast::Mode,
     ) -> error::SpannedResult<()> {
         declarations.modes.insert(mode.name.clone(), ir::Mode {});
+        Ok(())
+    }
+
+    fn output(
+        &mut self,
+        declarations: &mut ir::Declarations,
+        output: &ast::Output,
+    ) -> error::SpannedResult<()> {
+        let serialization = &mut declarations.serialization_params;
+        if output.name.is_some() {
+            return Err(error::Error::Unsupported(String::from("Output: Named outputs are not supported yet")).into());
+        }
+        if output.method.is_some() && output.method != Some(ast::OutputMethod::Xml) {
+            return Err(error::Error::Unsupported(String::from("Output: Non-XML output methods are not supported yet")).into());
+        }
+        if output.standalone.is_some() {
+            return Err(error::Error::Unsupported(String::from("Output: Standalone outputs are not supported yet")).into());
+        }
+        if output.parameter_document.is_some() {
+            return Err(error::Error::Unsupported(String::from("Output: Parameter documents are not supported yet")).into());
+        }
+        if output.normalization_form.is_some() {
+            return Err(error::Error::Unsupported(String::from("Output: Normalization forms are not supported yet")).into());
+        }
+        if !output.use_character_maps.is_empty() {
+            return Err(error::Error::Unsupported(String::from("Output: Character maps are not supported yet")).into());
+        }
+        if output.json_node_output_method.is_some() {
+            return Err(error::Error::Unsupported(String::from("Output: JSON node output method option is not supported yet")).into());
+        }
+        if output.build_tree {
+            return Err(error::Error::Unsupported(String::from("Output: Build tree is not supported yet")).into());
+        }
+        fn assign_if_some<T>(location: &mut T, value: Option<T>) {
+            if let Some(v) = value {
+                *location = v;
+            }
+        }
+        serialization.allow_duplicate_names = output.allow_duplicate_names;
+        serialization.byte_order_mark = output.byte_order_mark;
+        serialization.cdata_section_elements.extend(output.cdata_section_elements.clone());
+        serialization.doctype_public = output.doctype_public.clone();
+        serialization.doctype_system = output.doctype_system.clone();
+        assign_if_some(&mut serialization.encoding, output.encoding.clone());
+        serialization.escape_uri_attributes = output.escape_uri_attributes;
+        assign_if_some(&mut serialization.html_version, output.html_version);
+        serialization.include_content_type = output.include_content_type;
+        serialization.indent = output.indent;
+        assign_if_some(&mut serialization.item_separator, output.item_separator.clone());
+        // assign_if_some(&mut serialization.json_node_output_method, output.json_node_output_method);
+        serialization.media_type = output.media_type.clone();
+        // assign_if_some(&mut serialization.normalization_form, output.normalization_form);
+        serialization.omit_xml_declaration = output.omit_xml_declaration;
+        // assign_if_some(&mut serialization.standalone, output.standalone);
+        serialization.suppress_indentation.extend(output.suppress_indentation.clone());
+        serialization.undeclare_prefixes = output.undeclare_prefixes;
+        // serialization.use_character_maps.extend(output.use_character_maps.clone());
+        assign_if_some(&mut serialization.version, output.version.clone());
         Ok(())
     }
 

@@ -9,6 +9,7 @@ use rust_decimal::Decimal;
 
 pub use xee_interpreter::function::Name;
 use xee_interpreter::function::{CastType, Signature, StaticFunctionId};
+use xee_interpreter::sequence::SerializationParameters;
 use xee_interpreter::xml;
 use xee_schema_type::Xs;
 pub use xee_xpath_ast::ast::{BinaryOperator, SequenceType, UnaryOperator};
@@ -375,6 +376,7 @@ pub struct Declarations {
     pub modes: HashMap<Option<xmlname::OwnedName>, Mode>,
     pub functions: Vec<FunctionBinding>,
     pub main: FunctionDefinition,
+    pub serialization_params: SerializationParameters,
 }
 
 impl Declarations {
@@ -384,6 +386,7 @@ impl Declarations {
             modes: HashMap::new(),
             functions: Vec::new(),
             main,
+            serialization_params: SerializationParameters::new(),
         }
     }
 }

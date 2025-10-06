@@ -138,6 +138,7 @@ impl DeclarationName {
         match self {
             DeclarationName::Accumulator => ast::Accumulator::parse_declaration(attributes),
             DeclarationName::Template => ast::Template::parse_declaration(attributes),
+            DeclarationName::Output => ast::Output::parse_declaration(attributes),
             _ => Err(ElementError::Unsupported(format!("Unsupported declaration: {:?}", &self))),
         }
     }

@@ -15,6 +15,7 @@ use super::{
     opc::{OptionParameterConverter, QNameOrString},
 };
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SerializationParameters {
     pub allow_duplicate_names: bool,
     pub byte_order_mark: bool,

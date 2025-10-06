@@ -1205,7 +1205,7 @@ pub struct Output {
     pub allow_duplicate_names: bool,
     pub build_tree: bool,
     pub byte_order_mark: bool,
-    pub cdata_section_elements: Option<Vec<EqName>>,
+    pub cdata_section_elements: Vec<EqName>,
     pub doctype_public: Option<String>,
     pub doctype_system: Option<String>,
     pub encoding: Option<String>,
@@ -1220,12 +1220,18 @@ pub struct Output {
     pub omit_xml_declaration: bool,
     pub parameter_document: Option<Uri>,
     pub standalone: Option<Standalone>,
-    pub suppress_indentation: Option<Vec<EqName>>,
+    pub suppress_indentation: Vec<EqName>,
     pub undeclare_prefixes: bool,
-    pub use_character_maps: Option<Vec<EqName>>,
+    pub use_character_maps: Vec<EqName>,
     pub version: Option<NmToken>,
 
     pub span: Span,
+}
+
+impl From<Output> for Declaration {
+    fn from(t: Output) -> Self {
+        Declaration::Output(Box::new(t))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
