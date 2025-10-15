@@ -4,7 +4,7 @@ use xee_name::{Name, Namespaces, FN_NAMESPACE};
 use xee_interpreter::{context::StaticContext, error, interpreter, sequence::QNameOrString};
 use xee_ir::{compile_xslt, ir, Bindings, Variables};
 use xee_xpath_ast::{ast as xpath_ast, pattern::transform_pattern, span::Spanned};
-use xee_xslt_ast::{ast, parse_transform};
+use xee_xslt_ast::{ast, error::ElementError, parse_transform};
 use xot::xmlname::NameStrInfo;
 
 use crate::{default_declarations::text_only_copy_declarations, priority::default_priority};
@@ -31,8 +31,17 @@ pub fn parse(
     // TODO: better error handling
     let mut transform = match transform {
         Ok(transform) => transform,
-        Err(_e) => {
-            return Err(error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", _e)).into());
+        Err(ElementError::Unexpected { span }) => {
+            let text = xslt.get(span.start..span.end);
+            return Err(error::Error::Unsupported(format!(
+                "Failed parsing XSLT, Unexpected {} {:?}",
+                text.unwrap_or_default(),
+                span
+            ))
+            .into());
+        }
+        Err(e) => {
+            return Err(error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", e)).into());
         }
     };
     // insert default rules early on in precedence order

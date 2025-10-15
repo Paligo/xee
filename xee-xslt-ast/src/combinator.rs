@@ -449,7 +449,15 @@ impl<V, PA: NodeParser<V>, PB: NodeParser<V>> NodeParser<V> for OrParser<V, PA, 
         if r.is_ok() {
             r
         } else {
-            self.second.parse_next(node, state, context)
+            let r2 = self.second.parse_next(node, state, context);
+            if r2.is_ok() {
+                r2
+            } else {
+                match r2 {
+                    Err(ElementError::Unexpected { .. }) => r,
+                    _ => r2,
+                }
+            }
         }
     }
 }
