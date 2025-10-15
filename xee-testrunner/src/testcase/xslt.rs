@@ -11,6 +11,7 @@ use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::{
     catalog::{Catalog, LoadContext},
+    environment::xslt::Stylesheet,
     language::XsltLanguage,
     runcontext::RunContext,
     testset::TestSet,
@@ -35,11 +36,6 @@ pub(crate) struct XsltTest {
     pub(crate) stylesheets: Vec<Stylesheet>,
 }
 
-#[derive(Debug)]
-pub(crate) struct Stylesheet {
-    pub(crate) path: Option<String>,
-}
-
 impl Runnable<XsltLanguage> for XsltTestCase {
     fn test_case(&self) -> &TestCase<XsltLanguage> {
         &self.test_case
@@ -51,11 +47,21 @@ impl Runnable<XsltLanguage> for XsltTestCase {
         catalog: &Catalog<XsltLanguage>,
         test_set: &TestSet<XsltLanguage>,
     ) -> TestOutcome {
+        let mut stylesheets = self
+            .test_case
+            .environments(catalog, test_set)
+            .flatten()
+            .flat_map(|x| x.stylesheets.iter())
+            .chain(self.test.stylesheets.iter());
+
         // TODO take the first stylesheet for now
-        if self.test.stylesheets.is_empty() {
-            return TestOutcome::EnvironmentError("No stylesheet found".to_string());
-        }
-        let stylesheet = &self.test.stylesheets[0];
+        let stylesheet = stylesheets.next();
+        let stylesheet = match stylesheet {
+            Some(stylesheet) => stylesheet,
+            None => {
+                return TestOutcome::EnvironmentError("No stylesheet found".to_string());
+            }
+        };
         // construct full path
         let path = self.test.base_dir.join(stylesheet.path.as_ref().unwrap());
         // load xml text from file

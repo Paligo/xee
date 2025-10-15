@@ -8,7 +8,7 @@ mod shared;
 mod source;
 mod xpath;
 #[allow(dead_code)]
-mod xslt;
+pub(crate) mod xslt;
 
 pub(crate) use core::{Environment, EnvironmentRef, TestCaseEnvironment};
 pub(crate) use iterator::EnvironmentIterator;
