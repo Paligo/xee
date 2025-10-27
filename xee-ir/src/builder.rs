@@ -1,4 +1,5 @@
-use xee_xpath_ast::ast;
+use xee_interpreter::function::InlineFunctionId;
+use xee_xpath_ast::{ast, Pattern};
 
 use xee_interpreter::interpreter::instruction::{
     encode_instruction, instruction_size, Instruction,
@@ -31,6 +32,7 @@ pub struct FunctionBuilder<'a> {
     cast_types: Vec<function::CastType>,
     sequence_types: Vec<ast::SequenceType>,
     closure_names: Vec<ir::Name>,
+    patterns: Vec<Pattern<InlineFunctionId>>,
 }
 
 impl<'a> FunctionBuilder<'a> {
@@ -44,6 +46,7 @@ impl<'a> FunctionBuilder<'a> {
             cast_types: Vec::new(),
             sequence_types: Vec::new(),
             closure_names: Vec::new(),
+            patterns: Vec::new(),
         }
     }
 
@@ -76,6 +79,15 @@ impl<'a> FunctionBuilder<'a> {
         self.closure_names.push(name.clone());
         if index > (u16::MAX as usize) {
             panic!("too many closure names");
+        }
+        index
+    }
+
+    pub(crate) fn add_pattern(&mut self, pattern: Pattern<InlineFunctionId>) -> usize {
+        let index = self.patterns.len();
+        self.patterns.push(pattern.clone());
+        if index > (u16::MAX as usize) {
+            panic!("too many pattern names");
         }
         index
     }
@@ -164,10 +176,10 @@ impl<'a> FunctionBuilder<'a> {
     pub(crate) fn finish(
         mut self,
         name: String,
-        function_definition: &ir::FunctionDefinition,
+        signature: function::Signature,
         span: span::SourceSpan,
     ) -> function::InlineFunction {
-        if let Some(return_type) = &function_definition.return_type {
+        if let Some(return_type) = signature.return_type() {
             let sequence_type_id = self.add_sequence_type(return_type.clone());
             if sequence_type_id > (u16::MAX as usize) {
                 panic!("too many sequence types");
@@ -177,7 +189,7 @@ impl<'a> FunctionBuilder<'a> {
         self.emit(Instruction::Return, span);
         function::InlineFunction {
             name,
-            signature: function_definition.signature(),
+            signature,
             chunk: self.compiled,
             spans: self.spans,
             closure_names: self.closure_names,
@@ -185,6 +197,7 @@ impl<'a> FunctionBuilder<'a> {
             steps: self.steps,
             cast_types: self.cast_types,
             sequence_types: self.sequence_types,
+            patterns: self.patterns,
         }
     }
 

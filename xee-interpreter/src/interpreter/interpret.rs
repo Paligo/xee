@@ -14,13 +14,13 @@ use crate::atomic::{
     op_add, op_div, op_idiv, op_mod, op_multiply, op_subtract, OpEq, OpGe, OpGt, OpLe, OpLt, OpNe,
 };
 use crate::context::DynamicContext;
+use crate::error;
 use crate::function;
 use crate::pattern::PredicateMatcher;
 use crate::sequence;
 use crate::span::SourceSpan;
 use crate::stack;
 use crate::xml;
-use crate::{error, pattern};
 
 use super::instruction::{read_i16, read_instruction, read_u16, read_u8, EncodedInstruction};
 use super::runnable::Runnable;
@@ -175,6 +175,9 @@ impl<'a> Interpreter<'a> {
                 EncodedInstruction::ClosureVar => {
                     let index = self.read_u16();
                     self.state.push_closure_var(index as usize)?;
+                }
+                EncodedInstruction::ClosureRecursiveSelf => {
+                    self.state.push_closure_recursive()?;
                 }
                 EncodedInstruction::Comma => {
                     let b = self.state.pop()?;
@@ -630,12 +633,13 @@ impl<'a> Interpreter<'a> {
                     }
                     self.state.push(new_sequence);
                 }
-                EncodedInstruction::ApplyTemplates => {
-                    let value = self.state.pop()?;
-                    let mode_id = self.read_u16();
-                    let mode = pattern::ModeId::new(mode_id as usize);
-                    let value = self.apply_templates_sequence(mode, value)?;
-                    self.state.push(value);
+                EncodedInstruction::MatchPattern => {
+                    let pattern_id = self.read_u16();
+                    let items = self.state.top()?;
+                    let item = items.one()?;
+                    let pattern = &(self.current_inline_function().patterns[pattern_id as usize]);
+                    let result = self.matches(pattern, &item);
+                    self.state.push(sequence::Item::Atomic(result.into()));
                 }
                 EncodedInstruction::PrintTop => {
                     let top = self.state.top()?;
@@ -694,7 +698,7 @@ impl<'a> Interpreter<'a> {
         Ok(function::StaticFunctionData::new(static_function_id, closure_vars).into())
     }
 
-    pub(crate) fn current_inline_function(&self) -> &function::InlineFunction {
+    pub(crate) fn current_inline_function(&self) -> &'a function::InlineFunction {
         self.runnable
             .program()
             .inline_function(self.state.frame().function())
@@ -1181,62 +1185,6 @@ impl<'a> Interpreter<'a> {
             // operation as shallow copy
             _ => xot.clone_node(node),
         }
-    }
-
-    fn apply_templates_sequence(
-        &mut self,
-        mode: pattern::ModeId,
-        sequence: sequence::Sequence,
-    ) -> error::Result<sequence::Sequence> {
-        let mut r: Vec<sequence::Item> = Vec::new();
-        let size: IBig = sequence.len().into();
-
-        for (i, item) in sequence.iter().enumerate() {
-            let sequence = self.apply_templates_item(mode, item, i, size.clone())?;
-            if let Some(sequence) = sequence {
-                for item in sequence.iter() {
-                    r.push(item.clone());
-                }
-            }
-        }
-        Ok(r.into())
-    }
-
-    fn apply_templates_item(
-        &mut self,
-        mode: pattern::ModeId,
-        item: sequence::Item,
-        position: usize,
-        size: IBig,
-    ) -> error::Result<Option<sequence::Sequence>> {
-        let function_id = self.lookup_pattern(mode, &item);
-
-        if let Some(function_id) = function_id {
-            let position: IBig = (position + 1).into();
-            let arguments: Vec<sequence::Sequence> = vec![
-                item.into(),
-                atomic::Atomic::from(position).into(),
-                atomic::Atomic::from(size.clone()).into(),
-            ];
-            let function = function::InlineFunctionData::new(function_id, Vec::new()).into();
-            self.call_function_with_arguments(&function, &arguments)
-                .map(Some)
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub(crate) fn lookup_pattern(
-        &mut self,
-        mode: pattern::ModeId,
-        item: &sequence::Item,
-    ) -> Option<function::InlineFunctionId> {
-        self.runnable
-            .program()
-            .declarations
-            .mode_lookup
-            .lookup(mode, |pattern| self.matches(pattern, item))
-            .copied()
     }
 
     // The interpreter can return an error for any byte code, in any level of

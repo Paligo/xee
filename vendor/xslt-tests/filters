@@ -1070,7 +1070,6 @@ bug-6201
 bug-6301
 bug-6401
 = built-in-templates
-built-in-templates-0101
 built-in-templates-0201
 built-in-templates-0202
 built-in-templates-0301
@@ -1303,9 +1302,7 @@ copy-0103
 copy-0104
 copy-0105
 copy-0501
-copy-0602
 copy-0603
-copy-0604
 copy-0606
 copy-0609
 copy-0610
@@ -10364,7 +10361,6 @@ string-120
 string-121
 string-125
 string-131
-string-133
 string-134
 string-135
 string-136

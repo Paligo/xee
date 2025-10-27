@@ -1,5 +1,4 @@
 use crate::context;
-use crate::declaration::Declarations;
 use crate::function;
 use xee_name::Name;
 use xee_xpath_ast::ast::Span;
@@ -10,7 +9,6 @@ use super::Runnable;
 pub struct Program {
     span: Span,
     pub functions: Vec<function::InlineFunction>,
-    pub declarations: Declarations,
     static_context: context::StaticContext,
     map_signature: function::Signature,
     array_signature: function::Signature,
@@ -21,7 +19,6 @@ impl Program {
         Program {
             span,
             functions: Vec::new(),
-            declarations: Declarations::new(),
             static_context,
             map_signature: function::Signature::map_signature(),
             array_signature: function::Signature::array_signature(),
