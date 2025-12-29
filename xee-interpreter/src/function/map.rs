@@ -5,6 +5,7 @@ use xee_schema_type::Xs;
 use xee_xpath_ast::ast;
 use xot::Xot;
 
+use crate::xml::TypeTable;
 use crate::{atomic, context, error, sequence, string};
 
 /// An XPath Map (a collection of key-value pairs).
@@ -145,11 +146,18 @@ impl Map {
         atomic_type: Xs,
         static_context: &context::StaticContext,
         xot: &Xot,
+        type_table: &TypeTable,
     ) -> error::Result<Option<sequence::Sequence>> {
         match self {
-            Map::Empty(map) => map.get_as_type(key, occurrence, atomic_type, static_context, xot),
-            Map::One(map) => map.get_as_type(key, occurrence, atomic_type, static_context, xot),
-            Map::Many(map) => map.get_as_type(key, occurrence, atomic_type, static_context, xot),
+            Map::Empty(map) => {
+                map.get_as_type(key, occurrence, atomic_type, static_context, xot, type_table)
+            }
+            Map::One(map) => {
+                map.get_as_type(key, occurrence, atomic_type, static_context, xot, type_table)
+            }
+            Map::Many(map) => {
+                map.get_as_type(key, occurrence, atomic_type, static_context, xot, type_table)
+            }
         }
     }
 
@@ -286,6 +294,7 @@ pub(crate) trait Mappable {
         atomic_type: Xs,
         static_context: &context::StaticContext,
         xot: &Xot,
+        type_table: &TypeTable,
     ) -> error::Result<Option<sequence::Sequence>> {
         let value = self.get(key);
         let value = match value {
@@ -302,6 +311,7 @@ pub(crate) trait Mappable {
                 &sequence_type,
                 static_context,
                 xot,
+                type_table,
                 // typed function tests can't be invoked
                 &|_function| unreachable!(),
             )?,

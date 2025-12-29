@@ -2,7 +2,10 @@ use xee_schema_type::Xs;
 use xee_xpath_macros::xpath_fn;
 use xot::Xot;
 
-use crate::{atomic, context, error, function, interpreter::Interpreter, sequence, wrap_xpath_fn};
+use crate::{
+    atomic, context, error, function, interpreter::Interpreter, sequence, wrap_xpath_fn,
+    xml::TypeTable,
+};
 
 use super::StaticFunctionDescription;
 
@@ -27,7 +30,12 @@ fn parse_json2(
     options: function::Map,
 ) -> error::Result<Option<sequence::Item>> {
     let parameters =
-        ParseJsonParameters::from_map(&options, context.static_context(), interpreter.xot())?;
+        ParseJsonParameters::from_map(
+            &options,
+            context.static_context(),
+            interpreter.xot(),
+            &interpreter.state.type_table.borrow(),
+        )?;
 
     if let Some(json_text) = json_text {
         let value = json::parse(json_text).map_err(|_| error::Error::FOJS0001)?;
@@ -62,8 +70,9 @@ impl ParseJsonParameters {
         map: &function::Map,
         static_context: &context::StaticContext,
         xot: &Xot,
+        type_table: &TypeTable,
     ) -> error::Result<Self> {
-        let c = sequence::OptionParameterConverter::new(map, static_context, xot);
+        let c = sequence::OptionParameterConverter::new(map, static_context, xot, type_table);
 
         let liberal = c
             .option_with_default("liberal", Xs::Boolean, false)

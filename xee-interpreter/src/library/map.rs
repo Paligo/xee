@@ -98,12 +98,14 @@ impl MergeOptions {
         // apply function conversion rules as specified by the option parameter
         // conventions
         let runnable = interpreter.runnable();
+        let type_table = interpreter.state.type_table.borrow();
         let duplicates = duplicates
             .clone()
             .sequence_type_matching_function_conversion(
                 &sequence_type,
                 runnable.static_context(),
                 interpreter.xot(),
+                &type_table,
                 &|function| runnable.program().function_info(function).signature(),
             )?;
         // take the first value, which should be a string

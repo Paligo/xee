@@ -6,6 +6,7 @@ use xee_xpath_ast::ast;
 use xot::xmlname::{NameStrInfo, OwnedName};
 use xot::Xot;
 
+use crate::xml::TypeTable;
 use crate::{atomic, context, error, function::Map};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,6 +36,7 @@ pub(crate) struct OptionParameterConverter<'a> {
     map: &'a Map,
     static_context: &'a context::StaticContext,
     xot: &'a Xot,
+    type_table: &'a TypeTable,
 }
 
 impl<'a> OptionParameterConverter<'a> {
@@ -42,11 +44,13 @@ impl<'a> OptionParameterConverter<'a> {
         map: &'a Map,
         static_context: &'a context::StaticContext,
         xot: &'a Xot,
+        type_table: &'a TypeTable,
     ) -> Self {
         Self {
             map,
             static_context,
             xot,
+            type_table,
         }
     }
 
@@ -61,6 +65,7 @@ impl<'a> OptionParameterConverter<'a> {
             atomic_type,
             self.static_context,
             self.xot,
+            self.type_table,
         )?;
         let value = if let Some(value) = value {
             value.option()?
@@ -102,6 +107,7 @@ impl<'a> OptionParameterConverter<'a> {
             atomic_type,
             self.static_context,
             self.xot,
+            self.type_table,
         )?;
         let values = if let Some(value) = value {
             value

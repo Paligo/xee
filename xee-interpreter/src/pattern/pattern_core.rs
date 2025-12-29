@@ -6,6 +6,8 @@ use xee_xpath_ast::pattern;
 use crate::function::InlineFunctionId;
 use crate::sequence::Item;
 use crate::xml;
+use crate::context::TypeTableRef;
+use crate::xml::TypeTable;
 
 pub(crate) enum NodeMatch {
     Match(Option<xot::Node>),
@@ -15,6 +17,7 @@ pub(crate) enum NodeMatch {
 pub(crate) trait PredicateMatcher {
     fn match_predicate(&mut self, inline_function_id: InlineFunctionId, item: &Item) -> bool;
     fn xot(&self) -> &Xot;
+    fn type_table(&self) -> &TypeTableRef;
 
     fn matches(&mut self, pattern: &pattern::Pattern<InlineFunctionId>, item: &Item) -> bool {
         match pattern {
@@ -213,8 +216,11 @@ pub(crate) trait PredicateMatcher {
         } else if step.forward == pattern::ForwardAxis::Attribute {
             return (false, step.forward);
         }
-        if !Self::matches_node_test(&step.node_test, node, self.xot()) {
-            return (false, step.forward);
+        {
+            let type_table = self.type_table().borrow();
+            if !Self::matches_node_test(&step.node_test, node, self.xot(), &type_table) {
+                return (false, step.forward);
+            }
         }
         // if we have a match, check whether the predicates apply
         let item = Item::Node(node);
@@ -243,10 +249,17 @@ pub(crate) trait PredicateMatcher {
         true
     }
 
-    fn matches_node_test(node_test: &pattern::NodeTest, node: xot::Node, xot: &Xot) -> bool {
+    fn matches_node_test(
+        node_test: &pattern::NodeTest,
+        node: xot::Node,
+        xot: &Xot,
+        type_table: &TypeTable,
+    ) -> bool {
         match node_test {
             pattern::NodeTest::NameTest(name_test) => Self::matches_name_test(name_test, node, xot),
-            pattern::NodeTest::KindTest(kind_test) => Self::matches_kind_test(kind_test, node, xot),
+            pattern::NodeTest::KindTest(kind_test) => {
+                Self::matches_kind_test(kind_test, node, xot, type_table)
+            }
         }
     }
 
@@ -260,7 +273,7 @@ pub(crate) trait PredicateMatcher {
                     false
                 }
             }
-            pattern::NameTest::Star => true,
+            pattern::NameTest::Star => xot.node_name_ref(node).unwrap().is_some(),
             pattern::NameTest::LocalName(expected_local_name) => {
                 if let Some(name) = xot.node_name(node) {
                     xot.local_name_str(name) == expected_local_name
@@ -279,8 +292,13 @@ pub(crate) trait PredicateMatcher {
         }
     }
 
-    fn matches_kind_test(kind_test: &KindTest, node: xot::Node, xot: &Xot) -> bool {
-        xml::kind_test(kind_test, xot, node)
+    fn matches_kind_test(
+        kind_test: &KindTest,
+        node: xot::Node,
+        xot: &Xot,
+        type_table: &TypeTable,
+    ) -> bool {
+        xml::kind_test(kind_test, xot, type_table, node)
     }
 }
 
@@ -313,6 +331,7 @@ mod tests {
 
     struct BasicPredicateMatcher<'a> {
         xot: &'a Xot,
+        type_table: TypeTableRef,
         predicate_matches: bool,
     }
 
@@ -320,6 +339,7 @@ mod tests {
         fn new(xot: &'a Xot) -> Self {
             Self {
                 xot,
+                type_table: TypeTableRef::new(),
                 predicate_matches: false,
             }
         }
@@ -327,6 +347,7 @@ mod tests {
         fn matching(xot: &'a Xot) -> Self {
             Self {
                 xot,
+                type_table: TypeTableRef::new(),
                 predicate_matches: true,
             }
         }
@@ -339,6 +360,10 @@ mod tests {
 
         fn xot(&self) -> &Xot {
             self.xot
+        }
+
+        fn type_table(&self) -> &TypeTableRef {
+            &self.type_table
         }
     }
 

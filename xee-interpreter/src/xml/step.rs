@@ -5,6 +5,7 @@ use xee_xpath_ast::ast;
 use crate::sequence;
 
 use super::kind_test::kind_test;
+use super::TypeTable;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Step {
@@ -12,10 +13,15 @@ pub struct Step {
     pub node_test: ast::NodeTest,
 }
 
-pub(crate) fn resolve_step(step: &Step, node: xot::Node, xot: &Xot) -> sequence::Sequence {
+pub(crate) fn resolve_step(
+    step: &Step,
+    node: xot::Node,
+    xot: &Xot,
+    type_table: &TypeTable,
+) -> sequence::Sequence {
     let mut new_items = Vec::new();
     for axis_node in node_take_axis(&step.axis, xot, node) {
-        if node_test(&step.node_test, &step.axis, xot, axis_node) {
+        if node_test(&step.node_test, &step.axis, xot, type_table, axis_node) {
             new_items.push(sequence::Item::Node(axis_node));
         }
     }
@@ -49,9 +55,15 @@ fn node_take_axis<'a>(
     xot.axis(axis, node)
 }
 
-fn node_test(node_test: &ast::NodeTest, axis: &ast::Axis, xot: &Xot, node: xot::Node) -> bool {
+fn node_test(
+    node_test: &ast::NodeTest,
+    axis: &ast::Axis,
+    xot: &Xot,
+    type_table: &TypeTable,
+    node: xot::Node,
+) -> bool {
     match node_test {
-        ast::NodeTest::KindTest(kt) => kind_test(kt, xot, node),
+        ast::NodeTest::KindTest(kt) => kind_test(kt, xot, type_table, node),
         ast::NodeTest::NameTest(name_test) => {
             if xot.value_type(node) != principal_node_kind(axis) {
                 return false;
@@ -136,12 +148,13 @@ mod tests {
         let doc_el = xot.document_element(doc)?;
         let a = xot.first_child(doc_el).unwrap();
         let b = xot.next_sibling(a).unwrap();
+        let type_table = TypeTable::new();
 
         let step = Step {
             axis: ast::Axis::Child,
             node_test: ast::NodeTest::NameTest(ast::NameTest::Star),
         };
-        let value = resolve_step(&step, doc_el, &xot);
+        let value = resolve_step(&step, doc_el, &xot, &type_table);
         assert_eq!(value, xot_nodes_to_value(&[a, b]));
         Ok(())
     }
@@ -152,6 +165,7 @@ mod tests {
         let doc = xot.parse(r#"<root><a/><b/></root>"#).unwrap();
         let doc_el = xot.document_element(doc)?;
         let a = xot.first_child(doc_el).unwrap();
+        let type_table = TypeTable::new();
 
         let step = Step {
             axis: ast::Axis::Child,
@@ -159,7 +173,7 @@ mod tests {
                 ast::Name::name("a").with_empty_span(),
             )),
         };
-        let value = resolve_step(&step, doc_el, &xot);
+        let value = resolve_step(&step, doc_el, &xot, &type_table);
         assert_eq!(value, xot_nodes_to_value(&[a]));
         Ok(())
     }

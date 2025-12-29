@@ -14,6 +14,7 @@ use crate::context;
 use crate::error;
 use crate::function;
 use crate::xml;
+use crate::xml::TypeTable;
 
 use super::core::Sequence;
 use super::item::Item;
@@ -26,13 +27,14 @@ impl Sequence {
         &self,
         s: &str,
         xot: &Xot,
+        type_table: &TypeTable,
         get_signature: &impl Fn(&function::Function) -> &'a function::Signature,
     ) -> error::Result<bool> {
         let namespaces = Namespaces::default();
         let sequence_type = parse_sequence_type(s, &namespaces)?;
         if self
             .clone()
-            .sequence_type_matching(&sequence_type, xot, get_signature)
+            .sequence_type_matching(&sequence_type, xot, type_table, get_signature)
             .is_ok()
         {
             Ok(true)
@@ -46,6 +48,7 @@ impl Sequence {
         self,
         sequence_type: &ast::SequenceType,
         xot: &Xot,
+        type_table: &TypeTable,
         get_signature: &impl Fn(&function::Function) -> &'a function::Signature,
     ) -> error::Result<Self> {
         self.sequence_type_matching_convert(
@@ -53,6 +56,7 @@ impl Sequence {
             &|atomic, _| Ok(atomic),
             &|function_test, item| item.function_type_matching(function_test, &get_signature),
             xot,
+            type_table,
         )
     }
 
@@ -62,6 +66,7 @@ impl Sequence {
         sequence_type: &ast::SequenceType,
         context: &'a context::StaticContext,
         xot: &Xot,
+        type_table: &TypeTable,
         get_signature: &impl Fn(&function::Function) -> &'a function::Signature,
     ) -> error::Result<Self> {
         self.sequence_type_matching_convert(
@@ -69,6 +74,7 @@ impl Sequence {
             &|atomic, xs| Self::cast_or_promote_atomic(atomic, xs, context),
             &|function_test, item| item.function_arity_matching(function_test, &get_signature),
             xot,
+            type_table,
         )
     }
 
@@ -99,6 +105,7 @@ impl Sequence {
         cast_or_promote_atomic: &impl Fn(atomic::Atomic, Xs) -> error::Result<atomic::Atomic>,
         check_function: &impl Fn(&ast::FunctionTest, &Item) -> error::Result<()>,
         xot: &Xot,
+        type_table: &TypeTable,
     ) -> error::Result<Self> {
         match t {
             ast::SequenceType::Empty => {
@@ -113,6 +120,7 @@ impl Sequence {
                 cast_or_promote_atomic,
                 check_function,
                 xot,
+                type_table,
             ),
         }
     }
@@ -123,6 +131,7 @@ impl Sequence {
         cast_or_promote_atomic: &impl Fn(atomic::Atomic, Xs) -> error::Result<atomic::Atomic>,
         check_function: &impl Fn(&ast::FunctionTest, &Item) -> error::Result<()>,
         xot: &Xot,
+        type_table: &TypeTable,
     ) -> error::Result<Self> {
         match &occurrence_item.item_type {
             ast::ItemType::AtomicOrUnionType(xs) => self.atomic_occurrence_item_matching(
@@ -136,6 +145,7 @@ impl Sequence {
                 cast_or_promote_atomic,
                 check_function,
                 xot,
+                type_table,
             ),
         }
     }
@@ -149,6 +159,7 @@ impl Sequence {
         cast_or_promote_atomic: &impl Fn(atomic::Atomic, Xs) -> error::Result<atomic::Atomic>,
         check_function: &impl Fn(&ast::FunctionTest, &Item) -> error::Result<()>,
         xot: &Xot,
+        type_table: &TypeTable,
     ) -> error::Result<Self> {
         match occurrence_item.occurrence {
             ast::Occurrence::One => {
@@ -158,6 +169,7 @@ impl Sequence {
                     cast_or_promote_atomic,
                     check_function,
                     xot,
+                    type_table,
                 )?;
             }
             ast::Occurrence::Option => {
@@ -168,6 +180,7 @@ impl Sequence {
                         cast_or_promote_atomic,
                         check_function,
                         xot,
+                        type_table,
                     )?;
                 }
             }
@@ -184,6 +197,7 @@ impl Sequence {
                                 cast_or_promote_atomic,
                                 check_function,
                                 xot,
+                                type_table,
                             )?;
                         }
                     }
@@ -205,6 +219,7 @@ impl Sequence {
                                 cast_or_promote_atomic,
                                 check_function,
                                 xot,
+                                type_table,
                             )?;
                         }
                     }
@@ -264,6 +279,7 @@ impl Item {
         cast_or_promote_atomic: &impl Fn(atomic::Atomic, Xs) -> error::Result<atomic::Atomic>,
         check_function: &impl Fn(&ast::FunctionTest, &Item) -> error::Result<()>,
         xot: &Xot,
+        type_table: &TypeTable,
     ) -> error::Result<()> {
         match item_type {
             ast::ItemType::Item => {}
@@ -271,7 +287,7 @@ impl Item {
                 unreachable!()
             }
             ast::ItemType::KindTest(kind_test) => {
-                self.kind_test_matching(kind_test, xot)?;
+                self.kind_test_matching(kind_test, xot, type_table)?;
             }
             ast::ItemType::FunctionTest(function_test) => {
                 check_function(function_test, &self)?;
@@ -294,6 +310,7 @@ impl Item {
                             cast_or_promote_atomic,
                             check_function,
                             xot,
+                            type_table,
                         )?;
                     }
                 }
@@ -312,6 +329,7 @@ impl Item {
                             cast_or_promote_atomic,
                             check_function,
                             xot,
+                            type_table,
                         )?;
                     }
                 }
@@ -320,10 +338,15 @@ impl Item {
         Ok(())
     }
 
-    fn kind_test_matching(&self, kind_test: &ast::KindTest, xot: &Xot) -> error::Result<()> {
+    fn kind_test_matching(
+        &self,
+        kind_test: &ast::KindTest,
+        xot: &Xot,
+        type_table: &TypeTable,
+    ) -> error::Result<()> {
         match self {
             Item::Node(node) => {
-                if xml::kind_test(kind_test, xot, *node) {
+                if xml::kind_test(kind_test, xot, type_table, *node) {
                     Ok(())
                 } else {
                     Err(error::Error::XPTY0004)
@@ -451,19 +474,21 @@ mod tests {
         let wrong_amount_sequence: Sequence = vec![ibig!(1), ibig!(2)].into();
         let wrong_type_sequence: Sequence = vec![false].into();
         let xot = Xot::new();
+        let type_table = TypeTable::new();
 
         let right_result = right_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(&right_result.unwrap(), &right_sequence);
 
         let wrong_amount_result =
-            wrong_amount_sequence.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+            wrong_amount_sequence.sequence_type_matching(&sequence_type, &xot, &type_table, &|_| unreachable!());
         assert_eq!(wrong_amount_result, Err(error::Error::XPTY0004));
         let wrong_type_result =
-            wrong_type_sequence.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+            wrong_type_sequence.sequence_type_matching(&sequence_type, &xot, &type_table, &|_| unreachable!());
         assert_eq!(wrong_type_result, Err(error::Error::XPTY0004));
     }
 
@@ -476,18 +501,20 @@ mod tests {
         let wrong_amount_sequence = Sequence::from(vec![Item::from(1i64), Item::from(1i64)]);
         let wrong_type_sequence = Sequence::from(vec![Item::from(atomic::Atomic::from(false))]);
         let xot = Xot::new();
+        let type_table = TypeTable::new();
 
         let right_result = right_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_result, Ok(right_sequence));
         let wrong_amount_result =
-            wrong_amount_sequence.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+            wrong_amount_sequence.sequence_type_matching(&sequence_type, &xot, &type_table, &|_| unreachable!());
         assert_eq!(wrong_amount_result, Err(error::Error::XPTY0004));
         let wrong_type_result =
-            wrong_type_sequence.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+            wrong_type_sequence.sequence_type_matching(&sequence_type, &xot, &type_table, &|_| unreachable!());
         assert_eq!(wrong_type_result, Err(error::Error::XPTY0004));
     }
 
@@ -501,19 +528,26 @@ mod tests {
             Sequence::from(vec![Item::from(ibig!(1)), Item::from(ibig!(2))]);
         let right_type_sequence2 = Sequence::from(vec![Item::from(atomic::Atomic::from(false))]);
         let xot = Xot::new();
+        let type_table = TypeTable::new();
 
         let right_result = right_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_result, Ok(right_sequence));
-        let wrong_amount_result =
-            wrong_amount_sequence.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+        let wrong_amount_result = wrong_amount_sequence.sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| unreachable!(),
+        );
         assert_eq!(wrong_amount_result, Err(error::Error::XPTY0004));
         let right_type_result2 = right_type_sequence2.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_type_result2, Ok(right_type_sequence2));
@@ -532,20 +566,27 @@ mod tests {
             Item::from(atomic::Atomic::from(2i64)),
         ]);
         let right_type_sequence2 = Sequence::from(vec![Item::from(node)]);
+        let type_table = TypeTable::new();
 
         let right_result = right_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_result, Ok(right_sequence));
 
-        let wrong_amount_result =
-            wrong_amount_sequence.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+        let wrong_amount_result = wrong_amount_sequence.sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| unreachable!(),
+        );
         assert_eq!(wrong_amount_result, Err(error::Error::XPTY0004));
         let right_type_result2 = right_type_sequence2.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_type_result2, Ok(right_type_sequence2));
@@ -561,19 +602,26 @@ mod tests {
             Sequence::from(vec![Item::from(ibig!(1)), Item::from(ibig!(2))]);
         let right_empty_sequence = Sequence::default();
         let xot = Xot::new();
+        let type_table = TypeTable::new();
 
         let right_result = right_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_result, Ok(right_sequence));
-        let wrong_amount_result =
-            wrong_amount_sequence.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+        let wrong_amount_result = wrong_amount_sequence.sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| unreachable!(),
+        );
         assert_eq!(wrong_amount_result, Err(error::Error::XPTY0004));
         let right_empty_result = right_empty_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_empty_result, Ok(right_empty_sequence));
@@ -588,10 +636,12 @@ mod tests {
         let right_multi_sequence = Sequence::from(vec![Item::from(ibig!(1)), Item::from(ibig!(2))]);
         let right_empty_sequence = Sequence::default();
         let xot = Xot::new();
+        let type_table = TypeTable::new();
 
         let right_result = right_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_result, Ok(right_sequence));
@@ -599,6 +649,7 @@ mod tests {
         let right_multi_result = right_multi_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_multi_result, Ok(right_multi_sequence));
@@ -606,6 +657,7 @@ mod tests {
         let right_empty_result = right_empty_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_empty_result, Ok(right_empty_sequence));
@@ -626,6 +678,7 @@ mod tests {
             .attributes(a)
             .get_node(xot.name("attr").unwrap())
             .unwrap();
+        let type_table = TypeTable::new();
 
         let right_sequence = Sequence::from(vec![
             Item::from(doc),
@@ -640,12 +693,17 @@ mod tests {
         let right_result = right_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_result, Ok(right_sequence));
 
-        let wrong_result =
-            wrong_sequence.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+        let wrong_result = wrong_sequence.sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| unreachable!(),
+        );
         assert_eq!(wrong_result, Err(error::Error::XPTY0004));
     }
 
@@ -664,6 +722,7 @@ mod tests {
             .attributes(a)
             .get_node(xot.name("attr").unwrap())
             .unwrap();
+        let type_table = TypeTable::new();
 
         let right_sequence = Sequence::from(vec![Item::from(doc), Item::from(a), Item::from(b)]);
 
@@ -673,15 +732,24 @@ mod tests {
         let right_result = right_sequence.clone().sequence_type_matching(
             &sequence_type,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         assert_eq!(right_result, Ok(right_sequence));
 
-        let wrong_result =
-            wrong_sequence_text.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+        let wrong_result = wrong_sequence_text.sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| unreachable!(),
+        );
         assert_eq!(wrong_result, Err(error::Error::XPTY0004));
-        let wrong_result =
-            wrong_sequence_attr.sequence_type_matching(&sequence_type, &xot, &|_| unreachable!());
+        let wrong_result = wrong_sequence_attr.sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| unreachable!(),
+        );
         assert_eq!(wrong_result, Err(error::Error::XPTY0004));
     }
 
@@ -695,10 +763,12 @@ mod tests {
 
         let static_context = context::StaticContext::default();
         let xot = Xot::new();
+        let type_table = TypeTable::new();
         let right_result = right_sequence.sequence_type_matching_function_conversion(
             &sequence_type,
             &static_context,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         // atomization has changed the result sequence
@@ -725,11 +795,13 @@ mod tests {
         let right_sequence = Sequence::from(vec![Item::from(a), Item::from(b)]);
 
         let static_context = context::StaticContext::default();
+        let type_table = TypeTable::new();
 
         let right_result = right_sequence.sequence_type_matching_function_conversion(
             &sequence_type,
             &static_context,
             &xot,
+            &type_table,
             &|_| unreachable!(),
         );
         // atomization has changed the result sequence
@@ -758,11 +830,14 @@ mod tests {
         );
 
         let xot = Xot::new();
+        let type_table = TypeTable::new();
 
-        let right_result =
-            right_sequence
-                .clone()
-                .sequence_type_matching(&sequence_type, &xot, &|_| &signature);
+        let right_result = right_sequence.clone().sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| &signature,
+        );
         assert_eq!(&right_result.unwrap(), &right_sequence);
     }
 
@@ -783,11 +858,14 @@ mod tests {
         );
 
         let xot = Xot::new();
+        let type_table = TypeTable::new();
 
-        let right_result =
-            right_sequence
-                .clone()
-                .sequence_type_matching(&sequence_type, &xot, &|_| &signature);
+        let right_result = right_sequence.clone().sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| &signature,
+        );
         assert_eq!(&right_result.unwrap(), &right_sequence);
     }
 
@@ -808,11 +886,14 @@ mod tests {
         );
 
         let xot = Xot::new();
+        let type_table = TypeTable::new();
 
-        let right_result =
-            right_sequence
-                .clone()
-                .sequence_type_matching(&sequence_type, &xot, &|_| &signature);
+        let right_result = right_sequence.clone().sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| &signature,
+        );
         assert_eq!(&right_result.unwrap(), &right_sequence);
     }
 
@@ -834,11 +915,14 @@ mod tests {
         );
 
         let xot = Xot::new();
+        let type_table = TypeTable::new();
 
-        let wrong_result =
-            wrong_sequence
-                .clone()
-                .sequence_type_matching(&sequence_type, &xot, &|_| &signature);
+        let wrong_result = wrong_sequence.clone().sequence_type_matching(
+            &sequence_type,
+            &xot,
+            &type_table,
+            &|_| &signature,
+        );
         assert_eq!(wrong_result, Err(error::Error::XPTY0004));
     }
 }
