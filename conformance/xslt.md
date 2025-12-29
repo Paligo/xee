@@ -20,21 +20,25 @@ We have regexml now, so should be able to implement.
 
 ## xsl:apply-imports
 
-TODO: import subsystem
-
-## xsl:apply-templates
+Basic support with import precedence and non-tunnel `xsl:with-param`.
 
 Not yet:
 
-- Mode support
+- Packages/expose/override
+- Tunnel params
+
+## xsl:apply-templates
+
+Basic support:
+
+- Named/unnamed/current modes
+- Non-tunnel `xsl:with-param`
+- Built-in templates via `xsl:mode` on-no-match
+
+Not yet:
 
 - Variables in patterns
-
-- Rooted patterns
-
 - Certain axes
-
-- Fallback templates
 
 ## xsl:assert
 
@@ -45,15 +49,16 @@ Basic support:
 
 Not yet:
 
-- Assertion disable/enable toggles outside `use-when`.
+- Assertion disable/enable toggles outside `use-when` and the
+  `enable_assertions` dependency.
 
 ## xsl:attribute
 
 Cannot add after normal child.
 
-Not yet:
+Supports `type` (recorded in the type table; no schema validation).
 
-- type
+Not yet:
 
 - validation
 
@@ -67,11 +72,11 @@ TODO: xsl:iterate
 
 ## xsl:call-template
 
-TODO: function subsystem
+Basic support for named templates and non-tunnel `xsl:with-param`.
 
 ## xsl:catch
 
-TODO
+Supported as part of `xsl:try` (no `xsl:fallback`).
 
 ## xsl:character-map
 
@@ -91,33 +96,38 @@ TODO
 
 ## xsl:copy
 
+Supports `type` (recorded in the type table; no schema validation).
+
 Not yet:
 
-- copy-namespaces, inherit-namespaces, use-attribute-set, type, validation
+- copy-namespaces, inherit-namespaces, use-attribute-sets, validation
 
 ## xsl:copy-of
 
+Supports `type` (recorded in the type table; no schema validation).
+
 Not yet:
 
-- copy-accumulators, copy-namespaces, type, validation
+- copy-accumulators, copy-namespaces, validation
 
 ## xsl:decimal-format
 
-TOD: awaiting xee-format
+TODO: awaiting xee-format
 
 ## xsl:document
 
-TODO: nodes
+Basic document node construction with sequence constructor content.
+Supports `type` (recorded in the type table; no schema validation).
 
 ## xsl:element
+
+Supports `type` (recorded in the type table; no schema validation).
 
 Not yet:
 
 - inherit-namespaces
 
-- use-attribute sets
-
-- type
+- use-attribute-sets
 
 - validation
 
@@ -135,7 +145,7 @@ TODO
 
 ## xsl:for-each
 
-Todo:
+TODO:
 
 - xsl:sort support
 
@@ -149,7 +159,12 @@ TODO
 
 ## xsl:function
 
-TODO: function subsystem
+Basic support for user-defined functions.
+
+Not yet:
+
+- Visibility/overriding/caching/streamability
+- Default values for function parameters
 
 ## xsl:global-context-item
 
@@ -161,7 +176,11 @@ Done
 
 ## xsl:import
 
-TODO: import subsystem
+Basic file-based import resolution with import precedence.
+
+Not yet:
+
+- Packages/expose/override
 
 ## xsl:import-schema
 
@@ -169,7 +188,7 @@ TODO: schema support
 
 ## xsl:include
 
-TODO: imoprt subsystem
+Basic file-based include resolution.
 
 ## xsl:iterate
 
@@ -213,7 +232,11 @@ TODO
 
 ## xsl:mode
 
-TODO
+Supports `on-no-match` for built-in template behavior.
+
+Not yet:
+
+- Streamability and other mode attributes
 
 ## xsl:namespace
 
@@ -231,7 +254,7 @@ TODO: xsl:iterate
 
 ## xsl:next-match
 
-TODO: template rule subsystem, import system
+Basic support with import precedence and non-tunnel `xsl:with-param`.
 
 ## xsl:non-matching-substring
 
@@ -259,10 +282,6 @@ Done
 
 ## xsl:output
 
-TODO
-
-## xsl:output
-
 TODO: output method subsystem
 
 ## xsl:output-character
@@ -279,7 +298,11 @@ TODO: import subsystem
 
 ## xsl:param
 
-TODO: function subsystem
+Supports global and template parameters (non-tunnel).
+
+Not yet:
+
+- Static params and visibility
 
 ## xsl:perform-sort
 
@@ -315,19 +338,17 @@ TODO
 
 ## xsl:stylesheet
 
-Not yet: all of the attibutes
+Not yet: all of the attributes
 
 ## xsl:template
 
 Including priority.
 
+Named templates and mode selection are supported.
+
 Not yet:
 
-- match: variable support, rooted paths, certain axes
-
-- name
-
-- mode
+- match: variable support, certain axes
 
 - as
 
@@ -337,7 +358,7 @@ Not yet:
 
 Not yet:
 
-- depecrated disable-output-escaping
+- deprecated disable-output-escaping
 
 ## xsl:transform
 
@@ -345,7 +366,11 @@ See xsl:stylesheet
 
 ## xsl:try
 
-TODO
+Basic support for `xsl:try`/`xsl:catch`, including `rollback-output`.
+
+Not yet:
+
+- `xsl:fallback`
 
 ## xsl:use-package
 
@@ -359,13 +384,12 @@ Done except:
 
 ## xsl:variable
 
+Basic support for global and local variables (non-static).
+
 Not yet:
 
-- compile-time variables used as global variables
-
-- global variables
-
-- attributes: as, visbiility
+- static variables (compile-time)
+- attributes: as, visibility
 
 ## xsl:when
 
@@ -377,4 +401,8 @@ TODO
 
 ## xsl:with-param
 
-Todo: function subsystem
+Supported for apply-templates/apply-imports/next-match/call-template.
+
+Not yet:
+
+- Tunnel params

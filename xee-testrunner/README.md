@@ -4,8 +4,8 @@
 
 
 This is a test runner that can run the XPath conformance test suite in the [Xee
-project](https://github.com/Paligo/xee). Work on enabling the XSLT conformance
-test suite is in progress.
+project](https://github.com/Paligo/xee). It can also run the XSLT conformance
+test suite, though coverage is still partial.
 
 We have added both the [XPath conformance test
 suite](https://github.com/w3c/qt3tests) and the [XSLT conformance test
@@ -27,7 +27,7 @@ To check against regressions, run:
 cargo run --release  -- check ../vendor/xpath-tests/
 ```
 
-or (in the future)
+or
 
 ```
 cargo run --release  -- check ../vendor/xslt-tests/
@@ -39,6 +39,10 @@ To run all tests (for XPath or XSLT):
 cargo run --release  -- all ../vendor/xpath-tests/
 cargo run --release  -- all ../vendor/xslt-tests/
 ```
+
+For XSLT, the runner reads `<param>` and `initial-template` from the test
+suite metadata. The `enable_assertions` dependency is honored to toggle
+`xsl:assert` behavior.
 
 You can run the tests and update the regression filter accordingly:
 

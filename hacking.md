@@ -10,7 +10,7 @@ conformance test suite of more than 20,000 tests.
 
 ## XPath
 
-### Xpath functions
+### XPath functions
 
 The [XPath and XQuery Functions and
 Operators](https://www.w3.org/TR/xpath-functions-31/) specification describes
@@ -57,7 +57,7 @@ from the interpreter. Any function can take special optional arguments
 `context` and `interpreter` as the first two arguments. In this case the system
 automatically injects these objects into your function. 
 
-One you've created a function it needs to be registered at the bottom in
+Once you've created a function it needs to be registered at the bottom in
 `static_function_descriptions` using the `wrap_xpath_fn!` macro.
 
 In case you're creating a new library module, you need to hook up your new
@@ -83,16 +83,16 @@ tests we already *know* should pass as they did in the past.
 This gives a result in the end that reads like this:
 
 ```
-Total: 31812 Supported: 21859 Passed: 19987 Failed: 0 Error: 0 WrongE: 0
-Filtered: 1872 Unsupported: 9953
+Total: 31812 Supported: 21859 Passed: 20221 Failed: 0 Error: 0 WrongE: 0
+Filtered: 1638 Unsupported: 9953
 ```
 
 `Total` is the total amount of tests in the suite. This includes features that
 we don't support, most prominently XQuery, so `Supported` is the total amount
-of tests that are relevant to use. `Passed` indicates how many of the tests
-that behave as expected, `Failed`, the tests that failed (wrong answers),
-`Error` the tests that had an unexpected error, `WrongE` those tests that
-expect an error but the wrong error is returned. 
+of tests that are relevant to use. `Passed` indicates how many tests behave as
+expected, `Failed` the tests that failed (wrong answers), `Error` the tests
+that had an unexpected error, and `WrongE` those tests that expect an error
+but the wrong error is returned.
 
 `Filtered` is those tests we want to support but do not work yet - we know they
 fail in advance so they're filtered out by `check`.
@@ -117,17 +117,17 @@ are no regressions - `Failed`, `Error` and `WrongE` should remain at 0.
 
 ### Zooming in on tests
 
-You can run `all` against a whole test xml file. To rerun just the `node-name`
-tests.
+You can run `all` against a whole test XML file. To rerun just the `node-name`
+tests, use:
 
 ```
 cargo run --release  -- -v all ../vendor/xpath-tests/fn/node-name.xml
 ```
 
 Thanks to the `-v` option you can see the test names and you can also see more
-information about test passing and failure.
+information about pass/fail.
 
-You can also filter tests further by using (part of) its name in the XML file
+You can also filter tests further by using (part of) their name in the XML file
 
 ```
 cargo run --release  -- -v all ../vendor/xpath-tests/fn/node-name.xml fn-node-name-1
@@ -149,8 +149,8 @@ and then rerunning:
 cargo run --release  -- initialize ../vendor/xpath-tests/
 ```
 
-This regenerates the `filters` file from scratch. This means that are newly
-failing are added to it, *decreasing* the total amount of tests that pass
+This regenerates the `filters` file from scratch. This means tests that are
+newly failing are added to it, *decreasing* the total amount of tests that pass
 successfully. When you do this it makes sense to do a diff with the previous
 version of `filters` to see whether you've made any mistakes and caused too
 many tests to fail.
@@ -177,15 +177,15 @@ cargo run --release  -- check ../vendor/xslt-tests/
 
 You can improve tests just as described for XPath.
 
-Note that some features of the XSLT test runner such as passing in parameters
-are not yet working correctly; so if a test fails you may also want to suspect
-the test runner setup, not just the implementation. Like for the XPath
-conformance tests we intend to improve support for the testrunner
-incrementally.
+The runner reads `<param>` and `initial-template` from the test metadata and
+honors the `enable_assertions` dependency for `xsl:assert`. Coverage is still
+partial and many tests are filtered, so failures can still be due to missing
+runner features or missing implementation. Like for the XPath conformance
+tests we intend to improve support for the testrunner incrementally.
 
 ### Adding XSLT functionality
 
-The XSLT AST is pretty complete, and underlying IR and bytecode interpreter
+The XSLT AST is pretty complete, and the underlying IR and bytecode interpreter
 supports a lot of XSLT functionality already. Much of the effort of adding XSLT
 functionality is focused on translating the XSLT AST into the IR format. This
-is done by `xee-xslt-compiler/src/test_xslt.rs`. 
+is done by `xee-xslt-compiler/tests/test_xslt.rs`.

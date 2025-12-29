@@ -91,9 +91,9 @@ project. Contributions are encouraged!
   not yet implemented. Contributions are welcome!
 
 - Of the 21859 tests in the QT3 test suite (vendored into `vendor/xpath-tests`)
-  that match the features we support (so excluding XQuery tests), we support
-  over have 20130 at the time of writing. The failures are mostly due to
-  missing library implementation.
+  that match the features we support (so excluding XQuery tests), we pass 20221
+  at the time of writing. The remaining gaps are mostly missing library
+  functions and some parsing/formatting behavior.
 
 - XMLSchema support. While the basic `xs:*` data types as defined by XML Schema
   are implemented, deep XML Schema integration does not exist.
@@ -146,8 +146,8 @@ The Xee project is composed of many crates. Here is a quick overview:
 
 - [`xee-testrunner`](xee-testrunner) - a testrunner that can run the
   QT3 conformance suite of XPath tests (in `vendor/xpath-tests`). It has also
-  been generalized towards supporting running XSLT conformance tests, but that
-  implementation is not complete yet.
+  been generalized to run the XSLT conformance tests (in `vendor/xslt-tests`),
+  though coverage is still partial and many tests are filtered.
 
 - [`xee-xpath-lexer`](xee-xpath-lexer) - A lexer for XPath
   expressions.

@@ -8,8 +8,8 @@ bytecode interpreter, an implementation of XPath data types, and the XPath
 standard library.
 
 This is used by [`xee-xpath`](https://docs.rs/xee-xpath/latest/xee_xpath/) to
-implement XPath and can also serve as the engine to execute XSLT code (work in
-progress). 
+implement XPath and can also serve as the engine to execute XSLT code (partial
+support; template dispatch, parameters, and try/catch work, but much remains).
 
 This is a low-level crate of the [Xee project](https://github.com/Paligo/xee).
 For the API entry point see
