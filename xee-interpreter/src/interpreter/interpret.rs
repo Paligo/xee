@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::rc::Rc;
 
+use ahash::AHashMap;
 use ibig::{ibig, IBig};
 
 use xee_name::Name;
@@ -14,6 +15,7 @@ use crate::atomic::{
     op_add, op_div, op_idiv, op_mod, op_multiply, op_subtract, OpEq, OpGe, OpGt, OpLe, OpLt, OpNe,
 };
 use crate::context::DynamicContext;
+use crate::declaration::OnNoMatch;
 use crate::function;
 use crate::pattern::PredicateMatcher;
 use crate::sequence;
@@ -48,10 +50,10 @@ impl From<sequence::Item> for ContextInfo {
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new(runnable: &'a Runnable<'a>, xot: &'a mut Xot) -> Self {
+    pub fn new(runnable: &'a Runnable<'a>, xot: &'a mut Xot, type_table: crate::context::TypeTableRef) -> Self {
         Interpreter {
             runnable,
-            state: State::new(xot),
+            state: State::new_with_type_table(xot, type_table),
         }
     }
 
@@ -64,6 +66,7 @@ impl<'a> Interpreter<'a> {
     }
 
     pub fn start(&mut self, context_info: ContextInfo, arguments: Vec<sequence::Sequence>) {
+        self.state.set_global_params(arguments.clone());
         self.start_function(self.runnable.program().main_id(), context_info, arguments)
     }
 
@@ -362,7 +365,10 @@ impl<'a> Interpreter<'a> {
                     let step_id = self.read_u16();
                     let node: xot::Node = self.state.pop()?.try_into()?;
                     let step = &(self.current_inline_function().steps[step_id as usize]);
-                    let value = xml::resolve_step(step, node, self.state.xot());
+                    let value = {
+                        let type_table = self.state.type_table.borrow();
+                        xml::resolve_step(step, node, self.state.xot(), &type_table)
+                    };
                     self.state.push(value);
                 }
                 EncodedInstruction::Deduplicate => {
@@ -385,13 +391,16 @@ impl<'a> Interpreter<'a> {
                     let sequence = self.state.pop()?;
                     let sequence_type =
                         &(self.current_inline_function().sequence_types[sequence_type_id as usize]);
-
-                    let sequence = sequence.sequence_type_matching_function_conversion(
-                        sequence_type,
-                        self.runnable.static_context(),
-                        self.state.xot(),
-                        &|function| self.runnable.function_info(function).signature(),
-                    )?;
+                    let sequence = {
+                        let type_table = self.state.type_table.borrow();
+                        sequence.sequence_type_matching_function_conversion(
+                            sequence_type,
+                            self.runnable.static_context(),
+                            self.state.xot(),
+                            &type_table,
+                            &|function| self.runnable.function_info(function).signature(),
+                        )?
+                    };
                     self.state.push(sequence);
                 }
                 EncodedInstruction::LetDone => {
@@ -433,11 +442,15 @@ impl<'a> Interpreter<'a> {
                     let sequence = self.state.pop()?;
                     let sequence_type =
                         &(self.current_inline_function().sequence_types[sequence_type_id as usize]);
-                    let matches = sequence.sequence_type_matching(
-                        sequence_type,
-                        self.state.xot(),
-                        &|function| self.runnable.function_info(function).signature(),
-                    );
+                    let matches = {
+                        let type_table = self.state.type_table.borrow();
+                        sequence.sequence_type_matching(
+                            sequence_type,
+                            self.state.xot(),
+                            &type_table,
+                            &|function| self.runnable.function_info(function).signature(),
+                        )
+                    };
                     if matches.is_ok() {
                         self.state.push(true);
                     } else {
@@ -449,11 +462,15 @@ impl<'a> Interpreter<'a> {
                     let sequence = self.state.top()?;
                     let sequence_type =
                         &(self.current_inline_function().sequence_types[sequence_type_id as usize]);
-                    let matches = sequence.sequence_type_matching(
-                        sequence_type,
-                        self.state.xot(),
-                        &|function| self.runnable.function_info(function).signature(),
-                    );
+                    let matches = {
+                        let type_table = self.state.type_table.borrow();
+                        sequence.sequence_type_matching(
+                            sequence_type,
+                            self.state.xot(),
+                            &type_table,
+                            &|function| self.runnable.function_info(function).signature(),
+                        )
+                    };
                     if matches.is_err() {
                         Err(error::Error::XPDY0050)?;
                     }
@@ -592,6 +609,16 @@ impl<'a> Interpreter<'a> {
                     let item = sequence::Item::Node(parent_node);
                     self.state.push(item);
                 }
+                EncodedInstruction::XmlSetType => {
+                    let xs_id = self.read_u16();
+                    let value = self.state.pop()?;
+                    let xs = Xs::from_u16(xs_id).ok_or(error::Error::XPTY0004)?;
+                    for node in value.nodes() {
+                        let node = node?;
+                        self.state.set_node_type(node, xs);
+                    }
+                    self.state.push(value);
+                }
                 EncodedInstruction::CopyShallow => {
                     let value = &self.state.pop()?;
                     if value.is_empty() {
@@ -622,7 +649,7 @@ impl<'a> Interpreter<'a> {
                         let copy = match &item {
                             sequence::Item::Atomic(_) | sequence::Item::Function(_) => item.clone(),
                             sequence::Item::Node(node) => {
-                                let copied_node = self.state.xot.clone_node(*node);
+                                let copied_node = self.state.clone_node_with_type(*node);
                                 sequence::Item::Node(copied_node)
                             }
                         };
@@ -634,8 +661,136 @@ impl<'a> Interpreter<'a> {
                     let value = self.state.pop()?;
                     let mode_id = self.read_u16();
                     let mode = pattern::ModeId::new(mode_id as usize);
-                    let value = self.apply_templates_sequence(mode, value)?;
+                    let value = self.apply_templates_sequence(mode, value, None)?;
                     self.state.push(value);
+                }
+                EncodedInstruction::ApplyTemplatesWithParams => {
+                    let value = self.state.pop()?;
+                    let mode_id = self.read_u16();
+                    let param_count = self.read_u16();
+                    let params = self.pop_with_param_map(param_count)?;
+                    let mode = pattern::ModeId::new(mode_id as usize);
+                    let value = self.apply_templates_sequence(mode, value, Some(&params))?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::ApplyTemplatesCurrent => {
+                    let value = self.state.pop()?;
+                    let mode = self
+                        .state
+                        .frame()
+                        .mode
+                        .ok_or_else(|| {
+                            error::Error::Unsupported(
+                                "xsl:apply-templates has no current mode".to_string(),
+                            )
+                        })?;
+                    let value = self.apply_templates_sequence(mode, value, None)?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::ApplyTemplatesCurrentWithParams => {
+                    let value = self.state.pop()?;
+                    let param_count = self.read_u16();
+                    let params = self.pop_with_param_map(param_count)?;
+                    let mode = self
+                        .state
+                        .frame()
+                        .mode
+                        .ok_or_else(|| {
+                            error::Error::Unsupported(
+                                "xsl:apply-templates has no current mode".to_string(),
+                            )
+                        })?;
+                    let value = self.apply_templates_sequence(mode, value, Some(&params))?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::ApplyImports => {
+                    let value = self.apply_imports(None)?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::ApplyImportsWithParams => {
+                    let param_count = self.read_u16();
+                    let params = self.pop_with_param_map(param_count)?;
+                    let value = self.apply_imports(Some(&params))?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::ApplyNextMatch => {
+                    let value = self.apply_next_match(None)?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::ApplyNextMatchWithParams => {
+                    let param_count = self.read_u16();
+                    let params = self.pop_with_param_map(param_count)?;
+                    let value = self.apply_next_match(Some(&params))?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::CallTemplate => {
+                    let template_id = self.read_u16();
+                    let function_id = function::InlineFunctionId::new(template_id as usize);
+                    let value = self.call_named_template(function_id, None)?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::CallTemplateWithParams => {
+                    let template_id = self.read_u16();
+                    let param_count = self.read_u16();
+                    let params = self.pop_with_param_map(param_count)?;
+                    let function_id = function::InlineFunctionId::new(template_id as usize);
+                    let value = self.call_named_template(function_id, Some(&params))?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::TryCatch => {
+                    let try_catch_id = self.read_u16();
+                    let entry = self
+                        .runnable
+                        .program()
+                        .declarations
+                        .try_catches
+                        .get(try_catch_id as usize)
+                        .ok_or_else(|| {
+                            error::Error::Unsupported("Try/catch entry not found".to_string())
+                        })?;
+
+                    let mut catch_functions = Vec::with_capacity(entry.catches.len());
+                    for _ in 0..entry.catches.len() {
+                        let function = function::Function::try_from(self.state.pop()?)?;
+                        catch_functions.push(function);
+                    }
+                    catch_functions.reverse();
+                    let try_function = function::Function::try_from(self.state.pop()?)?;
+
+                    let (item, position, size) = self.current_context_values();
+                    let mut base_args = vec![item, position, size];
+                    base_args.extend(
+                        self.state
+                            .global_params()
+                            .iter()
+                            .cloned()
+                            .map(stack::Value::from),
+                    );
+
+                    let snapshot = self.state.snapshot(entry.rollback_output);
+                    match self.call_function_with_values(&try_function, &base_args) {
+                        Ok(sequence) => {
+                            self.state.push(sequence);
+                        }
+                        Err(err) => {
+                            self.state.restore(snapshot);
+                            let mut handled = false;
+                            for (index, clause) in entry.catches.iter().enumerate() {
+                                if self.match_catch_clause(&err, clause) {
+                                    let result = self.call_function_with_values(
+                                        &catch_functions[index],
+                                        &base_args,
+                                    )?;
+                                    self.state.push(result);
+                                    handled = true;
+                                    break;
+                                }
+                            }
+                            if !handled {
+                                return Err(err);
+                            }
+                        }
+                    }
                 }
                 EncodedInstruction::PrintTop => {
                     let top = self.state.top()?;
@@ -708,6 +863,39 @@ impl<'a> Interpreter<'a> {
         self.runnable.function_info(function).arity()
     }
 
+    fn match_catch_clause(
+        &self,
+        err: &error::Error,
+        clause: &crate::declaration::CatchClause,
+    ) -> bool {
+        let code = err.code_qname();
+        clause.errors.iter().any(|pattern| match pattern {
+            crate::declaration::CatchError::Any => true,
+            crate::declaration::CatchError::Name(name) => name == &code,
+            crate::declaration::CatchError::Local(local) => code.local_name() == local,
+            crate::declaration::CatchError::Namespace(namespace) => code.namespace() == namespace,
+        })
+    }
+
+    fn current_context_values(&self) -> (stack::Value, stack::Value, stack::Value) {
+        let function_id = self.state.frame().function();
+        if self
+            .runnable
+            .program()
+            .declarations
+            .user_functions
+            .contains(&function_id)
+        {
+            (
+                stack::Value::Absent,
+                stack::Value::Absent,
+                stack::Value::Absent,
+            )
+        } else {
+            self.state.context_values()
+        }
+    }
+
     fn call(&mut self, arity: u8) -> error::Result<()> {
         let function = self.state.callable(arity as usize)?;
         self.call_function(&function, arity)
@@ -730,6 +918,54 @@ impl<'a> Interpreter<'a> {
         if matches!(function, function::Function::Inline(_)) {
             // run interpreter until we return to the base
             // we started in
+            self.run_actual(self.state.frame().base())?;
+        }
+        self.state.pop()
+    }
+
+    pub(crate) fn call_function_with_values(
+        &mut self,
+        function: &function::Function,
+        arguments: &[stack::Value],
+    ) -> error::Result<sequence::Sequence> {
+        let item: sequence::Item = function.clone().into();
+        self.state.push(item);
+        let arity = arguments.len() as u8;
+        for arg in arguments {
+            self.state.push_value(arg.clone());
+        }
+        self.call_function(function, arity)?;
+        if matches!(function, function::Function::Inline(_)) {
+            self.run_actual(self.state.frame().base())?;
+        }
+        self.state.pop()
+    }
+
+    fn call_template_with_rule(
+        &mut self,
+        function: &function::Function,
+        arguments: &[stack::Value],
+        mode: pattern::ModeId,
+        rule: pattern::RuleEntry,
+        rule_index: usize,
+    ) -> error::Result<sequence::Sequence> {
+        let item: sequence::Item = function.clone().into();
+        self.state.push(item);
+        let arity = arguments.len() as u8;
+        for arg in arguments {
+            self.state.push_value(arg.clone());
+        }
+        match function {
+            function::Function::Static(data) => {
+                self.call_static(data.id, arity, &data.closure_vars)?
+            }
+            function::Function::Inline(data) => {
+                self.call_inline_with_rule(data.id, arity, mode, rule, rule_index)?
+            }
+            function::Function::Array(array) => self.call_array(array, arity as usize)?,
+            function::Function::Map(map) => self.call_map(map, arity as usize)?,
+        }
+        if matches!(function, function::Function::Inline(_)) {
             self.run_actual(self.state.frame().base())?;
         }
         self.state.pop()
@@ -782,15 +1018,38 @@ impl<'a> Interpreter<'a> {
             return Err(error::Error::XPTY0004);
         }
 
-        let arguments = self.coerce_arguments(parameter_types, arity)?;
+        let arguments = self.coerce_inline_arguments(parameter_types, arity)?;
 
         // now we have a list of arguments that we want to push back onto the stack
         // (they are already reversed)
         for arg in arguments {
-            self.state.push(arg);
+            self.state.push_value(arg);
         }
 
         self.state.push_frame(function_id, arity as usize)
+    }
+
+    fn call_inline_with_rule(
+        &mut self,
+        function_id: function::InlineFunctionId,
+        arity: u8,
+        mode: pattern::ModeId,
+        rule: pattern::RuleEntry,
+        rule_index: usize,
+    ) -> error::Result<()> {
+        let function = self.runnable.program().inline_function(function_id);
+        let parameter_types = &function.signature.parameter_types();
+        if arity as usize != parameter_types.len() {
+            return Err(error::Error::XPTY0004);
+        }
+
+        let arguments = self.coerce_inline_arguments(parameter_types, arity)?;
+        for arg in arguments {
+            self.state.push_value(arg);
+        }
+
+        self.state
+            .push_frame_with_rule(function_id, arity as usize, mode, rule, rule_index)
     }
 
     fn coerce_arguments(
@@ -810,20 +1069,64 @@ impl<'a> Interpreter<'a> {
         let mut arguments = Vec::with_capacity(arity as usize);
         let static_context = self.runnable.static_context();
         let xot = self.state.xot();
-        for (parameter_type, stack_value) in parameter_types.iter().zip(stack_values) {
-            let sequence: sequence::Sequence = stack_value.try_into()?;
-            if let Some(type_) = parameter_type {
-                // matching also takes care of function conversion rules
-                let sequence = sequence.sequence_type_matching_function_conversion(
-                    type_,
-                    static_context,
-                    xot,
-                    &|function| self.runnable.function_info(function).signature(),
-                )?;
-                arguments.push(sequence);
-            } else {
-                // no need to do any checking or conversion
-                arguments.push(sequence);
+        {
+            let type_table = self.state.type_table.borrow();
+            for (parameter_type, stack_value) in parameter_types.iter().zip(stack_values) {
+                let sequence: sequence::Sequence = stack_value.try_into()?;
+                if let Some(type_) = parameter_type {
+                    // matching also takes care of function conversion rules
+                    let sequence = sequence.sequence_type_matching_function_conversion(
+                        type_,
+                        static_context,
+                        xot,
+                        &type_table,
+                        &|function| self.runnable.function_info(function).signature(),
+                    )?;
+                    arguments.push(sequence);
+                } else {
+                    // no need to do any checking or conversion
+                    arguments.push(sequence);
+                }
+            }
+        }
+        self.state.truncate_arguments(arity as usize);
+        Ok(arguments)
+    }
+
+    fn coerce_inline_arguments(
+        &mut self,
+        parameter_types: &[Option<ast::SequenceType>],
+        arity: u8,
+    ) -> error::Result<Vec<stack::Value>> {
+        let stack_values = self.state.arguments(arity as usize);
+        let mut arguments = Vec::with_capacity(arity as usize);
+        let static_context = self.runnable.static_context();
+        let xot = self.state.xot();
+        {
+            let type_table = self.state.type_table.borrow();
+            for (parameter_type, stack_value) in parameter_types.iter().zip(stack_values) {
+                match stack_value {
+                    stack::Value::Absent => {
+                        if parameter_type.is_some() {
+                            return Err(error::Error::XPDY0002);
+                        }
+                        arguments.push(stack::Value::Absent);
+                    }
+                    stack::Value::Sequence(sequence) => {
+                        let sequence = if let Some(type_) = parameter_type {
+                            sequence.clone().sequence_type_matching_function_conversion(
+                                type_,
+                                static_context,
+                                xot,
+                                &type_table,
+                                &|function| self.runnable.function_info(function).signature(),
+                            )?
+                        } else {
+                            sequence.clone()
+                        };
+                        arguments.push(stack::Value::Sequence(sequence));
+                    }
+                }
             }
         }
         self.state.truncate_arguments(arity as usize);
@@ -1058,6 +1361,22 @@ impl<'a> Interpreter<'a> {
         value.atomized_one(self.state.xot())
     }
 
+    fn pop_with_param_map(
+        &mut self,
+        param_count: u16,
+    ) -> error::Result<AHashMap<xot::xmlname::OwnedName, sequence::Sequence>> {
+        let mut params = AHashMap::new();
+        for _ in 0..param_count {
+            let name_sequence = self.state.pop()?;
+            let name_item = name_sequence.one()?;
+            let name_atomic = name_item.to_atomic()?;
+            let name: xot::xmlname::OwnedName = name_atomic.try_into()?;
+            let value = self.state.pop()?;
+            params.insert(name, value);
+        }
+        Ok(params)
+    }
+
     fn pop_atomic_option(&mut self) -> error::Result<Option<atomic::Atomic>> {
         let value = self.state.pop()?;
         value.atomized_option(self.state.xot())
@@ -1144,7 +1463,7 @@ impl<'a> Interpreter<'a> {
                     // if we have a parent we're already in another document,
                     // in which case we want to make a clone first
                     let node = if self.state.xot.parent(node).is_some() {
-                        self.state.xot.clone_node(node)
+                        self.state.clone_node_with_type(node)
                     } else {
                         node
                     };
@@ -1174,12 +1493,20 @@ impl<'a> Interpreter<'a> {
         let value = xot.value(node);
         match value {
             // root and element are shallow copies
-            xot::Value::Document => xot.new_document(),
+            xot::Value::Document => {
+                let cloned = xot.new_document();
+                self.state.type_table.borrow_mut().copy_type(node, cloned);
+                cloned
+            }
             // TODO: work on copying prefixes
-            xot::Value::Element(element) => xot.new_element(element.name()),
+            xot::Value::Element(element) => {
+                let cloned = xot.new_element(element.name());
+                self.state.type_table.borrow_mut().copy_type(node, cloned);
+                cloned
+            }
             // we can clone (deep-copy) these nodes as it's the same
             // operation as shallow copy
-            _ => xot.clone_node(node),
+            _ => self.state.clone_node_with_type(node),
         }
     }
 
@@ -1187,12 +1514,13 @@ impl<'a> Interpreter<'a> {
         &mut self,
         mode: pattern::ModeId,
         sequence: sequence::Sequence,
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
     ) -> error::Result<sequence::Sequence> {
         let mut r: Vec<sequence::Item> = Vec::new();
         let size: IBig = sequence.len().into();
 
         for (i, item) in sequence.iter().enumerate() {
-            let sequence = self.apply_templates_item(mode, item, i, size.clone())?;
+            let sequence = self.apply_templates_item(mode, item, i, size.clone(), params)?;
             if let Some(sequence) = sequence {
                 for item in sequence.iter() {
                     r.push(item.clone());
@@ -1202,41 +1530,494 @@ impl<'a> Interpreter<'a> {
         Ok(r.into())
     }
 
-    fn apply_templates_item(
+    fn apply_imports(
+        &mut self,
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
+    ) -> error::Result<sequence::Sequence> {
+        let frame = self.state.frame();
+        let mode = frame
+            .mode
+            .ok_or_else(|| error::Error::Unsupported("xsl:apply-imports has no current mode".to_string()))?;
+        let rule = frame
+            .rule
+            .ok_or_else(|| error::Error::Unsupported("xsl:apply-imports has no current rule".to_string()))?;
+        let (item, position, size) = self.current_context_values();
+        let sequence: sequence::Sequence = item.clone().try_into()?;
+        let item = match sequence {
+            sequence::Sequence::One(one) => one.item().clone(),
+            _ => return Ok(sequence::Sequence::default()),
+        };
+        self.apply_imports_item(mode, item, position, size, params, rule)
+            .map(|sequence| sequence.unwrap_or_default())
+    }
+
+    fn apply_next_match(
+        &mut self,
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
+    ) -> error::Result<sequence::Sequence> {
+        let frame = self.state.frame();
+        let mode = frame
+            .mode
+            .ok_or_else(|| error::Error::Unsupported("xsl:next-match has no current mode".to_string()))?;
+        let current_rule_index = frame
+            .rule_index
+            .ok_or_else(|| error::Error::Unsupported("xsl:next-match has no current rule".to_string()))?;
+        let (item, position, size) = self.current_context_values();
+        let sequence: sequence::Sequence = item.clone().try_into()?;
+        let item = match sequence {
+            sequence::Sequence::One(one) => one.item().clone(),
+            _ => return Ok(sequence::Sequence::default()),
+        };
+        let current_rule = frame
+            .rule
+            .ok_or_else(|| error::Error::Unsupported("xsl:next-match has no current rule".to_string()))?;
+        let rule_entry = self.select_next_rule(mode, &item, current_rule_index, current_rule);
+
+        if let Some((rule_index, rule_entry)) = rule_entry {
+            if rule_entry.is_builtin {
+                return self.apply_builtin_template(mode, item, params);
+            }
+            let mut base_args: Vec<stack::Value> =
+                vec![stack::Value::from(item.clone()), position.clone(), size.clone()];
+            base_args.extend(
+                self.state
+                    .global_params()
+                    .iter()
+                    .cloned()
+                    .map(stack::Value::from),
+            );
+            let template_args =
+                self.resolve_template_params(rule_entry.function_id, &base_args, params)?;
+            let mut arguments = base_args;
+            arguments.extend(template_args.into_iter().map(stack::Value::from));
+            let function =
+                function::InlineFunctionData::new(rule_entry.function_id, Vec::new()).into();
+            self.call_template_with_rule(&function, &arguments, mode, rule_entry, rule_index)
+        } else {
+            Ok(sequence::Sequence::default())
+        }
+    }
+
+    fn apply_imports_sequence(
+        &mut self,
+        mode: pattern::ModeId,
+        sequence: sequence::Sequence,
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
+        current_rule: pattern::RuleEntry,
+    ) -> error::Result<sequence::Sequence> {
+        let mut r: Vec<sequence::Item> = Vec::new();
+        let size: IBig = sequence.len().into();
+
+        for (i, item) in sequence.iter().enumerate() {
+            let position: IBig = (i + 1).into();
+            let position_value = stack::Value::from(atomic::Atomic::from(position));
+            let size_value = stack::Value::from(atomic::Atomic::from(size.clone()));
+            let sequence =
+                self.apply_imports_item(mode, item, position_value, size_value, params, current_rule)?;
+            if let Some(sequence) = sequence {
+                for item in sequence.iter() {
+                    r.push(item.clone());
+                }
+            }
+        }
+        Ok(r.into())
+    }
+
+    fn apply_imports_item(
         &mut self,
         mode: pattern::ModeId,
         item: sequence::Item,
-        position: usize,
-        size: IBig,
+        position: stack::Value,
+        size: stack::Value,
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
+        current_rule: pattern::RuleEntry,
     ) -> error::Result<Option<sequence::Sequence>> {
-        let function_id = self.lookup_pattern(mode, &item);
+        let rule_entry =
+            self.select_apply_imports_rule(mode, &item, current_rule);
 
-        if let Some(function_id) = function_id {
-            let position: IBig = (position + 1).into();
-            let arguments: Vec<sequence::Sequence> = vec![
-                item.into(),
-                atomic::Atomic::from(position).into(),
-                atomic::Atomic::from(size.clone()).into(),
+        if let Some((rule_index, rule_entry)) = rule_entry {
+            if rule_entry.is_builtin {
+                return self.apply_builtin_template(mode, item, params).map(Some);
+            }
+            let mut base_args: Vec<stack::Value> = vec![
+                stack::Value::from(item),
+                position,
+                size,
             ];
-            let function = function::InlineFunctionData::new(function_id, Vec::new()).into();
-            self.call_function_with_arguments(&function, &arguments)
+            base_args.extend(
+                self.state
+                    .global_params()
+                    .iter()
+                    .cloned()
+                    .map(stack::Value::from),
+            );
+            let template_args =
+                self.resolve_template_params(rule_entry.function_id, &base_args, params)?;
+            let mut arguments = base_args;
+            arguments.extend(template_args.into_iter().map(stack::Value::from));
+            let function =
+                function::InlineFunctionData::new(rule_entry.function_id, Vec::new()).into();
+            self.call_template_with_rule(&function, &arguments, mode, rule_entry, rule_index)
                 .map(Some)
         } else {
             Ok(None)
         }
     }
 
+    fn apply_templates_item(
+        &mut self,
+        mode: pattern::ModeId,
+        item: sequence::Item,
+        position: usize,
+        size: IBig,
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
+    ) -> error::Result<Option<sequence::Sequence>> {
+        let rule_entry = self.select_first_rule(mode, &item);
+
+        if let Some((rule_index, rule_entry)) = rule_entry {
+            if rule_entry.is_builtin {
+                return self.apply_builtin_template(mode, item, params).map(Some);
+            }
+            let position: IBig = (position + 1).into();
+            let mut base_args: Vec<stack::Value> = vec![
+                stack::Value::from(item),
+                stack::Value::from(atomic::Atomic::from(position)),
+                stack::Value::from(atomic::Atomic::from(size.clone())),
+            ];
+            base_args.extend(
+                self.state
+                    .global_params()
+                    .iter()
+                    .cloned()
+                    .map(stack::Value::from),
+            );
+            let template_args =
+                self.resolve_template_params(rule_entry.function_id, &base_args, params)?;
+            let mut arguments = base_args;
+            arguments.extend(template_args.into_iter().map(stack::Value::from));
+            let function =
+                function::InlineFunctionData::new(rule_entry.function_id, Vec::new()).into();
+            self.call_template_with_rule(&function, &arguments, mode, rule_entry, rule_index)
+                .map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn apply_builtin_template(
+        &mut self,
+        mode: pattern::ModeId,
+        item: sequence::Item,
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
+    ) -> error::Result<sequence::Sequence> {
+        let on_no_match = self
+            .runnable
+            .program()
+            .declarations
+            .mode_configs
+            .get(&mode)
+            .and_then(|config| config.on_no_match)
+            .unwrap_or(OnNoMatch::TextOnlyCopy);
+
+        match on_no_match {
+            OnNoMatch::TextOnlyCopy => {
+                return match item {
+                    sequence::Item::Node(node) => match self.state.xot().value(node) {
+                        xot::Value::Document | xot::Value::Element(_) => {
+                            let children = self
+                                .state
+                                .xot()
+                                .children(node)
+                                .map(sequence::Item::Node)
+                                .collect::<Vec<_>>();
+                            self.apply_templates_sequence(mode, children.into(), params)
+                        }
+                        xot::Value::Attribute(_) | xot::Value::Text(_) => {
+                            let text = item.string_value(self.state.xot())?;
+                            let text_node = self.state.xot.new_text(&text);
+                            Ok(sequence::Sequence::from(sequence::Item::Node(text_node)))
+                        }
+                        xot::Value::ProcessingInstruction(_) | xot::Value::Comment(_) => {
+                            Ok(sequence::Sequence::default())
+                        }
+                        _ => Ok(sequence::Sequence::default()),
+                    },
+                    sequence::Item::Atomic(_) => Ok(sequence::Sequence::default()),
+                    sequence::Item::Function(_) => Err(error::Error::XTDE0450),
+                };
+            }
+            OnNoMatch::ShallowCopy => {
+                return match item {
+                    sequence::Item::Node(node) => match self.state.xot().value(node) {
+                        xot::Value::Document | xot::Value::Element(_) => {
+                            let copied = self.shallow_copy_node(node);
+                            let children = self
+                                .state
+                                .xot()
+                                .children(node)
+                                .map(sequence::Item::Node)
+                                .collect::<Vec<_>>();
+                            let child_value =
+                                self.apply_templates_sequence(mode, children.into(), params)?;
+                            self.xml_append(copied, child_value)?;
+                            Ok(sequence::Sequence::from(sequence::Item::Node(copied)))
+                        }
+                        _ => {
+                            let copied = self.state.clone_node_with_type(node);
+                            Ok(sequence::Sequence::from(sequence::Item::Node(copied)))
+                        }
+                    },
+                    sequence::Item::Atomic(_) => Ok(sequence::Sequence::default()),
+                    sequence::Item::Function(_) => Err(error::Error::XTDE0450),
+                };
+            }
+            OnNoMatch::DeepCopy => {
+                return match item {
+                    sequence::Item::Node(node) => {
+                        let copied = self.state.clone_node_with_type(node);
+                        Ok(sequence::Sequence::from(sequence::Item::Node(copied)))
+                    }
+                    sequence::Item::Atomic(_) => Ok(sequence::Sequence::default()),
+                    sequence::Item::Function(_) => Err(error::Error::XTDE0450),
+                };
+            }
+            OnNoMatch::ShallowSkip => {
+                return match item {
+                    sequence::Item::Node(node) => match self.state.xot().value(node) {
+                        xot::Value::Document | xot::Value::Element(_) => {
+                            let children = self
+                                .state
+                                .xot()
+                                .children(node)
+                                .map(sequence::Item::Node)
+                                .collect::<Vec<_>>();
+                            self.apply_templates_sequence(mode, children.into(), params)
+                        }
+                        _ => Ok(sequence::Sequence::default()),
+                    },
+                    sequence::Item::Atomic(_) => Ok(sequence::Sequence::default()),
+                    sequence::Item::Function(_) => Err(error::Error::XTDE0450),
+                };
+            }
+            OnNoMatch::DeepSkip => {
+                return match item {
+                    sequence::Item::Node(_) => Ok(sequence::Sequence::default()),
+                    sequence::Item::Atomic(_) => Ok(sequence::Sequence::default()),
+                    sequence::Item::Function(_) => Err(error::Error::XTDE0450),
+                };
+            }
+            OnNoMatch::Fail => {
+                return Err(error::Error::Unsupported(
+                    "xsl:mode on-no-match=\"fail\" is not supported".to_string(),
+                ));
+            }
+        }
+
+    }
+
+    pub(crate) fn call_named_template(
+        &mut self,
+        function_id: function::InlineFunctionId,
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
+    ) -> error::Result<sequence::Sequence> {
+        let (item, position, size) = self.current_context_values();
+        let mut base_args = vec![item, position, size];
+        base_args.extend(
+            self.state
+                .global_params()
+                .iter()
+                .cloned()
+                .map(stack::Value::from),
+        );
+        let template_args = self.resolve_template_params(function_id, &base_args, params)?;
+        let mut arguments = base_args;
+        arguments.extend(template_args.into_iter().map(stack::Value::from));
+        let function = function::InlineFunctionData::new(function_id, Vec::new()).into();
+        self.call_function_with_values(&function, &arguments)
+    }
+
+    fn resolve_template_params(
+        &mut self,
+        function_id: function::InlineFunctionId,
+        base_args: &[stack::Value],
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
+    ) -> error::Result<Vec<sequence::Sequence>> {
+        let template_params = match self
+            .runnable
+            .program()
+            .declarations
+            .template_params
+            .get(&function_id)
+        {
+            Some(params) => params.clone(),
+            None => return Ok(Vec::new()),
+        };
+        let mut values: AHashMap<xot::xmlname::OwnedName, sequence::Sequence> = AHashMap::new();
+        if let Some(params) = params {
+            for (name, value) in params {
+                values.insert(name.clone(), value.clone());
+            }
+        }
+        let template_param_count = template_params.len();
+        let mut resolved: Vec<sequence::Sequence> = Vec::with_capacity(template_param_count);
+        for template_param in &template_params {
+            let value = if let Some(value) = values.get(&template_param.name) {
+                value.clone()
+            } else if let Some(default_fn) = template_param.default {
+                let mut args = Vec::with_capacity(base_args.len() + template_param_count);
+                args.extend(base_args.iter().cloned());
+                for existing in &resolved {
+                    args.push(stack::Value::from(existing.clone()));
+                }
+                for _ in resolved.len()..template_param_count {
+                    args.push(stack::Value::from(sequence::Sequence::default()));
+                }
+                let function = function::InlineFunctionData::new(default_fn, Vec::new()).into();
+                self.call_function_with_values(&function, &args)?
+            } else if template_param.required {
+                return Err(error::Error::XTDE0060);
+            } else {
+                sequence::Sequence::default()
+            };
+            values.insert(template_param.name.clone(), value.clone());
+            resolved.push(value);
+        }
+        Ok(resolved)
+    }
+
     pub(crate) fn lookup_pattern(
         &mut self,
         mode: pattern::ModeId,
         item: &sequence::Item,
-    ) -> Option<function::InlineFunctionId> {
-        self.runnable
+    ) -> Option<pattern::RuleEntry> {
+        self.select_first_rule(mode, item).map(|(_, rule)| rule)
+    }
+
+    pub(crate) fn lookup_next_match(
+        &mut self,
+        mode: pattern::ModeId,
+        item: &sequence::Item,
+        current_rule: pattern::RuleEntry,
+    ) -> Option<pattern::RuleEntry> {
+        let (current_index, _) = self
+            .select_first_rule(mode, item)
+            .and_then(|(idx, rule)| if rule == current_rule { Some((idx, rule)) } else { None })?;
+        self.select_next_rule(mode, item, current_index, current_rule)
+            .map(|(_, rule)| rule)
+    }
+
+    fn select_first_rule(
+        &mut self,
+        mode: pattern::ModeId,
+        item: &sequence::Item,
+    ) -> Option<(usize, pattern::RuleEntry)> {
+        let rules = self
+            .runnable
             .program()
             .declarations
-            .mode_lookup
-            .lookup(mode, |pattern| self.matches(pattern, item))
-            .copied()
+            .mode_rules
+            .get(&mode)?;
+        for (idx, (pattern, rule)) in rules.iter().enumerate() {
+            if rule.is_builtin {
+                continue;
+            }
+            if self.matches(pattern, item) {
+                return Some((idx, *rule));
+            }
+        }
+        for (idx, (pattern, rule)) in rules.iter().enumerate() {
+            if !rule.is_builtin {
+                continue;
+            }
+            if self.matches(pattern, item) {
+                return Some((idx, *rule));
+            }
+        }
+        None
+    }
+
+    fn select_next_rule(
+        &mut self,
+        mode: pattern::ModeId,
+        item: &sequence::Item,
+        current_index: usize,
+        current_rule: pattern::RuleEntry,
+    ) -> Option<(usize, pattern::RuleEntry)> {
+        let rules = self
+            .runnable
+            .program()
+            .declarations
+            .mode_rules
+            .get(&mode)?;
+        if !current_rule.is_builtin {
+            for (idx, (pattern, rule)) in rules.iter().enumerate().skip(current_index + 1) {
+                if rule.is_builtin {
+                    continue;
+                }
+                if *rule == current_rule {
+                    continue;
+                }
+                if self.matches(pattern, item) {
+                    return Some((idx, *rule));
+                }
+            }
+            for (idx, (pattern, rule)) in rules.iter().enumerate() {
+                if !rule.is_builtin {
+                    continue;
+                }
+                if self.matches(pattern, item) {
+                    return Some((idx, *rule));
+                }
+            }
+            return None;
+        }
+
+        for (idx, (pattern, rule)) in rules.iter().enumerate().skip(current_index + 1) {
+            if !rule.is_builtin {
+                continue;
+            }
+            if *rule == current_rule {
+                continue;
+            }
+            if self.matches(pattern, item) {
+                return Some((idx, *rule));
+            }
+        }
+        None
+    }
+
+    fn select_apply_imports_rule(
+        &mut self,
+        mode: pattern::ModeId,
+        item: &sequence::Item,
+        current_rule: pattern::RuleEntry,
+    ) -> Option<(usize, pattern::RuleEntry)> {
+        let rules = self
+            .runnable
+            .program()
+            .declarations
+            .mode_rules
+            .get(&mode)?;
+        for (idx, (pattern, rule)) in rules.iter().enumerate() {
+            if rule.is_builtin {
+                continue;
+            }
+            if rule.import_level <= current_rule.import_level {
+                continue;
+            }
+            if self.matches(pattern, item) {
+                return Some((idx, *rule));
+            }
+        }
+        for (idx, (pattern, rule)) in rules.iter().enumerate() {
+            if !rule.is_builtin {
+                continue;
+            }
+            if self.matches(pattern, item) {
+                return Some((idx, *rule));
+            }
+        }
+        None
     }
 
     // The interpreter can return an error for any byte code, in any level of

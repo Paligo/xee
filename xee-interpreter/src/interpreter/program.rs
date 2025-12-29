@@ -1,9 +1,11 @@
 use crate::context;
 use crate::declaration::Declarations;
 use crate::function;
+use crate::span::SourceSpan;
 use xee_name::Name;
 use xee_xpath_ast::ast::Span;
 
+use super::instruction::{encode_instruction, Instruction};
 use super::Runnable;
 
 #[derive(Debug)]
@@ -79,6 +81,26 @@ impl Program {
         function::InlineFunctionId(id)
     }
 
+    pub fn reserve_function_slots(&mut self, count: usize) -> usize {
+        let start = self.functions.len();
+        self.functions
+            .resize_with(start + count, Self::placeholder_function);
+        start
+    }
+
+    pub fn set_function(
+        &mut self,
+        function_id: function::InlineFunctionId,
+        function: function::InlineFunction,
+    ) {
+        let index = function_id.0;
+        if index >= self.functions.len() {
+            self.functions
+                .resize_with(index + 1, Self::placeholder_function);
+        }
+        self.functions[index] = function;
+    }
+
     pub(crate) fn get_function(&self, index: usize) -> &function::InlineFunction {
         &self.functions[index]
     }
@@ -92,6 +114,22 @@ impl Program {
 
     pub(crate) fn main_id(&self) -> function::InlineFunctionId {
         function::InlineFunctionId(self.functions.len() - 1)
+    }
+
+    fn placeholder_function() -> function::InlineFunction {
+        let mut chunk = Vec::new();
+        encode_instruction(Instruction::Return, &mut chunk);
+        function::InlineFunction {
+            name: "<reserved>".to_string(),
+            signature: function::Signature::new(Vec::new(), None),
+            constants: Vec::new(),
+            steps: Vec::new(),
+            cast_types: Vec::new(),
+            sequence_types: Vec::new(),
+            closure_names: Vec::new(),
+            chunk,
+            spans: vec![SourceSpan::empty()],
+        }
     }
 }
 

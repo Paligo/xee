@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use ahash::AHashMap;
 use ibig::ibig;
 use iri_string::types::IriReferenceStr;
 use xot::Xot;
@@ -8,7 +9,7 @@ use crate::context::DocumentsRef;
 use crate::context::DynamicContext;
 use crate::context::StaticContext;
 use crate::error::SpannedError;
-use crate::function::Function;
+use crate::function::{Function, InlineFunctionData};
 use crate::interpreter::interpret::ContextInfo;
 use crate::sequence;
 use crate::stack;
@@ -37,8 +38,8 @@ impl<'a> Runnable<'a> {
     }
 
     fn run_value(&self, xot: &'a mut Xot) -> error::SpannedResult<stack::Value> {
-        let arguments = self.dynamic_context.arguments().unwrap();
-        let mut interpreter = Interpreter::new(self, xot);
+        let arguments = self.resolve_global_param_arguments(xot)?;
+        let mut interpreter = Interpreter::new(self, xot, self.dynamic_context.type_table());
 
         let context_info = if let Some(context_item) = self.dynamic_context.context_item() {
             ContextInfo {
@@ -78,9 +79,132 @@ impl<'a> Runnable<'a> {
         }
     }
 
+    fn resolve_global_param_arguments(
+        &self,
+        xot: &'a mut Xot,
+    ) -> error::SpannedResult<Vec<sequence::Sequence>> {
+        if self.program.declarations.global_params.is_empty() {
+            return Ok(self.dynamic_context.arguments()?);
+        }
+        let globals = &self.program.declarations.global_params;
+        let mut explicit: AHashMap<xot::xmlname::OwnedName, sequence::Sequence> =
+            AHashMap::new();
+        for (name, value) in self.dynamic_context.variables() {
+            explicit.insert(name.clone(), value.clone());
+        }
+        let mut values: AHashMap<xot::xmlname::OwnedName, sequence::Sequence> = AHashMap::new();
+        for global in globals {
+            if global.overrideable {
+                if let Some(value) = explicit.get(&global.name) {
+                    values.insert(global.name.clone(), value.clone());
+                }
+            }
+        }
+        let iterations = globals.len().max(1);
+
+        for _ in 0..iterations {
+            for global in globals {
+                let value = if global.overrideable {
+                    if let Some(value) = explicit.get(&global.name) {
+                        value.clone()
+                    } else if let Some(default_fn) = global.default {
+                        let args = globals
+                            .iter()
+                            .map(|param| values.get(&param.name).cloned().unwrap_or_default())
+                            .collect::<Vec<_>>();
+                        let function = InlineFunctionData::new(default_fn, Vec::new()).into();
+                        let mut interpreter = Interpreter::new(self, xot, self.dynamic_context.type_table());
+                        interpreter
+                            .call_function_with_arguments(&function, &args)
+                            .map_err(|error| error::SpannedError {
+                                error,
+                                span: Some(self.program.span().into()),
+                            })?
+                    } else if global.required {
+                        return Err(error::SpannedError {
+                            error: error::Error::XTDE0050,
+                            span: Some(self.program.span().into()),
+                        });
+                    } else {
+                        sequence::Sequence::default()
+                    }
+                } else if let Some(default_fn) = global.default {
+                    let args = globals
+                        .iter()
+                        .map(|param| values.get(&param.name).cloned().unwrap_or_default())
+                        .collect::<Vec<_>>();
+                    let function = InlineFunctionData::new(default_fn, Vec::new()).into();
+                    let mut interpreter = Interpreter::new(self, xot, self.dynamic_context.type_table());
+                    interpreter
+                        .call_function_with_arguments(&function, &args)
+                        .map_err(|error| error::SpannedError {
+                            error,
+                            span: Some(self.program.span().into()),
+                        })?
+                } else if global.required {
+                    return Err(error::SpannedError {
+                        error: error::Error::XTDE0050,
+                        span: Some(self.program.span().into()),
+                    });
+                } else {
+                    sequence::Sequence::default()
+                };
+
+                values.insert(global.name.clone(), value);
+            }
+        }
+
+        let mut resolved = Vec::with_capacity(globals.len());
+        for global in globals {
+            resolved.push(values.get(&global.name).cloned().unwrap_or_default());
+        }
+        Ok(resolved)
+    }
+
     /// Run the program against a sequence item.
     pub fn many(&self, xot: &'a mut Xot) -> error::SpannedResult<sequence::Sequence> {
         Ok(self.run_value(xot)?.try_into()?)
+    }
+
+    pub fn call_named_template(
+        &self,
+        xot: &'a mut Xot,
+        name: &xot::xmlname::OwnedName,
+        params: Option<&AHashMap<xot::xmlname::OwnedName, sequence::Sequence>>,
+    ) -> error::SpannedResult<sequence::Sequence> {
+        let function_id = self
+            .program
+            .declarations
+            .named_templates
+            .get(name)
+            .copied()
+            .ok_or(SpannedError {
+                error: error::Error::Unsupported(String::from("Named template not found")),
+                span: Some(self.program.span().into()),
+            })?;
+
+        let arguments = self.resolve_global_param_arguments(xot)?;
+        let mut interpreter = Interpreter::new(self, xot, self.dynamic_context.type_table());
+        let context_info = if let Some(context_item) = self.dynamic_context.context_item() {
+            ContextInfo {
+                item: context_item.clone().into(),
+                position: ibig!(1).into(),
+                size: ibig!(1).into(),
+            }
+        } else {
+            ContextInfo {
+                item: stack::Value::Absent,
+                position: stack::Value::Absent,
+                size: stack::Value::Absent,
+            }
+        };
+        interpreter.start(context_info, arguments);
+        interpreter
+            .call_named_template(function_id, params)
+            .map_err(|error| SpannedError {
+                error,
+                span: Some(self.program.span().into()),
+            })
     }
 
     /// Run the program, expect a single item as the result.
