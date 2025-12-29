@@ -19,8 +19,7 @@ pub fn parse_transform(s: &str) -> Result<ast::Transform> {
     let mut state = State::new(xot, span_info, names);
 
     let mut xot = Xot::new();
-    static_evaluate(&mut state, node, Variables::new(), &mut xot)
-        .map_err(|_e| Error::Unsupported(format!("Static evaluate error: {:?}", _e)))?;
+    static_evaluate(&mut state, node, Variables::new(), &mut xot)?;
     let parser = XsltParser::new(&state);
     parser.parse_transform(node)
 }

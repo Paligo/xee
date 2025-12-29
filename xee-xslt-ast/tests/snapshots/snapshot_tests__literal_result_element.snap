@@ -1,5 +1,6 @@
 ---
-source: xee-xslt-ast/src/instruction.rs
+source: xee-xslt-ast/tests/snapshot_tests.rs
+assertion_line: 98
 expression: "parse_sequence_constructor_item(r#\"<foo/>\"#)"
 ---
 Ok(Content(Element(ElementNode(
@@ -10,6 +11,7 @@ Ok(Content(Element(ElementNode(
   ),
   attributes: [],
   sequence_constructor: [],
+  type_: None,
   span: Span(
     start: 1,
     end: 4,

@@ -122,18 +122,40 @@ impl<'a> Attributes<'a> {
 
     pub(crate) fn validate_unseen(&self) -> Result<(), AttributeError> {
         let unseen_attributes = self.unseen_attributes();
-        if !unseen_attributes.is_empty() {
-            return Err(self.content.state.attribute_unexpected(
-                self.content.node,
-                unseen_attributes[0],
-                "unexpected attribute",
-            ));
+        if unseen_attributes.is_empty() {
+            return Ok(());
+        }
+        let element_in_xsl = self.in_xsl_namespace();
+        let xsl_ns_uri = self
+            .content
+            .state
+            .xot
+            .namespace_str(self.content.state.names.xsl_ns);
+        for name in unseen_attributes {
+            let ns_uri = self.content.state.xot.uri_str(name);
+            let is_xsl = ns_uri == xsl_ns_uri;
+            let is_null = ns_uri.is_empty();
+            let should_error = if element_in_xsl {
+                // On XSLT elements, only attributes in null/XSLT namespaces are constrained.
+                is_null || is_xsl
+            } else {
+                // On literal result elements, only XSLT-namespaced attributes are constrained.
+                is_xsl
+            };
+            if should_error {
+                return Err(self.content.state.attribute_unexpected(
+                    self.content.node,
+                    name,
+                    "unexpected attribute",
+                ));
+            }
         }
         Ok(())
     }
 
     fn _boolean(s: &str, span: Span) -> Result<bool, AttributeError> {
-        match s {
+        let value = s.trim();
+        match value {
             "yes" | "true" | "1" => Ok(true),
             "no" | "false" | "0" => Ok(false),
             _ => Err(AttributeError::Invalid {

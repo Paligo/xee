@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
+use ahash::{HashSet, HashSetExt};
 use rust_decimal::Decimal;
 use xee_xpath_ast::{ast as xpath_ast, VariableNames, XPathParserContext};
 use xee_xpath_ast::{Namespaces, FN_NAMESPACE};
@@ -171,7 +171,7 @@ impl Context {
     }
 
     pub(crate) fn namespaces<'a>(&'a self, state: &'a State) -> Namespaces {
-        let mut namespaces = HashMap::new();
+        let mut namespaces = Namespaces::default_namespaces();
         for (prefix, ns) in &self.prefixes {
             let prefix = state.xot.prefix_str(*prefix);
             let uri = state.xot.namespace_str(*ns);
