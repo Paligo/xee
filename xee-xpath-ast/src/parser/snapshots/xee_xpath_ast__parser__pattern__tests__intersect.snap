@@ -1,35 +1,44 @@
 ---
 source: xee-xpath-ast/src/parser/pattern.rs
+assertion_line: 997
 expression: "pattern::Pattern::parse(\"foo intersect bar\", &namespaces, &variable_names)"
 ---
-Ok(Expr(BinaryExpr(BinaryExpr(
-  operator: Intersect,
-  left: Path(PathExpr(
-    root: Relative,
-    steps: [
-      AxisStep(AxisStep(
-        forward: Child,
-        node_test: NameTest(Name(OwnedName(
-          local_name_str: "foo",
-          namespace_str: "",
-          prefix_str: "",
-        ))),
-        predicates: [],
+Ok(Expr(Path(PathExpr(
+  root: Relative,
+  steps: [
+    PostfixExpr(PostfixExpr(
+      expr: BinaryExpr(BinaryExpr(
+        operator: Intersect,
+        left: Path(PathExpr(
+          root: Relative,
+          steps: [
+            AxisStep(AxisStep(
+              forward: Child,
+              node_test: NameTest(Name(OwnedName(
+                local_name_str: "foo",
+                namespace_str: "",
+                prefix_str: "",
+              ))),
+              predicates: [],
+            )),
+          ],
+        )),
+        right: Path(PathExpr(
+          root: Relative,
+          steps: [
+            AxisStep(AxisStep(
+              forward: Child,
+              node_test: NameTest(Name(OwnedName(
+                local_name_str: "bar",
+                namespace_str: "",
+                prefix_str: "",
+              ))),
+              predicates: [],
+            )),
+          ],
+        )),
       )),
-    ],
-  )),
-  right: Path(PathExpr(
-    root: Relative,
-    steps: [
-      AxisStep(AxisStep(
-        forward: Child,
-        node_test: NameTest(Name(OwnedName(
-          local_name_str: "bar",
-          namespace_str: "",
-          prefix_str: "",
-        ))),
-        predicates: [],
-      )),
-    ],
-  )),
+      predicates: [],
+    )),
+  ],
 ))))

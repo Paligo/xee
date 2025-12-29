@@ -531,3 +531,15 @@ fn test_function_name_026() {
     assert_eq!(lex.next(), Some((Token::RightParen, (26..27))));
     assert_eq!(lex.next(), None);
 }
+
+#[test]
+fn test_text_predicate_tokens() {
+    let mut lex = lexer("text()[1]");
+    assert_eq!(lex.next(), Some((Token::Text, (0..4))));
+    assert_eq!(lex.next(), Some((Token::LeftParen, (4..5))));
+    assert_eq!(lex.next(), Some((Token::RightParen, (5..6))));
+    assert_eq!(lex.next(), Some((Token::LeftBracket, (6..7))));
+    assert_eq!(lex.next(), Some((Token::IntegerLiteral(ibig!(1)), (7..8))));
+    assert_eq!(lex.next(), Some((Token::RightBracket, (8..9))));
+    assert_eq!(lex.next(), None);
+}

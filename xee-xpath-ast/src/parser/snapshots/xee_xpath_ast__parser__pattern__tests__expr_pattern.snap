@@ -1,29 +1,38 @@
 ---
 source: xee-xpath-ast/src/parser/pattern.rs
+assertion_line: 892
 expression: "pattern::Pattern::parse(\"$a | $b\", &namespaces, &variable_names)"
 ---
-Ok(Expr(BinaryExpr(BinaryExpr(
-  operator: Union,
-  left: Path(PathExpr(
-    root: Rooted(
-      root: VarRef(OwnedName(
-        local_name_str: "a",
-        namespace_str: "",
-        prefix_str: "",
+Ok(Expr(Path(PathExpr(
+  root: Relative,
+  steps: [
+    PostfixExpr(PostfixExpr(
+      expr: BinaryExpr(BinaryExpr(
+        operator: Union,
+        left: Path(PathExpr(
+          root: Rooted(
+            root: VarRef(OwnedName(
+              local_name_str: "a",
+              namespace_str: "",
+              prefix_str: "",
+            )),
+            predicates: [],
+          ),
+          steps: [],
+        )),
+        right: Path(PathExpr(
+          root: Rooted(
+            root: VarRef(OwnedName(
+              local_name_str: "b",
+              namespace_str: "",
+              prefix_str: "",
+            )),
+            predicates: [],
+          ),
+          steps: [],
+        )),
       )),
       predicates: [],
-    ),
-    steps: [],
-  )),
-  right: Path(PathExpr(
-    root: Rooted(
-      root: VarRef(OwnedName(
-        local_name_str: "b",
-        namespace_str: "",
-        prefix_str: "",
-      )),
-      predicates: [],
-    ),
-    steps: [],
-  )),
+    )),
+  ],
 ))))

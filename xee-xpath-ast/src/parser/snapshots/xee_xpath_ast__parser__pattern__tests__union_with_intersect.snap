@@ -1,52 +1,69 @@
 ---
 source: xee-xpath-ast/src/parser/pattern.rs
-expression: "pattern::Pattern::parse(\"foo intersect bar | baz\", &namespaces,\n    &variable_names)"
+assertion_line: 1008
+expression: "pattern::Pattern::parse(\"foo intersect bar | baz\", &namespaces,\n&variable_names)"
 ---
-Ok(Expr(BinaryExpr(BinaryExpr(
-  operator: Union,
-  left: BinaryExpr(BinaryExpr(
-    operator: Intersect,
-    left: Path(PathExpr(
-      root: Relative,
-      steps: [
-        AxisStep(AxisStep(
-          forward: Child,
-          node_test: NameTest(Name(OwnedName(
-            local_name_str: "foo",
-            namespace_str: "",
-            prefix_str: "",
-          ))),
-          predicates: [],
+Ok(Expr(Path(PathExpr(
+  root: Relative,
+  steps: [
+    PostfixExpr(PostfixExpr(
+      expr: BinaryExpr(BinaryExpr(
+        operator: Union,
+        left: Path(PathExpr(
+          root: Relative,
+          steps: [
+            PostfixExpr(PostfixExpr(
+              expr: BinaryExpr(BinaryExpr(
+                operator: Intersect,
+                left: Path(PathExpr(
+                  root: Relative,
+                  steps: [
+                    AxisStep(AxisStep(
+                      forward: Child,
+                      node_test: NameTest(Name(OwnedName(
+                        local_name_str: "foo",
+                        namespace_str: "",
+                        prefix_str: "",
+                      ))),
+                      predicates: [],
+                    )),
+                  ],
+                )),
+                right: Path(PathExpr(
+                  root: Relative,
+                  steps: [
+                    AxisStep(AxisStep(
+                      forward: Child,
+                      node_test: NameTest(Name(OwnedName(
+                        local_name_str: "bar",
+                        namespace_str: "",
+                        prefix_str: "",
+                      ))),
+                      predicates: [],
+                    )),
+                  ],
+                )),
+              )),
+              predicates: [],
+            )),
+          ],
         )),
-      ],
-    )),
-    right: Path(PathExpr(
-      root: Relative,
-      steps: [
-        AxisStep(AxisStep(
-          forward: Child,
-          node_test: NameTest(Name(OwnedName(
-            local_name_str: "bar",
-            namespace_str: "",
-            prefix_str: "",
-          ))),
-          predicates: [],
+        right: Path(PathExpr(
+          root: Relative,
+          steps: [
+            AxisStep(AxisStep(
+              forward: Child,
+              node_test: NameTest(Name(OwnedName(
+                local_name_str: "baz",
+                namespace_str: "",
+                prefix_str: "",
+              ))),
+              predicates: [],
+            )),
+          ],
         )),
-      ],
-    )),
-  )),
-  right: Path(PathExpr(
-    root: Relative,
-    steps: [
-      AxisStep(AxisStep(
-        forward: Child,
-        node_test: NameTest(Name(OwnedName(
-          local_name_str: "baz",
-          namespace_str: "",
-          prefix_str: "",
-        ))),
-        predicates: [],
       )),
-    ],
-  )),
+      predicates: [],
+    )),
+  ],
 ))))

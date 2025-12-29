@@ -57,7 +57,11 @@ impl ast::XPath {
         namespaces: &'a Namespaces,
         variable_names: &'a VariableNames,
     ) -> Result<Self, ParserError> {
-        let mut xpath = parse(parser().xpath, tokens(input), Cow::Borrowed(namespaces))?;
+        let mut xpath = parse(
+            parser().xpath,
+            tokens(input),
+            Cow::Borrowed(namespaces),
+        )?;
         // rename all variables to unique names
         unique_names(&mut xpath, variable_names);
         Ok(xpath)
@@ -90,41 +94,67 @@ impl ast::XPath {
 impl ast::ExprSingle {
     pub fn parse(src: &str) -> Result<ast::ExprSingleS, ParserError> {
         let namespaces = Namespaces::default();
-        parse(parser().expr_single, tokens(src), Cow::Owned(namespaces))
+        let parsed = parse(
+            parser().expr_single,
+            tokens(src),
+            Cow::Owned(namespaces),
+        )?;
+        Ok(parsed)
     }
 }
 
 impl ast::Signature {
     pub fn parse<'a>(input: &'a str, namespaces: &'a Namespaces) -> Result<Self, ParserError> {
-        parse(parser().signature, tokens(input), Cow::Borrowed(namespaces))
+        let parsed = parse(
+            parser().signature,
+            tokens(input),
+            Cow::Borrowed(namespaces),
+        )?;
+        Ok(parsed)
     }
 }
 
 pub fn parse_kind_test(src: &str) -> Result<ast::KindTest, ParserError> {
     let namespaces = Namespaces::default();
-    parse(parser().kind_test, tokens(src), Cow::Owned(namespaces))
+    let parsed = parse(
+        parser().kind_test,
+        tokens(src),
+        Cow::Owned(namespaces),
+    )?;
+    Ok(parsed)
 }
 
 pub fn parse_sequence_type<'a>(
     input: &'a str,
     namespaces: &'a Namespaces,
 ) -> Result<ast::SequenceType, ParserError> {
-    parse(
+    let parsed = parse(
         parser().sequence_type,
         tokens(input),
         Cow::Borrowed(namespaces),
-    )
+    )?;
+    Ok(parsed)
 }
 
 pub fn parse_item_type<'a>(
     input: &'a str,
     namespaces: &'a Namespaces,
 ) -> Result<ast::ItemType, ParserError> {
-    parse(parser().item_type, tokens(input), Cow::Borrowed(namespaces))
+    let parsed = parse(
+        parser().item_type,
+        tokens(input),
+        Cow::Borrowed(namespaces),
+    )?;
+    Ok(parsed)
 }
 
 pub fn parse_name<'a>(src: &'a str, namespaces: &'a Namespaces) -> Result<ast::NameS, ParserError> {
-    parse(parser().name, tokens(src), Cow::Borrowed(namespaces))
+    let parsed = parse(
+        parser().name,
+        tokens(src),
+        Cow::Borrowed(namespaces),
+    )?;
+    Ok(parsed)
 }
 
 #[cfg(test)]
@@ -132,12 +162,16 @@ mod tests {
 
     use super::*;
 
-    use ahash::HashSetExt;
     use insta::assert_ron_snapshot;
 
     fn parse_xpath_simple(src: &str) -> Result<ast::XPath, ParserError> {
         let namespaces = Namespaces::default();
-        parse(parser().xpath, tokens(src), Cow::Owned(namespaces))
+        let parsed = parse(
+            parser().xpath,
+            tokens(src),
+            Cow::Owned(namespaces),
+        )?;
+        Ok(parsed)
     }
 
     fn parse_xpath_simple_element_ns(src: &str) -> Result<ast::XPath, ParserError> {
@@ -146,7 +180,12 @@ mod tests {
             "http://example.com".to_string(),
             "".to_string(),
         );
-        parse(parser().xpath, tokens(src), Cow::Owned(namespaces))
+        let parsed = parse(
+            parser().xpath,
+            tokens(src),
+            Cow::Owned(namespaces),
+        )?;
+        Ok(parsed)
     }
 
     #[test]
@@ -862,7 +901,12 @@ mod tests {
     fn test_xpath_parse_value_template() {
         let namespaces = Namespaces::default();
         let xpath =
-            ast::XPath::parse_value_template("1 + 2}", &namespaces, &VariableNames::new()).unwrap();
+            ast::XPath::parse_value_template(
+                "1 + 2}",
+                &namespaces,
+                &VariableNames::default(),
+            )
+            .unwrap();
         assert_eq!(xpath.0.span, Span::new(0, 5));
         assert_ron_snapshot!(xpath);
     }
@@ -871,7 +915,11 @@ mod tests {
     fn test_xpath_parse_value_template_with_leftover() {
         let namespaces = Namespaces::default();
         let xpath =
-            ast::XPath::parse_value_template("1 + 2}foo", &namespaces, &VariableNames::new())
+            ast::XPath::parse_value_template(
+                "1 + 2}foo",
+                &namespaces,
+                &VariableNames::default(),
+            )
                 .unwrap();
         assert_eq!(xpath.0.span, Span::new(0, 5));
         assert_ron_snapshot!(xpath);
@@ -881,7 +929,12 @@ mod tests {
     fn test_xpath_parse_value_template_a_with_leftover() {
         let namespaces = Namespaces::default();
         let xpath =
-            ast::XPath::parse_value_template("a}foo", &namespaces, &VariableNames::new()).unwrap();
+            ast::XPath::parse_value_template(
+                "a}foo",
+                &namespaces,
+                &VariableNames::default(),
+            )
+            .unwrap();
         assert_eq!(xpath.0.span, Span::new(0, 1));
         assert_ron_snapshot!(xpath);
     }
@@ -890,7 +943,11 @@ mod tests {
     fn test_xpath_parse_value_template_with_second_value_following() {
         let namespaces = Namespaces::default();
         let xpath =
-            ast::XPath::parse_value_template("a}foo{b}!", &namespaces, &VariableNames::new())
+            ast::XPath::parse_value_template(
+                "a}foo{b}!",
+                &namespaces,
+                &VariableNames::default(),
+            )
                 .unwrap();
         assert_eq!(xpath.0.span, Span::new(0, 1));
         assert_ron_snapshot!(xpath);
