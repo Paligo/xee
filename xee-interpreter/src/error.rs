@@ -540,6 +540,34 @@ pub enum Error {
     /// cannot handle such characters.
     FOXT0006,
 
+    /// Required parameter has a default value.
+    ///
+    /// It is a static error if xsl:param specifies required="yes" and also
+    /// specifies a select attribute or sequence constructor.
+    XTSE0010,
+    /// Invalid attribute value.
+    ///
+    /// It is a static error if a stylesheet attribute has a value that is not
+    /// allowed by the specification.
+    XTSE0020,
+    /// Attribute not permitted on an XSLT element.
+    ///
+    /// It is a static error if an attribute is not permitted for the
+    /// containing XSLT element.
+    XTSE0090,
+    /// Required stylesheet parameter not supplied.
+    ///
+    /// It is a dynamic error if a required stylesheet parameter is not supplied.
+    XTDE0050,
+    /// Required template parameter not supplied.
+    ///
+    /// It is a dynamic error if a required template parameter is not supplied.
+    XTDE0060,
+    /// Required parameter not supplied (alternative code).
+    ///
+    /// Some processors use XTDE0700 for missing required parameters.
+    XTDE0700,
+
     /// Duplicate global variable name.
     ///
     /// It is a static error if a package contains more than one non-hidden

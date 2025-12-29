@@ -31,11 +31,12 @@ pub struct StaticContext {
     // TODO: try to make collations static
     collations: RefCell<Collations>,
     static_base_uri: Option<IriAbsoluteString>,
+    assertions_enabled: bool,
 }
 
 impl Default for StaticContext {
     fn default() -> Self {
-        Self::new(Namespaces::default(), VariableNames::default(), None)
+        Self::new(Namespaces::default(), VariableNames::default(), None, true)
     }
 }
 
@@ -46,6 +47,7 @@ impl From<XPathParserContext> for StaticContext {
             functions: &STATIC_FUNCTIONS,
             collations: RefCell::new(Collations::new()),
             static_base_uri: None,
+            assertions_enabled: true,
         }
     }
 }
@@ -55,17 +57,19 @@ impl StaticContext {
         namespaces: Namespaces,
         variable_names: VariableNames,
         static_base_uri: Option<IriAbsoluteString>,
+        assertions_enabled: bool,
     ) -> Self {
         Self {
             parser_context: XPathParserContext::new(namespaces, variable_names),
             functions: &STATIC_FUNCTIONS,
             collations: RefCell::new(Collations::new()),
             static_base_uri,
+            assertions_enabled,
         }
     }
 
     pub fn from_namespaces(namespaces: Namespaces) -> Self {
-        Self::new(namespaces, VariableNames::default(), None)
+        Self::new(namespaces, VariableNames::default(), None, true)
     }
 
     pub fn namespaces(&self) -> &Namespaces {
@@ -98,6 +102,10 @@ impl StaticContext {
 
     pub fn static_base_uri(&self) -> Option<&IriAbsoluteStr> {
         self.static_base_uri.as_deref()
+    }
+
+    pub fn assertions_enabled(&self) -> bool {
+        self.assertions_enabled
     }
 
     pub(crate) fn collation(&self, uri: &IriReferenceStr) -> error::Result<Rc<Collation>> {

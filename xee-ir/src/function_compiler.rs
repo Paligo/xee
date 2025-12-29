@@ -1,5 +1,7 @@
+use ahash::HashMap;
 use ibig::{ibig, IBig};
 
+use xee_interpreter::atomic;
 use xee_interpreter::error::Error;
 use xee_interpreter::function::FunctionRule;
 use xee_interpreter::interpreter::instruction::Instruction;
@@ -17,6 +19,8 @@ pub(crate) type Scopes = scope::Scopes<ir::Name>;
 pub struct FunctionCompiler<'a> {
     pub(crate) scopes: &'a mut Scopes,
     pub(crate) mode_ids: &'a ModeIds,
+    pub(crate) user_function_ids: &'a [function::InlineFunctionId],
+    pub(crate) named_template_ids: &'a HashMap<xot::xmlname::OwnedName, function::InlineFunctionId>,
     pub(crate) builder: FunctionBuilder<'a>,
 }
 
@@ -25,11 +29,15 @@ impl<'a> FunctionCompiler<'a> {
         builder: FunctionBuilder<'a>,
         scopes: &'a mut Scopes,
         mode_ids: &'a ModeIds,
+        user_function_ids: &'a [function::InlineFunctionId],
+        named_template_ids: &'a HashMap<xot::xmlname::OwnedName, function::InlineFunctionId>,
     ) -> Self {
         Self {
             builder,
             scopes,
             mode_ids,
+            user_function_ids,
+            named_template_ids,
         }
     }
 
@@ -53,6 +61,7 @@ impl<'a> FunctionCompiler<'a> {
             ir::Expr::Step(step) => self.compile_step(step, span),
             ir::Expr::Deduplicate(expr) => self.compile_deduplicate(expr, span),
             ir::Expr::If(if_) => self.compile_if(if_, span),
+            ir::Expr::TryCatch(try_catch) => self.compile_try_catch(try_catch, span),
             ir::Expr::Map(map) => self.compile_map(map, span),
             ir::Expr::Filter(filter) => self.compile_filter(filter, span),
             ir::Expr::Iterate(iterate) => self.compile_iterate(iterate, span),
@@ -87,8 +96,16 @@ impl<'a> FunctionCompiler<'a> {
                 self.compile_xml_processing_instruction(processing_instruction, span)
             }
             ir::Expr::XmlAppend(xml_append) => self.compile_xml_append(xml_append, span),
+            ir::Expr::XmlSetType(xml_set_type) => self.compile_xml_set_type(xml_set_type, span),
             ir::Expr::ApplyTemplates(apply_templates) => {
                 self.compile_apply_templates(apply_templates, span)
+            }
+            ir::Expr::ApplyImports(apply_imports) => {
+                self.compile_apply_imports(apply_imports, span)
+            }
+            ir::Expr::NextMatch(next_match) => self.compile_next_match(next_match, span),
+            ir::Expr::CallTemplate(call_template) => {
+                self.compile_call_template(call_template, span)
             }
             ir::Expr::CopyShallow(copy_shallow) => self.compile_copy_shallow(copy_shallow, span),
             ir::Expr::CopyDeep(copy_deep) => self.compile_copy_deep(copy_deep, span),
@@ -111,6 +128,15 @@ impl<'a> FunctionCompiler<'a> {
                     }
                     ir::Const::Decimal(d) => {
                         self.builder.emit_constant((*d).into(), span);
+                    }
+                    ir::Const::UserFunctionReference(index) => {
+                        let function_id = self.user_function_ids.get(*index).ok_or_else(|| {
+                            Error::Unsupported(String::from(
+                                "User function reference out of range",
+                            ))
+                        })?;
+                        self.builder
+                            .emit(Instruction::Closure(function_id.as_u16()), span);
                     }
                     ir::Const::EmptySequence => self
                         .builder
@@ -190,6 +216,31 @@ impl<'a> FunctionCompiler<'a> {
         self.builder.patch_jump(jump_else);
         self.compile_expr(&if_.else_)?;
         self.builder.patch_jump(jump_end);
+        Ok(())
+    }
+
+    fn compile_try_catch(
+        &mut self,
+        try_catch: &ir::TryCatch,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        self.compile_function_definition(&try_catch.try_body, span)?;
+        for catch in &try_catch.catches {
+            self.compile_function_definition(&catch.body, span)?;
+        }
+
+        let entry = xee_interpreter::declaration::TryCatch {
+            rollback_output: try_catch.rollback_output,
+            catches: try_catch
+                .catches
+                .iter()
+                .map(|catch| xee_interpreter::declaration::CatchClause {
+                    errors: catch.errors.clone(),
+                })
+                .collect(),
+        };
+        let entry_id = self.builder.add_try_catch(entry);
+        self.builder.emit(Instruction::TryCatch(entry_id), span);
         Ok(())
     }
 
@@ -330,11 +381,11 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    pub fn compile_function_id(
+    fn build_inline_function(
         &mut self,
         function_definition: &ir::FunctionDefinition,
         span: SourceSpan,
-    ) -> error::SpannedResult<function::InlineFunctionId> {
+    ) -> error::SpannedResult<function::InlineFunction> {
         let nested_builder = self.builder.builder();
         self.scopes.push_scope();
 
@@ -342,6 +393,8 @@ impl<'a> FunctionCompiler<'a> {
             builder: nested_builder,
             scopes: self.scopes,
             mode_ids: self.mode_ids,
+            user_function_ids: self.user_function_ids,
+            named_template_ids: self.named_template_ids,
         };
 
         for param in &function_definition.params {
@@ -354,9 +407,17 @@ impl<'a> FunctionCompiler<'a> {
 
         compiler.scopes.pop_scope();
 
-        let function = compiler
+        Ok(compiler
             .builder
-            .finish("inline".to_string(), function_definition, span);
+            .finish("inline".to_string(), function_definition, span))
+    }
+
+    pub fn compile_function_id(
+        &mut self,
+        function_definition: &ir::FunctionDefinition,
+        span: SourceSpan,
+    ) -> error::SpannedResult<function::InlineFunctionId> {
+        let function = self.build_inline_function(function_definition, span)?;
         // now place all captured names on stack, to ensure we have the
         // closure
         // in reverse order so we can pop them off in the right order
@@ -364,6 +425,17 @@ impl<'a> FunctionCompiler<'a> {
             self.compile_variable(name, span)?;
         }
         Ok(self.builder.add_function(function))
+    }
+
+    pub fn compile_function_id_at(
+        &mut self,
+        function_definition: &ir::FunctionDefinition,
+        function_id: function::InlineFunctionId,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        let function = self.build_inline_function(function_definition, span)?;
+        self.builder.set_function(function_id, function);
+        Ok(())
     }
 
     pub(crate) fn compile_function_definition(
@@ -976,6 +1048,17 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn compile_xml_set_type(
+        &mut self,
+        xml_set_type: &ir::XmlSetType,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        self.compile_atom(&xml_set_type.node)?;
+        self.builder
+            .emit(Instruction::XmlSetType(xml_set_type.xs.to_u16()), span);
+        Ok(())
+    }
+
     fn compile_xml_comment(
         &mut self,
         comment: &ir::XmlComment,
@@ -1003,24 +1086,172 @@ impl<'a> FunctionCompiler<'a> {
         apply_templates: &ir::ApplyTemplates,
         span: SourceSpan,
     ) -> error::SpannedResult<()> {
+        if !apply_templates.params.is_empty() {
+            for param in &apply_templates.params {
+                self.compile_atom(&param.value)?;
+                let name_sequence = sequence::Sequence::from(sequence::Item::Atomic(
+                    atomic::Atomic::from(param.name.clone()),
+                ));
+                self.builder.emit_constant(name_sequence, span);
+            }
+        }
         self.compile_atom(&apply_templates.select)?;
 
-        let mode_id = if matches!(
-            apply_templates.mode,
-            ir::ApplyTemplatesModeValue::Named(_) | ir::ApplyTemplatesModeValue::Unnamed
-        ) {
-            self.mode_ids.get(&apply_templates.mode)
+        match apply_templates.mode {
+            ir::ApplyTemplatesModeValue::Current => {
+                if apply_templates.params.is_empty() {
+                    self.builder.emit(Instruction::ApplyTemplatesCurrent, span);
+                } else {
+                    let param_count = apply_templates.params.len();
+                    if param_count > u16::MAX as usize {
+                        return Err(error::Error::Unsupported(
+                            "Too many xsl:with-param values".to_string(),
+                        )
+                        .into());
+                    }
+                    self.builder.emit(
+                        Instruction::ApplyTemplatesCurrentWithParams(param_count as u16),
+                        span,
+                    );
+                }
+            }
+            ir::ApplyTemplatesModeValue::Named(_) | ir::ApplyTemplatesModeValue::Unnamed => {
+                let mode_id = self.mode_ids.get(&apply_templates.mode);
+                if let Some(mode_id) = mode_id {
+                    if apply_templates.params.is_empty() {
+                        self.builder
+                            .emit(Instruction::ApplyTemplates(mode_id.get() as u16), span);
+                    } else {
+                        let param_count = apply_templates.params.len();
+                        if param_count > u16::MAX as usize {
+                            return Err(error::Error::Unsupported(
+                                "Too many xsl:with-param values".to_string(),
+                            )
+                            .into());
+                        }
+                        self.builder.emit(
+                            Instruction::ApplyTemplatesWithParams(
+                                mode_id.get() as u16,
+                                param_count as u16,
+                            ),
+                            span,
+                        );
+                    }
+                } else {
+                    // the mode was never used by any templates, so compile the empty
+                    // sequence
+                    self.builder
+                        .emit_constant(sequence::Sequence::default(), span);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn compile_apply_imports(
+        &mut self,
+        apply_imports: &ir::ApplyImports,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        if !apply_imports.params.is_empty() {
+            for param in &apply_imports.params {
+                self.compile_atom(&param.value)?;
+                let name_sequence = sequence::Sequence::from(sequence::Item::Atomic(
+                    atomic::Atomic::from(param.name.clone()),
+                ));
+                self.builder.emit_constant(name_sequence, span);
+            }
+        }
+        if apply_imports.params.is_empty() {
+            self.builder.emit(Instruction::ApplyImports, span);
         } else {
-            todo!("#current mode not handled yet")
-        };
-        if let Some(mode_id) = mode_id {
-            self.builder
-                .emit(Instruction::ApplyTemplates(mode_id.get() as u16), span);
+            let param_count = apply_imports.params.len();
+            if param_count > u16::MAX as usize {
+                return Err(error::Error::Unsupported(
+                    "Too many xsl:with-param values".to_string(),
+                )
+                .into());
+            }
+            self.builder.emit(
+                Instruction::ApplyImportsWithParams(param_count as u16),
+                span,
+            );
+        }
+        Ok(())
+    }
+
+    fn compile_next_match(
+        &mut self,
+        next_match: &ir::NextMatch,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        if !next_match.params.is_empty() {
+            for param in &next_match.params {
+                self.compile_atom(&param.value)?;
+                let name_sequence = sequence::Sequence::from(sequence::Item::Atomic(
+                    atomic::Atomic::from(param.name.clone()),
+                ));
+                self.builder.emit_constant(name_sequence, span);
+            }
+        }
+        if next_match.params.is_empty() {
+            self.builder.emit(Instruction::ApplyNextMatch, span);
         } else {
-            // the mode was never used by any templates, so compile the empty
-            // sequence
+            let param_count = next_match.params.len();
+            if param_count > u16::MAX as usize {
+                return Err(error::Error::Unsupported(
+                    "Too many xsl:with-param values".to_string(),
+                )
+                .into());
+            }
+            self.builder.emit(
+                Instruction::ApplyNextMatchWithParams(param_count as u16),
+                span,
+            );
+        }
+        Ok(())
+    }
+
+    fn compile_call_template(
+        &mut self,
+        call_template: &ir::CallTemplate,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        let function_id = self
+            .named_template_ids
+            .get(&call_template.name)
+            .ok_or_else(|| {
+                error::Error::Unsupported(String::from("Named template not found"))
+            })?;
+
+        if !call_template.params.is_empty() {
+            for param in &call_template.params {
+                self.compile_atom(&param.value)?;
+                let name_sequence = sequence::Sequence::from(sequence::Item::Atomic(
+                    atomic::Atomic::from(param.name.clone()),
+                ));
+                self.builder.emit_constant(name_sequence, span);
+            }
+        }
+
+        if call_template.params.is_empty() {
             self.builder
-                .emit_constant(sequence::Sequence::default(), span);
+                .emit(Instruction::CallTemplate(function_id.as_u16()), span);
+        } else {
+            let param_count = call_template.params.len();
+            if param_count > u16::MAX as usize {
+                return Err(error::Error::Unsupported(
+                    "Too many xsl:with-param values".to_string(),
+                )
+                .into());
+            }
+            self.builder.emit(
+                Instruction::CallTemplateWithParams(
+                    function_id.as_u16(),
+                    param_count as u16,
+                ),
+                span,
+            );
         }
         Ok(())
     }

@@ -1,10 +1,14 @@
-use ahash::HashSetExt;
+use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
+use std::path::{Path, PathBuf};
 use xee_name::{Name, Namespaces, FN_NAMESPACE};
 
-use xee_interpreter::{context::StaticContext, error, interpreter, sequence::QNameOrString};
+use xee_interpreter::{context::StaticContext, declaration::CatchError, error, interpreter, sequence::QNameOrString};
 use xee_ir::{compile_xslt, ir, Bindings, Variables};
-use xee_xpath_ast::{ast as xpath_ast, pattern::transform_pattern, span::Spanned};
+use xee_xpath_ast::{ast as xpath_ast, parse_name, pattern::transform_pattern, span::Spanned};
+use xee_schema_type::Xs;
+use xee_xpath_compiler::UserFunctions;
 use xee_xslt_ast::{ast, parse_transform};
+use xee_xslt_ast::error::{AttributeError, ElementError};
 use xot::xmlname::NameStrInfo;
 
 use crate::{default_declarations::text_only_copy_declarations, priority::default_priority};
@@ -12,34 +16,206 @@ use crate::{default_declarations::text_only_copy_declarations, priority::default
 struct IrConverter<'a> {
     variables: Variables,
     static_context: &'a StaticContext,
+    global_params: Vec<ir::GlobalParam>,
+    global_param_lookup: HashMap<Name, usize>,
+    function_lookup: HashMap<(Name, u8), usize>,
+    user_functions: Option<UserFunctions>,
 }
 
+#[derive(Debug, Clone)]
+struct DeclarationWithImport {
+    declaration: ast::Declaration,
+    import_level: u32,
+    is_builtin: bool,
+}
+
+#[allow(dead_code)]
 pub fn compile(
     transform: ast::Transform,
     static_context: StaticContext,
 ) -> error::SpannedResult<interpreter::Program> {
-    let mut ir_converter = IrConverter::new(&static_context);
-    let declarations = ir_converter.transform(&transform)?;
-    compile_xslt(declarations, static_context)
+    let declarations = transform
+        .declarations
+        .into_iter()
+        .map(|declaration| DeclarationWithImport {
+            declaration,
+            import_level: 0,
+            is_builtin: false,
+        })
+        .collect::<Vec<_>>();
+    compile_with_imports(declarations, static_context)
 }
 
 pub fn parse(
     static_context: StaticContext,
     xslt: &str,
 ) -> error::SpannedResult<interpreter::Program> {
+    parse_with_base(static_context, xslt, None)
+}
+
+pub fn parse_with_base(
+    static_context: StaticContext,
+    xslt: &str,
+    base_path: Option<&Path>,
+) -> error::SpannedResult<interpreter::Program> {
     let transform = parse_transform(xslt);
     // TODO: better error handling
-    let mut transform = match transform {
+    let transform = match transform {
         Ok(transform) => transform,
-        Err(_e) => {
-            return Err(error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", _e)).into());
+        Err(err) => {
+            return Err(map_parse_error(err).into());
         }
     };
-    // insert default rules early on in precedence order
-    let mut declarations = text_only_copy_declarations().unwrap();
-    declarations.extend(transform.declarations);
-    transform.declarations = declarations;
-    compile(transform, static_context)
+    let mut declarations = if let Some(base_path) = base_path {
+        let base_dir = base_path.parent().unwrap_or_else(|| Path::new("."));
+        let mut visited = HashSet::new();
+        resolve_imports(transform, base_dir, &mut visited, 0)?
+    } else {
+        transform
+            .declarations
+            .into_iter()
+            .map(|declaration| DeclarationWithImport {
+                declaration,
+                import_level: 0,
+                is_builtin: false,
+            })
+            .collect()
+    };
+    let max_import_level = declarations
+        .iter()
+        .map(|decl| decl.import_level)
+        .max()
+        .unwrap_or(0);
+    let default_import_level = max_import_level.saturating_add(1);
+    let mut default_declarations = text_only_copy_declarations()
+        .unwrap()
+        .into_iter()
+        .map(|declaration| DeclarationWithImport {
+            declaration,
+            import_level: default_import_level,
+            is_builtin: true,
+        })
+        .collect::<Vec<_>>();
+    default_declarations.append(&mut declarations);
+    compile_with_imports(default_declarations, static_context)
+}
+
+fn compile_with_imports(
+    declarations: Vec<DeclarationWithImport>,
+    static_context: StaticContext,
+) -> error::SpannedResult<interpreter::Program> {
+    let mut ir_converter = IrConverter::new(&static_context);
+    let declarations = ir_converter.transform_with_imports(&declarations)?;
+    compile_xslt(declarations, static_context)
+}
+
+fn resolve_imports(
+    transform: ast::Transform,
+    base_dir: &Path,
+    visited: &mut HashSet<PathBuf>,
+    import_level: u32,
+) -> error::SpannedResult<Vec<DeclarationWithImport>> {
+    let mut import_decls = Vec::new();
+    let mut local_decls = Vec::new();
+
+    for decl in transform.declarations {
+        match decl {
+            ast::Declaration::Import(import) => {
+                let import_path = resolve_import_path(&import.href, base_dir)?;
+                let canonical =
+                    std::fs::canonicalize(&import_path).unwrap_or_else(|_| import_path.clone());
+                if !visited.insert(canonical) {
+                    return Err(error::Error::Unsupported(
+                        "Circular xsl:import detected".to_string(),
+                    )
+                    .into());
+                }
+                let xslt = std::fs::read_to_string(&import_path).map_err(|e| {
+                    error::Error::Unsupported(format!(
+                        "Failed to read xsl:import href '{}': {}",
+                        import.href, e
+                    ))
+                })?;
+                let import_transform = parse_transform(&xslt).map_err(map_parse_error)?;
+                let import_base_dir = import_path.parent().unwrap_or(base_dir);
+                let import_transform =
+                    resolve_imports(import_transform, import_base_dir, visited, import_level + 1)?;
+                import_decls.extend(import_transform);
+            }
+            ast::Declaration::Include(include) => {
+                let include_path = resolve_import_path(&include.href, base_dir)?;
+                let canonical =
+                    std::fs::canonicalize(&include_path).unwrap_or_else(|_| include_path.clone());
+                if !visited.insert(canonical) {
+                    return Err(error::Error::Unsupported(
+                        "Circular xsl:include detected".to_string(),
+                    )
+                    .into());
+                }
+                let xslt = std::fs::read_to_string(&include_path).map_err(|e| {
+                    error::Error::Unsupported(format!(
+                        "Failed to read xsl:include href '{}': {}",
+                        include.href, e
+                    ))
+                })?;
+                let include_transform = parse_transform(&xslt).map_err(map_parse_error)?;
+                let include_base_dir = include_path.parent().unwrap_or(base_dir);
+                let include_transform = resolve_imports(
+                    include_transform,
+                    include_base_dir,
+                    visited,
+                    import_level,
+                )?;
+                local_decls.extend(include_transform);
+            }
+            _ => local_decls.push(DeclarationWithImport {
+                declaration: decl,
+                import_level,
+                is_builtin: false,
+            }),
+        }
+    }
+
+    import_decls.extend(local_decls);
+    Ok(import_decls)
+}
+
+fn resolve_import_path(href: &str, base_dir: &Path) -> error::SpannedResult<PathBuf> {
+    let href = href.strip_prefix("file://").unwrap_or(href);
+    let href_path = Path::new(href);
+    let path = if href_path.is_absolute() {
+        href_path.to_path_buf()
+    } else {
+        base_dir.join(href_path)
+    };
+    Ok(path)
+}
+
+fn map_parse_error(err: ElementError) -> error::Error {
+    match err {
+        ElementError::Attribute(attr) => map_attribute_error(attr),
+        ElementError::Unexpected { .. } | ElementError::UnexpectedEnd => error::Error::XTSE0010,
+        ElementError::ValueTemplate(_) => error::Error::XTSE0020,
+        ElementError::XPathRunTime(spanned) => spanned.error,
+        ElementError::Unsupported(reason) => error::Error::Unsupported(reason),
+        ElementError::Internal => error::Error::Unsupported(String::from("Internal XSLT error")),
+    }
+}
+
+fn map_attribute_error(err: AttributeError) -> error::Error {
+    match err {
+        AttributeError::NotFound { .. } => error::Error::XTSE0010,
+        AttributeError::Unexpected { .. } => error::Error::XTSE0090,
+        AttributeError::Invalid { .. } | AttributeError::InvalidEqName { .. } => {
+            error::Error::XTSE0020
+        }
+        AttributeError::XPathParser(err) => {
+            eprintln!("XPath parse error: {err:?}");
+            error::Error::XPST0003
+        }
+        AttributeError::ValueTemplate(_) => error::Error::XPST0003,
+        AttributeError::Internal => error::Error::Unsupported(String::from("Internal XSLT error")),
+    }
 }
 
 impl<'a> IrConverter<'a> {
@@ -47,6 +223,10 @@ impl<'a> IrConverter<'a> {
         IrConverter {
             variables: Variables::new(),
             static_context,
+            global_params: Vec::new(),
+            global_param_lookup: HashMap::new(),
+            function_lookup: HashMap::new(),
+            user_functions: None,
         }
     }
 
@@ -60,7 +240,7 @@ impl<'a> IrConverter<'a> {
                     xpath: xee_xpath_ast::ast::XPath::parse(
                         "/",
                         &Namespaces::default(),
-                        &xee_name::VariableNames::new(),
+                        &xee_name::VariableNames::default(),
                     )
                     .unwrap(),
                     span: xee_xslt_ast::ast::Span::new(0, 0),
@@ -106,27 +286,44 @@ impl<'a> IrConverter<'a> {
         })
     }
 
-    fn transform(&mut self, transform: &ast::Transform) -> error::SpannedResult<ir::Declarations> {
+    fn transform_with_imports(
+        &mut self,
+        declarations: &[DeclarationWithImport],
+    ) -> error::SpannedResult<ir::Declarations> {
+        self.collect_global_params(declarations)?;
+        self.collect_functions(declarations)?;
         let main_sequence_constructor = self.main_sequence_constructor();
-        let main = self.sequence_constructor_function(&main_sequence_constructor)?;
-        let mut declarations = ir::Declarations::new(main);
+        let main = self.sequence_constructor_function(&main_sequence_constructor, &[])?;
+        let mut ir_declarations = ir::Declarations::new(main);
 
-        for declaration in &transform.declarations {
-            self.declaration(&mut declarations, declaration)?;
+        for declaration in declarations {
+            self.declaration_with_import(
+                &mut ir_declarations,
+                &declaration.declaration,
+                declaration.import_level,
+                declaration.is_builtin,
+            )?;
         }
-        Ok(declarations)
+        ir_declarations.global_params = self.global_params.clone();
+        Ok(ir_declarations)
     }
 
-    fn declaration(
+    fn declaration_with_import(
         &mut self,
         declarations: &mut ir::Declarations,
         declaration: &ast::Declaration,
+        import_level: u32,
+        is_builtin: bool,
     ) -> error::SpannedResult<()> {
         use ast::Declaration::*;
         match declaration {
-            Template(template) => self.template(declarations, template),
+            Template(template) => self.template(declarations, template, import_level, is_builtin),
             Mode(mode) => self.mode(declarations, mode),
             Output(output) => self.output(declarations, output),
+            Param(param) => self.param_declaration(param),
+            Variable(variable) => self.variable_declaration(variable),
+            Function(function) => self.function_declaration(declarations, function),
+            Import(_) | Include(_) => Ok(()),
             _ => Err(error::Error::Unsupported(format!(
                 "Declaration not supported: {:?}",
                 declaration
@@ -139,41 +336,149 @@ impl<'a> IrConverter<'a> {
         &mut self,
         declarations: &mut ir::Declarations,
         template: &ast::Template,
+        import_level: u32,
+        is_builtin: bool,
     ) -> error::SpannedResult<()> {
+        if template.match_.is_none() && template.name.is_none() {
+            return Err(
+                error::Error::Unsupported("Template without match or name".to_string()).into(),
+            );
+        }
+
+        let context_names = self.variables.push_context();
+        let (template_params, template_ir_params) = self.template_params(&template.params)?;
+        let function_definition = self.sequence_constructor_function_with_context(
+            &context_names,
+            &template.sequence_constructor,
+            &template_ir_params,
+        )?;
+        self.variables.pop_context();
+
         if let Some(pattern) = &template.match_ {
-            let priority = if let Some(priority) = &template.priority {
-                *priority
+            let priorities = if let Some(priority) = &template.priority {
+                vec![(pattern.pattern.clone(), *priority)]
             } else {
-                let default_priorities = default_priority(&pattern.pattern).collect::<Vec<_>>();
-                if default_priorities.len() > 1 {
-                    // for now, we can't deal with multiple registration yet
-                    return Err(error::Error::Unsupported(
-                        "Default priorities splitting not supported".to_string(),
-                    )
-                    .into());
-                } else {
-                    default_priorities.first().unwrap().1
-                }
+                default_priority(&pattern.pattern)
+                    .map(|(p, d)| (p.into_owned(), d))
+                    .collect()
             };
-            let function_definition =
-                self.sequence_constructor_function(&template.sequence_constructor)?;
 
             let modes = template
                 .mode
                 .iter()
                 .map(Self::ast_mode_value_to_ir_mode_value)
-                .collect();
+                .collect::<Vec<_>>();
 
-            declarations.rules.push(ir::Rule {
-                priority,
-                modes,
-                pattern: transform_pattern(&pattern.pattern, |expr| self.pattern_predicate(expr))?,
-                function_definition,
-            });
-            Ok(())
-        } else {
-            Err(error::Error::Unsupported("Named templates not supported".to_string()).into())
+            for (pattern, priority) in priorities {
+                declarations.rules.push(ir::Rule {
+                    priority,
+                    modes: modes.clone(),
+                    import_level,
+                    is_builtin,
+                    pattern: transform_pattern(&pattern, |expr| self.pattern_predicate(expr))?,
+                    function_definition: function_definition.clone(),
+                    template_params: template_params.clone(),
+                });
+            }
         }
+
+        if let Some(name) = &template.name {
+            declarations.named_templates.push(ir::NamedTemplate {
+                name: name.clone(),
+                function_definition,
+                template_params,
+            });
+        }
+
+        Ok(())
+    }
+
+    fn sequence_constructor_function_with_context(
+        &mut self,
+        context_names: &ir::ContextNames,
+        sequence_constructor: &ast::SequenceConstructor,
+        extra_params: &[ir::Param],
+    ) -> error::SpannedResult<ir::FunctionDefinition> {
+        let bindings = self.sequence_constructor(sequence_constructor)?;
+        let mut params = vec![
+            ir::Param {
+                name: context_names.item.clone(),
+                type_: None,
+            },
+            ir::Param {
+                name: context_names.position.clone(),
+                type_: None,
+            },
+            ir::Param {
+                name: context_names.last.clone(),
+                type_: None,
+            },
+        ];
+        params.extend(self.global_param_ir_params());
+        params.extend(extra_params.iter().cloned());
+        Ok(ir::FunctionDefinition {
+            params,
+            return_type: None,
+            body: Box::new(bindings.expr()),
+        })
+    }
+
+    fn function_declaration(
+        &mut self,
+        declarations: &mut ir::Declarations,
+        function: &ast::Function,
+    ) -> error::SpannedResult<()> {
+        if function.override_
+            || function.override_extension_function
+            || function.new_each_time.is_some()
+            || function.cache
+        {
+            return Err(error::Error::Unsupported(
+                "Overridable or cached functions are not supported".to_string(),
+            )
+            .into());
+        }
+        if function.visibility.is_some() {
+            return Err(error::Error::Unsupported(
+                "Function visibility is not supported".to_string(),
+            )
+            .into());
+        }
+        if function.streamability.is_some() {
+            return Err(error::Error::Unsupported(
+                "Streamable functions are not supported".to_string(),
+            )
+            .into());
+        }
+
+        let function_params = self.function_params(&function.params)?;
+        self.variables.push_absent_context();
+        let bindings = self.sequence_constructor(&function.sequence_constructor)?;
+        self.variables.pop_context();
+
+        let mut params = function_params;
+        params.extend(self.global_param_ir_params());
+
+        let function_definition = ir::FunctionDefinition {
+            params,
+            return_type: function.as_.clone(),
+            body: Box::new(bindings.expr()),
+        };
+
+        let arity = function.params.len();
+        if arity > u8::MAX as usize {
+            return Err(error::Error::Unsupported(
+                "Function arity too large".to_string(),
+            )
+            .into());
+        }
+
+        declarations.functions.push(ir::FunctionBinding {
+            name: function.name.clone(),
+            arity: arity as u8,
+            main: function_definition,
+        });
+        Ok(())
     }
 
     fn mode(
@@ -181,7 +486,17 @@ impl<'a> IrConverter<'a> {
         declarations: &mut ir::Declarations,
         mode: &ast::Mode,
     ) -> error::SpannedResult<()> {
-        declarations.modes.insert(mode.name.clone(), ir::Mode {});
+        let on_no_match = mode.on_no_match.as_ref().map(|m| match m {
+            ast::OnNoMatch::DeepCopy => ir::OnNoMatch::DeepCopy,
+            ast::OnNoMatch::ShallowCopy => ir::OnNoMatch::ShallowCopy,
+            ast::OnNoMatch::DeepSkip => ir::OnNoMatch::DeepSkip,
+            ast::OnNoMatch::ShallowSkip => ir::OnNoMatch::ShallowSkip,
+            ast::OnNoMatch::TextOnlyCopy => ir::OnNoMatch::TextOnlyCopy,
+            ast::OnNoMatch::Fail => ir::OnNoMatch::Fail,
+        });
+        declarations
+            .modes
+            .insert(mode.name.clone(), ir::Mode { on_no_match });
         Ok(())
     }
 
@@ -309,11 +624,12 @@ impl<'a> IrConverter<'a> {
     fn sequence_constructor_function(
         &mut self,
         sequence_constructor: &ast::SequenceConstructor,
+        extra_params: &[ir::Param],
     ) -> error::SpannedResult<ir::FunctionDefinition> {
         let context_names = self.variables.push_context();
         let bindings = self.sequence_constructor(sequence_constructor)?;
         self.variables.pop_context();
-        let params = vec![
+        let mut params = vec![
             ir::Param {
                 name: context_names.item,
                 type_: None,
@@ -327,6 +643,8 @@ impl<'a> IrConverter<'a> {
                 type_: None,
             },
         ];
+        params.extend(self.global_param_ir_params());
+        params.extend(extra_params.iter().cloned());
         Ok(ir::FunctionDefinition {
             params,
             return_type: None,
@@ -338,27 +656,46 @@ impl<'a> IrConverter<'a> {
         &mut self,
         sequence_constructor: &[ast::SequenceConstructorItem],
     ) -> error::SpannedResult<Bindings> {
-        let mut items = sequence_constructor.iter();
-        let left = items.next();
-        if let Some(left) = left {
-            if let Some((name, var_bindings)) = self.variable(left)? {
+        if sequence_constructor.is_empty() {
+            let empty_sequence = self.empty_sequence();
+            return Ok(Bindings::new(
+                self.variables
+                    .new_binding(empty_sequence.value, empty_sequence.span),
+            ));
+        }
+
+        for (index, item) in sequence_constructor.iter().enumerate() {
+            if let Some((name, var_bindings)) = self.variable(item)? {
+                let rest_bindings = self.sequence_constructor(&sequence_constructor[index + 1..])?;
                 let expr = ir::Expr::Let(ir::Let {
                     name,
                     var_expr: Box::new(var_bindings.expr()),
-                    return_expr: Box::new(self.sequence_constructor(items.as_slice())?.expr()),
+                    return_expr: Box::new(rest_bindings.expr()),
                 });
-                return Ok(Bindings::new(
-                    self.variables.new_binding(expr, (0..0).into()),
-                ));
+                let let_bindings =
+                    Bindings::new(self.variables.new_binding(expr, (0..0).into()));
+                if index == 0 {
+                    return Ok(let_bindings);
+                }
+                let prefix_bindings = self.sequence_constructor_concat(
+                    &sequence_constructor[0],
+                    sequence_constructor[1..index].iter(),
+                )?;
+                let (left_atom, left_bindings) = prefix_bindings.atom_bindings();
+                let (right_atom, right_bindings) = let_bindings.atom_bindings();
+                let expr = ir::Expr::Binary(ir::Binary {
+                    left: left_atom,
+                    op: ir::BinaryOperator::Comma,
+                    right: right_atom,
+                });
+                let binding = self.variables.new_binding_no_span(expr);
+                return Ok(left_bindings.concat(right_bindings).bind(binding));
             }
-            self.sequence_constructor_concat(left, items)
-        } else {
-            let empty_sequence = self.empty_sequence();
-            Ok(Bindings::new(
-                self.variables
-                    .new_binding(empty_sequence.value, empty_sequence.span),
-            ))
         }
+
+        let mut items = sequence_constructor.iter();
+        let left = items.next().expect("sequence_constructor not empty");
+        self.sequence_constructor_concat(left, items)
     }
 
     fn sequence_constructor_concat<'b>(
@@ -401,9 +738,13 @@ impl<'a> IrConverter<'a> {
         use ast::SequenceConstructorInstruction::*;
         match instruction {
             ApplyTemplates(apply_templates) => self.apply_templates(apply_templates),
+            ApplyImports(apply_imports) => self.apply_imports(apply_imports),
+            NextMatch(next_match) => self.next_match(next_match),
+            CallTemplate(call_template) => self.call_template(call_template),
             ValueOf(value_of) => self.value_of(value_of),
             If(if_) => self.if_(if_),
             Choose(choose) => self.choose(choose),
+            Assert(assert_) => self.assert_(assert_),
             ForEach(for_each) => self.for_each(for_each),
             Iterate(iterate) => self.iterate(iterate),
             NextIteration(next_iteration) => self.next_iteration(next_iteration),
@@ -411,8 +752,10 @@ impl<'a> IrConverter<'a> {
             Copy(copy) => self.copy(copy),
             CopyOf(copy_of) => self.copy_of(copy_of),
             Sequence(sequence) => self.sequence(sequence),
+            Document(document) => self.document(document),
             Element(element) => self.element(element),
             Text(text) => self.text(text),
+            Try(try_) => self.try_(try_),
             Attribute(attribute) => self.attribute(attribute),
             Namespace(namespace) => self.namespace(namespace),
             Comment(comment) => self.comment(comment),
@@ -474,6 +817,16 @@ impl<'a> IrConverter<'a> {
         let (element_atom, mut bindings) = bindings
             .bind_expr_no_span(&mut self.variables, name_expr)
             .atom_bindings();
+        if let Some(type_name) = &element_node.type_ {
+            let xs = self.xs_type_from_eqname(type_name, element_node.span)?;
+            let set_type_expr = ir::Expr::XmlSetType(ir::XmlSetType {
+                node: element_atom.clone(),
+                xs,
+            });
+            let set_type_bindings =
+                bindings.bind_expr_no_span(&mut self.variables, set_type_expr);
+            bindings = bindings.concat(set_type_bindings);
+        }
         for (name, value) in &element_node.attributes {
             let (value_atom, value_bindings) =
                 self.attribute_value_template(value)?.atom_bindings();
@@ -500,6 +853,18 @@ impl<'a> IrConverter<'a> {
         )?;
         let bindings = bindings.concat(sequence_constructor_bindings);
         Ok(bindings)
+    }
+
+    fn xs_type_from_eqname(
+        &self,
+        type_name: &ast::EqName,
+        span: ast::Span,
+    ) -> error::SpannedResult<Xs> {
+        Xs::by_name(type_name.namespace(), type_name.local_name()).ok_or_else(|| {
+            let span = xpath_ast::Span::new(span.start, span.end);
+            error::Error::Unsupported("xsl:type only supports xs:* names".to_string())
+                .with_ast_span(span)
+        })
     }
 
     fn sequence_constructor_append(
@@ -542,13 +907,285 @@ impl<'a> IrConverter<'a> {
             ast::ApplyTemplatesModeValue::Current => ir::ApplyTemplatesModeValue::Current,
         };
 
+        let mut params = Vec::new();
+        let mut bindings = bindings;
+        for content in &apply_templates.content {
+            let with_param = match content {
+                ast::ApplyTemplatesContent::WithParam(with_param) => with_param,
+                ast::ApplyTemplatesContent::Sort(_) => {
+                    continue;
+                }
+            };
+            if with_param.tunnel {
+                return Err(error::Error::Unsupported(
+                    "Tunnel params are not supported".to_string(),
+                )
+                .into());
+            }
+            let (value_atom, value_bindings) =
+                self.with_param_value_atom(with_param)?.atom_bindings();
+            bindings = bindings.concat(value_bindings);
+            params.push(ir::WithParam {
+                name: with_param.name.clone(),
+                value: value_atom,
+            });
+        }
+
         Ok(bindings.bind_expr_no_span(
             &mut self.variables,
             ir::Expr::ApplyTemplates(ir::ApplyTemplates {
                 mode,
                 select: select_atom,
+                params,
             }),
         ))
+    }
+
+    fn apply_imports(
+        &mut self,
+        apply_imports: &ast::ApplyImports,
+    ) -> error::SpannedResult<Bindings> {
+        let mut params = Vec::new();
+        let mut bindings = Bindings::empty();
+        for with_param in &apply_imports.with_params {
+            if with_param.tunnel {
+                return Err(error::Error::Unsupported(
+                    "Tunnel params are not supported".to_string(),
+                )
+                .into());
+            }
+            let (value_atom, value_bindings) =
+                self.with_param_value_atom(with_param)?.atom_bindings();
+            bindings = bindings.concat(value_bindings);
+            params.push(ir::WithParam {
+                name: with_param.name.clone(),
+                value: value_atom,
+            });
+        }
+
+        Ok(bindings.bind_expr_no_span(
+            &mut self.variables,
+            ir::Expr::ApplyImports(ir::ApplyImports { params }),
+        ))
+    }
+
+    fn next_match(&mut self, next_match: &ast::NextMatch) -> error::SpannedResult<Bindings> {
+        let mut params = Vec::new();
+        let mut bindings = Bindings::empty();
+        for content in &next_match.content {
+            let with_param = match content {
+                ast::NextMatchContent::WithParam(with_param) => with_param,
+                ast::NextMatchContent::Fallback(_) => {
+                    return Err(error::Error::Unsupported(
+                        "xsl:fallback not supported".to_string(),
+                    )
+                    .into());
+                }
+            };
+            if with_param.tunnel {
+                return Err(error::Error::Unsupported(
+                    "Tunnel params are not supported".to_string(),
+                )
+                .into());
+            }
+            let (value_atom, value_bindings) =
+                self.with_param_value_atom(with_param)?.atom_bindings();
+            bindings = bindings.concat(value_bindings);
+            params.push(ir::WithParam {
+                name: with_param.name.clone(),
+                value: value_atom,
+            });
+        }
+
+        Ok(bindings.bind_expr_no_span(
+            &mut self.variables,
+            ir::Expr::NextMatch(ir::NextMatch { params }),
+        ))
+    }
+
+    fn call_template(
+        &mut self,
+        call_template: &ast::CallTemplate,
+    ) -> error::SpannedResult<Bindings> {
+        let mut params = Vec::new();
+        let mut bindings = Bindings::empty();
+        for with_param in &call_template.with_params {
+            if with_param.tunnel {
+                return Err(error::Error::Unsupported(
+                    "Tunnel params are not supported".to_string(),
+                )
+                .into());
+            }
+            let (value_atom, value_bindings) =
+                self.with_param_value_atom(with_param)?.atom_bindings();
+            bindings = bindings.concat(value_bindings);
+            params.push(ir::WithParam {
+                name: with_param.name.clone(),
+                value: value_atom,
+            });
+        }
+
+        Ok(bindings.bind_expr_no_span(
+            &mut self.variables,
+            ir::Expr::CallTemplate(ir::CallTemplate {
+                name: call_template.name.clone(),
+                params,
+            }),
+        ))
+    }
+
+    fn try_(&mut self, try_: &ast::Try) -> error::SpannedResult<Bindings> {
+        let try_body = self.select_or_sequence_constructor_function(
+            try_.select.as_ref(),
+            &try_.sequence_constructor,
+        )?;
+
+        let mut catches = Vec::new();
+        catches.push(self.catch_clause(&try_.catch)?);
+
+        for entry in &try_.catches {
+            match entry {
+                ast::TryCatchOrFallback::Catch(catch) => {
+                    catches.push(self.catch_clause(catch)?);
+                }
+                ast::TryCatchOrFallback::Fallback(_) => {
+                    return Err(error::Error::Unsupported(
+                        "xsl:fallback in xsl:try is not supported".to_string(),
+                    )
+                    .into());
+                }
+            }
+        }
+
+        let expr = ir::Expr::TryCatch(ir::TryCatch {
+            try_body,
+            catches,
+            rollback_output: try_.rollback_output.unwrap_or(true),
+        });
+
+        Ok(Bindings::new(self.variables.new_binding_no_span(expr)))
+    }
+
+    fn catch_clause(&mut self, catch: &ast::Catch) -> error::SpannedResult<ir::CatchClause> {
+        let errors = self.parse_catch_errors(catch.errors.as_ref())?;
+        let body = self.select_or_sequence_constructor_function(
+            catch.select.as_ref(),
+            &catch.sequence_constructor,
+        )?;
+        Ok(ir::CatchClause { errors, body })
+    }
+
+    fn select_or_sequence_constructor_function(
+        &mut self,
+        select: Option<&ast::Expression>,
+        sequence_constructor: &ast::SequenceConstructor,
+    ) -> error::SpannedResult<ir::FunctionDefinition> {
+        if let Some(select) = select {
+            self.expression_function(select)
+        } else {
+            self.sequence_constructor_function(sequence_constructor, &[])
+        }
+    }
+
+    fn expression_function(
+        &mut self,
+        expression: &ast::Expression,
+    ) -> error::SpannedResult<ir::FunctionDefinition> {
+        let context_names = self.variables.push_context();
+        let bindings = self.expression(expression)?;
+        self.variables.pop_context();
+        let mut params = vec![
+            ir::Param {
+                name: context_names.item,
+                type_: None,
+            },
+            ir::Param {
+                name: context_names.position,
+                type_: None,
+            },
+            ir::Param {
+                name: context_names.last,
+                type_: None,
+            },
+        ];
+        params.extend(self.global_param_ir_params());
+        Ok(ir::FunctionDefinition {
+            params,
+            return_type: None,
+            body: Box::new(bindings.expr()),
+        })
+    }
+
+    fn parse_catch_errors(
+        &self,
+        errors: Option<&Vec<ast::Token>>,
+    ) -> error::SpannedResult<Vec<CatchError>> {
+        let errors = match errors {
+            Some(errors) if !errors.is_empty() => errors,
+            _ => return Ok(vec![CatchError::Any]),
+        };
+        let mut result = Vec::with_capacity(errors.len());
+        for token in errors {
+            result.push(self.parse_catch_error_token(token)?);
+        }
+        Ok(result)
+    }
+
+    fn parse_catch_error_token(&self, token: &str) -> error::SpannedResult<CatchError> {
+        let token = token.trim();
+        if token == "*" || token == "*:*" {
+            return Ok(CatchError::Any);
+        }
+        if let Some(local) = token.strip_prefix("*:") {
+            return Ok(CatchError::Local(local.to_string()));
+        }
+        if let Some(prefix) = token.strip_suffix(":*") {
+            let namespace = self
+                .static_context
+                .namespaces()
+                .by_prefix(prefix)
+                .ok_or_else(|| {
+                    error::Error::Unsupported(format!(
+                        "Unknown namespace prefix in xsl:catch errors: {token}"
+                    ))
+                })?;
+            return Ok(CatchError::Namespace(namespace.to_string()));
+        }
+        if let Some(qname) = token.strip_prefix("Q{") {
+            if let Some(end) = qname.find('}') {
+                let namespace = &qname[..end];
+                let local = &qname[end + 1..];
+                if local == "*" {
+                    return Ok(CatchError::Namespace(namespace.to_string()));
+                }
+                if local.is_empty() {
+                    return Err(error::Error::Unsupported(format!(
+                        "Invalid xsl:catch errors token: {token}"
+                    ))
+                    .into());
+                }
+                return Ok(CatchError::Name(Name::new(
+                    local.to_string(),
+                    namespace.to_string(),
+                    String::new(),
+                )));
+            }
+        }
+        if !token.contains(':') {
+            return Ok(CatchError::Name(Name::new(
+                token.to_string(),
+                String::new(),
+                String::new(),
+            )));
+        }
+
+        match parse_name(token, self.static_context.namespaces()) {
+            Ok(spanned) => Ok(CatchError::Name(spanned.value)),
+            Err(_) => Err(error::Error::Unsupported(format!(
+                "Invalid xsl:catch errors token: {token}"
+            ))
+            .into()),
+        }
     }
 
     fn select_or_sequence_constructor(
@@ -559,6 +1196,88 @@ impl<'a> IrConverter<'a> {
             self.expression(select)
         } else {
             self.sequence_constructor(instruction.sequence_constructor())
+        }
+    }
+
+    fn sequence_constructor_document(
+        &mut self,
+        sequence_constructor: &ast::SequenceConstructor,
+    ) -> error::SpannedResult<Bindings> {
+        let doc_expr = ir::Expr::XmlDocument(ir::XmlRoot {});
+        let (doc_atom, mut bindings) = Bindings::new(self.variables.new_binding_no_span(doc_expr))
+            .atom_bindings();
+        if !sequence_constructor.is_empty() {
+            let (child_atom, child_bindings) =
+                self.sequence_constructor(sequence_constructor)?.atom_bindings();
+            bindings = bindings.concat(child_bindings);
+            let append = ir::Expr::XmlAppend(ir::XmlAppend {
+                parent: doc_atom,
+                child: child_atom,
+            });
+            bindings = bindings.bind_expr_no_span(&mut self.variables, append);
+        }
+        Ok(bindings)
+    }
+
+    fn sequence_constructor_has_content(sequence_constructor: &ast::SequenceConstructor) -> bool {
+        sequence_constructor.iter().any(|item| {
+            matches!(item, ast::SequenceConstructorItem::Content(_))
+        })
+    }
+
+    fn with_param_value_atom(
+        &mut self,
+        with_param: &ast::WithParam,
+    ) -> error::SpannedResult<Bindings> {
+        if let Some(as_) = &with_param.as_ {
+            if let Some(occurrence) = Self::string_sequence_occurrence(as_) {
+                match occurrence {
+                    xpath_ast::Occurrence::One => {
+                        return self.select_or_sequence_constructor_simple_content(with_param);
+                    }
+                    xpath_ast::Occurrence::Option => {
+                        if with_param.select.is_some()
+                            || !with_param.sequence_constructor.is_empty()
+                        {
+                            return self.select_or_sequence_constructor_simple_content(with_param);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        if with_param.select.is_none()
+            && with_param.sequence_constructor.is_empty()
+            && with_param.as_.is_none()
+        {
+            return Ok(Bindings::new(self.variables.new_binding_no_span(ir::Expr::Atom(
+                Spanned::new(
+                    ir::Atom::Const(ir::Const::String(String::new())),
+                    (0..0).into(),
+                ),
+            ))));
+        }
+        if with_param.select.is_none()
+            && !with_param.sequence_constructor.is_empty()
+            && Self::sequence_constructor_has_content(&with_param.sequence_constructor)
+        {
+            return self.sequence_constructor_document(&with_param.sequence_constructor);
+        }
+        self.select_or_sequence_constructor(with_param)
+    }
+
+    fn string_sequence_occurrence(
+        sequence_type: &xpath_ast::SequenceType,
+    ) -> Option<xpath_ast::Occurrence> {
+        match sequence_type {
+            xpath_ast::SequenceType::Item(item) => {
+                matches!(
+                    item.item_type,
+                    xpath_ast::ItemType::AtomicOrUnionType(Xs::String)
+                )
+                .then_some(item.occurrence)
+            }
+            _ => None,
         }
     }
 
@@ -610,6 +1329,118 @@ impl<'a> IrConverter<'a> {
             &mut self.variables,
             ir::Expr::XmlText(ir::XmlText { value: text_atom }),
         ))
+    }
+
+    fn assert_error_expr(&mut self, assert_: &ast::Assert) -> error::SpannedResult<ir::ExprS> {
+        let (code_atom, code_bindings) = self.assert_error_code(assert_)?.atom_bindings();
+        let (message_atom, message_bindings) = self.assert_message(assert_)?.atom_bindings();
+        let bindings = code_bindings.concat(message_bindings);
+        let error_atom = self.static_function_atom("error", FN_NAMESPACE, 2);
+        let expr = ir::Expr::FunctionCall(ir::FunctionCall {
+            atom: Spanned::new(error_atom, (0..0).into()),
+            args: vec![code_atom, message_atom],
+        });
+        Ok(bindings
+            .bind_expr_no_span(&mut self.variables, expr)
+            .expr())
+    }
+
+    fn assert_error_code(&mut self, assert_: &ast::Assert) -> error::SpannedResult<Bindings> {
+        let (namespace, local) = if let Some(error_code) = &assert_.error_code {
+            let literal = self
+                .value_template_literal(error_code)
+                .ok_or_else(|| {
+                    error::Error::Unsupported(
+                        "xsl:assert error-code must be a literal in this implementation"
+                            .to_string(),
+                    )
+                })?;
+            self.parse_error_code_literal(&literal)?
+        } else {
+            (
+                "http://www.w3.org/2005/xqt-errors".to_string(),
+                "XTMM9001".to_string(),
+            )
+        };
+
+        Ok(self.qname_expr(&namespace, &local))
+    }
+
+    fn assert_message(&mut self, assert_: &ast::Assert) -> error::SpannedResult<Bindings> {
+        let (select_atom, bindings) = if let Some(select) = &assert_.select {
+            self.expression(select)?.atom_bindings()
+        } else {
+            self.sequence_constructor(&assert_.sequence_constructor)?
+                .atom_bindings()
+        };
+
+        let expr = self.simple_content_expr(select_atom, self.space_separator_atom());
+        Ok(bindings.bind_expr_no_span(&mut self.variables, expr))
+    }
+
+    fn qname_expr(&mut self, namespace: &str, qname: &str) -> Bindings {
+        let namespace_atom = Spanned::new(
+            ir::Atom::Const(ir::Const::String(namespace.to_string())),
+            (0..0).into(),
+        );
+        let qname_atom = Spanned::new(
+            ir::Atom::Const(ir::Const::String(qname.to_string())),
+            (0..0).into(),
+        );
+        let qname_fn = self.static_function_atom("QName", FN_NAMESPACE, 2);
+        let expr = ir::Expr::FunctionCall(ir::FunctionCall {
+            atom: Spanned::new(qname_fn, (0..0).into()),
+            args: vec![namespace_atom, qname_atom],
+        });
+        Bindings::new(self.variables.new_binding_no_span(expr))
+    }
+
+    fn value_template_literal<T>(&self, template: &ast::ValueTemplate<T>) -> Option<String>
+    where
+        T: Clone + PartialEq + Eq,
+    {
+        let mut out = String::new();
+        for item in &template.template {
+            match item {
+                ast::ValueTemplateItem::String { text, .. } => out.push_str(text),
+                ast::ValueTemplateItem::Curly { c } => out.push(*c),
+                ast::ValueTemplateItem::Value { .. } => return None,
+            }
+        }
+        Some(out)
+    }
+
+    fn parse_error_code_literal(&self, value: &str) -> error::SpannedResult<(String, String)> {
+        if let Some(rest) = value.strip_prefix("Q{") {
+            if let Some(end) = rest.find('}') {
+                let namespace = rest[..end].to_string();
+                let local = rest[end + 1..].to_string();
+                if local.is_empty() {
+                    return Err(error::Error::Unsupported(format!(
+                        "Invalid error-code EQName: {}",
+                        value
+                    ))
+                    .into());
+                }
+                return Ok((namespace, local));
+            }
+        }
+
+        let local = value
+            .rsplit_once(':')
+            .map(|(_, local)| local)
+            .unwrap_or(value)
+            .to_string();
+
+        if local.is_empty() {
+            return Err(error::Error::Unsupported(format!(
+                "Invalid error-code EQName: {}",
+                value
+            ))
+            .into());
+        }
+
+        Ok((String::new(), local))
     }
 
     fn attribute_value_template(
@@ -723,6 +1554,26 @@ impl<'a> IrConverter<'a> {
 
     fn choose(&mut self, choose: &ast::Choose) -> error::SpannedResult<Bindings> {
         self.choose_when_otherwise(&choose.when, choose.otherwise.as_ref())
+    }
+
+    fn assert_(&mut self, assert_: &ast::Assert) -> error::SpannedResult<Bindings> {
+        if !self.static_context.assertions_enabled() {
+            let empty = self.empty_sequence().value;
+            return Ok(Bindings::empty().bind_expr_no_span(
+                &mut self.variables,
+                empty,
+            ));
+        }
+        let (condition, bindings) = self.expression(&assert_.test)?.atom_bindings();
+        let error_expr = self.assert_error_expr(assert_)?;
+
+        let expr = ir::Expr::If(ir::If {
+            condition,
+            then: Box::new(self.empty_sequence()),
+            else_: Box::new(error_expr),
+        });
+
+        Ok(bindings.bind_expr_no_span(&mut self.variables, expr))
     }
 
     fn choose_when_otherwise(
@@ -864,9 +1715,21 @@ impl<'a> IrConverter<'a> {
         let expr = ir::Expr::CopyShallow(ir::CopyShallow {
             select: context_atom,
         });
-        let (copy_atom, bindings) = bindings
+        let (mut copy_atom, mut bindings) = bindings
             .bind_expr_no_span(&mut self.variables, expr)
             .atom_bindings();
+        if let Some(type_name) = &copy.type_ {
+            let xs = self.xs_type_from_eqname(type_name, copy.span)?;
+            let set_type_expr = ir::Expr::XmlSetType(ir::XmlSetType {
+                node: copy_atom.clone(),
+                xs,
+            });
+            let (typed_atom, set_type_bindings) = bindings
+                .bind_expr_no_span(&mut self.variables, set_type_expr)
+                .atom_bindings();
+            bindings = set_type_bindings;
+            copy_atom = typed_atom;
+        }
 
         // if it is an element or document,
         // execute sequence constructor
@@ -922,7 +1785,51 @@ impl<'a> IrConverter<'a> {
     fn copy_of(&mut self, copy_of: &ast::CopyOf) -> error::SpannedResult<Bindings> {
         let (atom, bindings) = self.expression(&copy_of.select)?.atom_bindings();
         let copy_deep_expr = ir::Expr::CopyDeep(ir::CopyDeep { select: atom });
-        Ok(bindings.bind_expr_no_span(&mut self.variables, copy_deep_expr))
+        let (copy_atom, mut bindings) = bindings
+            .bind_expr_no_span(&mut self.variables, copy_deep_expr)
+            .atom_bindings();
+        if let Some(type_name) = &copy_of.type_ {
+            let xs = self.xs_type_from_eqname(type_name, copy_of.span)?;
+            let set_type_expr = ir::Expr::XmlSetType(ir::XmlSetType {
+                node: copy_atom.clone(),
+                xs,
+            });
+            let (_typed_atom, set_type_bindings) = bindings
+                .bind_expr_no_span(&mut self.variables, set_type_expr)
+                .atom_bindings();
+            bindings = set_type_bindings;
+        }
+        Ok(bindings)
+    }
+
+    fn document(&mut self, document: &ast::Document) -> error::SpannedResult<Bindings> {
+        let doc_expr = ir::Expr::XmlDocument(ir::XmlRoot {});
+        let (mut doc_atom, mut bindings) =
+            Bindings::new(self.variables.new_binding_no_span(doc_expr)).atom_bindings();
+        if let Some(type_name) = &document.type_ {
+            let xs = self.xs_type_from_eqname(type_name, document.span)?;
+            let set_type_expr = ir::Expr::XmlSetType(ir::XmlSetType {
+                node: doc_atom.clone(),
+                xs,
+            });
+            let (typed_atom, set_type_bindings) = bindings
+                .bind_expr_no_span(&mut self.variables, set_type_expr)
+                .atom_bindings();
+            bindings = set_type_bindings;
+            doc_atom = typed_atom;
+        }
+        if !document.sequence_constructor.is_empty() {
+            let (child_atom, child_bindings) = self
+                .sequence_constructor(&document.sequence_constructor)?
+                .atom_bindings();
+            bindings = bindings.concat(child_bindings);
+            let append = ir::Expr::XmlAppend(ir::XmlAppend {
+                parent: doc_atom,
+                child: child_atom,
+            });
+            bindings = bindings.bind_expr_no_span(&mut self.variables, append);
+        }
+        Ok(bindings)
     }
 
     fn sequence(&mut self, sequence: &ast::Sequence) -> error::SpannedResult<Bindings> {
@@ -978,9 +1885,21 @@ impl<'a> IrConverter<'a> {
             .atom_bindings();
 
         let expr = ir::Expr::XmlElement(ir::XmlElement { name: name_atom });
-        let (element_atom, bindings) = bindings
+        let (mut element_atom, mut bindings) = bindings
             .bind_expr_no_span(&mut self.variables, expr)
             .atom_bindings();
+        if let Some(type_name) = &element.type_ {
+            let xs = self.xs_type_from_eqname(type_name, element.span)?;
+            let set_type_expr = ir::Expr::XmlSetType(ir::XmlSetType {
+                node: element_atom.clone(),
+                xs,
+            });
+            let (typed_atom, set_type_bindings) = bindings
+                .bind_expr_no_span(&mut self.variables, set_type_expr)
+                .atom_bindings();
+            bindings = set_type_bindings;
+            element_atom = typed_atom;
+        }
         let sequence_constructor_bindings =
             self.sequence_constructor_append(element_atom, &element.sequence_constructor)?;
         Ok(bindings.concat(sequence_constructor_bindings))
@@ -1007,13 +1926,25 @@ impl<'a> IrConverter<'a> {
             )?
             .atom_bindings();
         let bindings = name_bindings.concat(text_bindings);
-        Ok(bindings.bind_expr_no_span(
-            &mut self.variables,
-            ir::Expr::XmlAttribute(ir::XmlAttribute {
-                name: name_atom,
-                value: text_atom,
-            }),
-        ))
+        let attribute_expr = ir::Expr::XmlAttribute(ir::XmlAttribute {
+            name: name_atom,
+            value: text_atom,
+        });
+        let (attribute_atom, mut bindings) = bindings
+            .bind_expr_no_span(&mut self.variables, attribute_expr)
+            .atom_bindings();
+        if let Some(type_name) = &attribute.type_ {
+            let xs = self.xs_type_from_eqname(type_name, attribute.span)?;
+            let set_type_expr = ir::Expr::XmlSetType(ir::XmlSetType {
+                node: attribute_atom.clone(),
+                xs,
+            });
+            let (_typed_atom, set_type_bindings) = bindings
+                .bind_expr_no_span(&mut self.variables, set_type_expr)
+                .atom_bindings();
+            bindings = set_type_bindings;
+        }
+        Ok(bindings)
     }
 
     fn namespace(&mut self, namespace: &ast::Namespace) -> error::SpannedResult<Bindings> {
@@ -1073,8 +2004,15 @@ impl<'a> IrConverter<'a> {
     }
 
     fn xpath(&mut self, xpath: &xee_xpath_ast::ast::ExprS) -> error::SpannedResult<Bindings> {
-        let mut ir_converter =
-            xee_xpath_compiler::IrConverter::new(&mut self.variables, self.static_context);
+        let mut ir_converter = if let Some(user_functions) = &self.user_functions {
+            xee_xpath_compiler::IrConverter::new_with_user_functions(
+                &mut self.variables,
+                self.static_context,
+                user_functions.clone(),
+            )
+        } else {
+            xee_xpath_compiler::IrConverter::new(&mut self.variables, self.static_context)
+        };
         ir_converter.expr(xpath)
     }
 
@@ -1096,7 +2034,7 @@ impl<'a> IrConverter<'a> {
         });
         let bindings = bindings.bind_expr(&mut self.variables, Spanned::new(filter, (0..0).into()));
 
-        let params = vec![
+        let mut params = vec![
             ir::Param {
                 name: context_names.item,
                 type_: None,
@@ -1110,11 +2048,276 @@ impl<'a> IrConverter<'a> {
                 type_: None,
             },
         ];
+        params.extend(self.global_param_ir_params());
 
         Ok(ir::FunctionDefinition {
             params,
             return_type: None,
             body: Box::new(bindings.expr()),
         })
+    }
+
+    fn template_params(
+        &mut self,
+        params: &[ast::Param],
+    ) -> error::SpannedResult<(Vec<ir::TemplateParam>, Vec<ir::Param>)> {
+        let mut template_params = Vec::new();
+        let mut template_ir_params = Vec::new();
+        let mut seen = HashSet::new();
+
+        for param in params {
+            if param.static_ {
+                return Err(error::Error::Unsupported(
+                    "Static template params are not supported".to_string(),
+                )
+                .into());
+            }
+            if param.tunnel {
+                return Err(error::Error::Unsupported(
+                    "Tunnel params are not supported".to_string(),
+                )
+                .into());
+            }
+            if !seen.insert(param.name.clone()) {
+                return Err(error::Error::Unsupported(
+                    "Duplicate template param names are not supported".to_string(),
+                )
+                .into());
+            }
+            if param.required
+                && (param.select.is_some() || !param.sequence_constructor.is_empty())
+            {
+                return Err(error::SpannedError {
+                    error: error::Error::XTSE0010,
+                    span: Some((param.span.start..param.span.end).into()),
+                });
+            }
+
+            let default_expr = if let Some(select) = &param.select {
+                Some(self.expression(select)?.expr())
+            } else if !param.sequence_constructor.is_empty() {
+                if Self::sequence_constructor_has_content(&param.sequence_constructor) {
+                    Some(
+                        self.sequence_constructor_document(&param.sequence_constructor)?
+                            .expr(),
+                    )
+                } else {
+                    Some(self.sequence_constructor(&param.sequence_constructor)?.expr())
+                }
+            } else {
+                None
+            };
+            let var_name = self.variables.new_var_name(&param.name);
+            template_params.push(ir::TemplateParam {
+                name: param.name.clone(),
+                var_name: var_name.clone(),
+                required: param.required,
+                default_expr,
+                type_: param.as_.clone(),
+            });
+            template_ir_params.push(ir::Param {
+                name: var_name,
+                type_: param.as_.clone(),
+            });
+        }
+
+        Ok((template_params, template_ir_params))
+    }
+
+    fn function_params(&mut self, params: &[ast::Param]) -> error::SpannedResult<Vec<ir::Param>> {
+        let mut function_params = Vec::new();
+        let mut seen = HashSet::new();
+
+        for param in params {
+            if param.static_ {
+                return Err(error::Error::Unsupported(
+                    "Static function params are not supported".to_string(),
+                )
+                .into());
+            }
+            if param.tunnel {
+                return Err(error::Error::Unsupported(
+                    "Tunnel function params are not supported".to_string(),
+                )
+                .into());
+            }
+            if param.select.is_some() || !param.sequence_constructor.is_empty() {
+                return Err(error::Error::Unsupported(
+                    "Function param defaults are not supported".to_string(),
+                )
+                .into());
+            }
+            if !seen.insert(param.name.clone()) {
+                return Err(error::Error::Unsupported(
+                    "Duplicate function param names are not supported".to_string(),
+                )
+                .into());
+            }
+
+            let var_name = self.variables.new_var_name(&param.name);
+            function_params.push(ir::Param {
+                name: var_name,
+                type_: param.as_.clone(),
+            });
+        }
+
+        Ok(function_params)
+    }
+
+    fn collect_global_params(
+        &mut self,
+        declarations: &[DeclarationWithImport],
+    ) -> error::SpannedResult<()> {
+        for declaration in declarations {
+            match &declaration.declaration {
+                ast::Declaration::Param(param) => {
+                    if param.static_ {
+                        continue;
+                    }
+                    if self.global_param_lookup.contains_key(&param.name) {
+                        continue;
+                    }
+                    let var_name = self.variables.new_var_name(&param.name);
+                    let index = self.global_params.len();
+                    self.global_param_lookup.insert(param.name.clone(), index);
+                    self.global_params.push(ir::GlobalParam {
+                        name: param.name.clone(),
+                        var_name,
+                        required: param.required,
+                        overrideable: true,
+                        default_expr: None,
+                    });
+                }
+                ast::Declaration::Variable(variable) => {
+                    if variable.static_ {
+                        continue;
+                    }
+                    if self.global_param_lookup.contains_key(&variable.name) {
+                        continue;
+                    }
+                    let var_name = self.variables.new_var_name(&variable.name);
+                    let index = self.global_params.len();
+                    self.global_param_lookup.insert(variable.name.clone(), index);
+                    self.global_params.push(ir::GlobalParam {
+                        name: variable.name.clone(),
+                        var_name,
+                        required: false,
+                        overrideable: false,
+                        default_expr: None,
+                    });
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    fn collect_functions(
+        &mut self,
+        declarations: &[DeclarationWithImport],
+    ) -> error::SpannedResult<()> {
+        for declaration in declarations {
+            if let ast::Declaration::Function(function) = &declaration.declaration {
+                let arity = function.params.len();
+                if arity > u8::MAX as usize {
+                    return Err(error::Error::Unsupported(
+                        "Function arity too large".to_string(),
+                    )
+                    .into());
+                }
+                let key = (function.name.clone(), arity as u8);
+                if self.function_lookup.contains_key(&key) {
+                    return Err(error::Error::Unsupported(
+                        "Duplicate function declaration".to_string(),
+                    )
+                    .into());
+                }
+                let index = self.function_lookup.len();
+                self.function_lookup.insert(key, index);
+            }
+        }
+        if !self.function_lookup.is_empty() {
+            self.user_functions = Some(UserFunctions::new(
+                self.function_lookup.clone(),
+                self.global_param_names(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn param_declaration(&mut self, param: &ast::Param) -> error::SpannedResult<()> {
+        if param.static_ {
+            return Ok(());
+        }
+        if param.required && (param.select.is_some() || !param.sequence_constructor.is_empty()) {
+            return Err(error::SpannedError {
+                error: error::Error::XTSE0010,
+                span: Some((param.span.start..param.span.end).into()),
+            });
+        }
+        let default_expr = if let Some(select) = &param.select {
+            Some(self.expression(select)?.expr())
+        } else if !param.sequence_constructor.is_empty() {
+            if Self::sequence_constructor_has_content(&param.sequence_constructor) {
+                Some(
+                    self.sequence_constructor_document(&param.sequence_constructor)?
+                        .expr(),
+                )
+            } else {
+                Some(self.sequence_constructor(&param.sequence_constructor)?.expr())
+            }
+        } else {
+            None
+        };
+        if let Some(index) = self.global_param_lookup.get(&param.name).copied() {
+            if let Some(entry) = self.global_params.get_mut(index) {
+                entry.required = param.required;
+                entry.default_expr = default_expr;
+            }
+        }
+        Ok(())
+    }
+
+    fn variable_declaration(&mut self, variable: &ast::Variable) -> error::SpannedResult<()> {
+        if variable.static_ {
+            return Ok(());
+        }
+        let default_expr = if let Some(select) = &variable.select {
+            Some(self.expression(select)?.expr())
+        } else if !variable.sequence_constructor.is_empty() {
+            if Self::sequence_constructor_has_content(&variable.sequence_constructor) {
+                Some(
+                    self.sequence_constructor_document(&variable.sequence_constructor)?
+                        .expr(),
+                )
+            } else {
+                Some(self.sequence_constructor(&variable.sequence_constructor)?.expr())
+            }
+        } else {
+            None
+        };
+        if let Some(index) = self.global_param_lookup.get(&variable.name).copied() {
+            if let Some(entry) = self.global_params.get_mut(index) {
+                entry.default_expr = default_expr;
+            }
+        }
+        Ok(())
+    }
+
+    fn global_param_ir_params(&self) -> Vec<ir::Param> {
+        self.global_params
+            .iter()
+            .map(|param| ir::Param {
+                name: param.var_name.clone(),
+                type_: None,
+            })
+            .collect()
+    }
+
+    fn global_param_names(&self) -> Vec<ir::Name> {
+        self.global_params
+            .iter()
+            .map(|param| param.var_name.clone())
+            .collect()
     }
 }
