@@ -51,11 +51,19 @@ impl KnownDependencies {
 impl Dependency {
     pub(crate) fn load<'a>(queries: &'a Queries) -> Result<impl Query<Vec<Vec<Dependency>>> + 'a> {
         let satisfied_query = queries.option("@satisfied/string()", convert_string)?;
+        let satisfied_query_dep = satisfied_query.clone();
+        let satisfied_query_enable = satisfied_query.clone();
         let type_query = queries.one("@type/string()", convert_string)?;
         let value_query = queries.one("@value/string()", convert_string)?;
+        let satisfied_query_dep_direct = satisfied_query_dep.clone();
+        let satisfied_query_dep_nested = satisfied_query_dep.clone();
+        let type_query_direct = type_query.clone();
+        let type_query_nested = type_query.clone();
+        let value_query_direct = value_query.clone();
+        let value_query_nested = value_query.clone();
 
-        let dependency_query = queries.many("dependency", move |session, item| {
-            let satisfied = satisfied_query.execute(session, item)?;
+        let dependency_query_direct = queries.many("dependency", move |session, item| {
+            let satisfied = satisfied_query_dep_direct.execute(session, item)?;
             let satisfied = if let Some(satisfied) = satisfied {
                 if satisfied == "true" {
                     true
@@ -67,9 +75,9 @@ impl Dependency {
             } else {
                 true
             };
-            let value = value_query.execute(session, item)?;
+            let value = value_query_direct.execute(session, item)?;
             let values = value.split(' ');
-            let type_ = type_query.execute(session, item)?;
+            let type_ = type_query_direct.execute(session, item)?;
             Ok(values
                 .map(|value| Dependency {
                     spec: DependencySpec {
@@ -80,7 +88,88 @@ impl Dependency {
                 })
                 .collect::<Vec<Dependency>>())
         })?;
-        Ok(dependency_query)
+        let dependency_query_nested = queries.many("dependencies/dependency", move |session, item| {
+            let satisfied = satisfied_query_dep_nested.execute(session, item)?;
+            let satisfied = if let Some(satisfied) = satisfied {
+                if satisfied == "true" {
+                    true
+                } else if satisfied == "false" {
+                    false
+                } else {
+                    panic!("Unexpected satisfied value: {:?}", satisfied);
+                }
+            } else {
+                true
+            };
+            let value = value_query_nested.execute(session, item)?;
+            let values = value.split(' ');
+            let type_ = type_query_nested.execute(session, item)?;
+            Ok(values
+                .map(|value| Dependency {
+                    spec: DependencySpec {
+                        type_: type_.clone(),
+                        value: value.to_string(),
+                    },
+                    satisfied,
+                })
+                .collect::<Vec<Dependency>>())
+        })?;
+        let satisfied_query_enable_direct = satisfied_query_enable.clone();
+        let satisfied_query_enable_nested = satisfied_query_enable.clone();
+        let enable_assertions_query_direct =
+            queries.many("enable_assertions", move |session, item| {
+                let satisfied = satisfied_query_enable_direct.execute(session, item)?;
+                let satisfied = if let Some(satisfied) = satisfied {
+                    if satisfied == "true" {
+                        true
+                    } else if satisfied == "false" {
+                        false
+                    } else {
+                        panic!("Unexpected satisfied value: {:?}", satisfied);
+                    }
+                } else {
+                    true
+                };
+                Ok(vec![Dependency {
+                    spec: DependencySpec {
+                        type_: "feature".to_string(),
+                        value: "enable_assertions".to_string(),
+                    },
+                    satisfied,
+                }])
+            })?;
+        let enable_assertions_query_nested =
+            queries.many("dependencies/enable_assertions", move |session, item| {
+                let satisfied = satisfied_query_enable_nested.execute(session, item)?;
+                let satisfied = if let Some(satisfied) = satisfied {
+                    if satisfied == "true" {
+                        true
+                    } else if satisfied == "false" {
+                        false
+                    } else {
+                        panic!("Unexpected satisfied value: {:?}", satisfied);
+                    }
+                } else {
+                    true
+                };
+                Ok(vec![Dependency {
+                    spec: DependencySpec {
+                        type_: "feature".to_string(),
+                        value: "enable_assertions".to_string(),
+                    },
+                    satisfied,
+                }])
+            })?;
+        Ok(queries.one(".", move |session, item| {
+            let mut deps = dependency_query_direct.execute(session, item)?;
+            let mut nested = dependency_query_nested.execute(session, item)?;
+            deps.append(&mut nested);
+            let mut enable = enable_assertions_query_direct.execute(session, item)?;
+            let mut enable_nested = enable_assertions_query_nested.execute(session, item)?;
+            enable.append(&mut enable_nested);
+            deps.append(&mut enable);
+            Ok(deps)
+        })?)
     }
 }
 
@@ -110,11 +199,22 @@ impl Dependencies {
     pub(crate) fn is_feature_supported(&self, known_dependencies: &KnownDependencies) -> bool {
         for dependency in &self.dependencies {
             // if a listed feature dependency is not supported, we don't support this
-            if dependency.spec.type_ == "feature" && !known_dependencies.is_supported(dependency) {
+            if dependency.spec.type_ == "feature"
+                && dependency.spec.value != "enable_assertions"
+                && !known_dependencies.is_supported(dependency)
+            {
                 return false;
             }
         }
         true
+    }
+
+    pub(crate) fn is_feature_disabled(&self, value: &str) -> bool {
+        self.dependencies.iter().any(|dependency| {
+            dependency.spec.type_ == "feature"
+                && dependency.spec.value == value
+                && !dependency.satisfied
+        })
     }
 
     // the XML version is supported if the xml-version is the same

@@ -38,7 +38,14 @@ Not yet:
 
 ## xsl:assert
 
-TODO
+Basic support:
+
+- Evaluates `test`; on failure raises `XTMM9001` or the supplied `error-code`.
+- Uses `select` or the sequence constructor for the error message.
+
+Not yet:
+
+- Assertion disable/enable toggles outside `use-when`.
 
 ## xsl:attribute
 
