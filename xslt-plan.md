@@ -5,7 +5,7 @@ are, and how people could contribute.
 
 ## Current status
 
-`xee-xslt-ast` parses the XSTL stylesheets into an AST. This AST is
+`xee-xslt-ast` parses the XSLT stylesheets into an AST. This AST is
 very similar in structure to the underlying XML.
 
 `xee-xslt-compiler` compiles this AST to IR (as defined by `xee-ir`).
@@ -49,16 +49,16 @@ This won't make any more XSLT run but it ensures what we load is correct.
 
 ### xee-testrunner
 
-We want `xee-testrunner` to be able to execute the XSLT test suite in
-`vendor/xslt`. Then we can slowly build up test coverage. Martijn has done
-preparatory work and is working towards the ability to run our first XSLT
-conformance tests.
+`xee-testrunner` can execute the XSLT test suite in `vendor/xslt-tests`, but
+coverage is still partial and many tests are filtered. The focus now is
+expanding coverage and improving runner support alongside new XSLT
+functionality.
 
 ### xee-xslt-compiler
 
 We want to extend `xee-xslt-compiler` so it can compile more XSLT constructs to
 the IR. The compilation code is in `src/ast_ir.rs`. We can extend the tests in
-`test/test_xslt.rs` but the test runner once it works can also help drive this.
+`tests/test_xslt.rs` but the test runner can also help drive this.
 
 Right now we don't have snapshot tests to verify that particular AST gets
 transformed into particular IR, but it may be useful to add this.

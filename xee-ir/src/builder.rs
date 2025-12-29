@@ -3,7 +3,7 @@ use xee_xpath_ast::ast;
 use xee_interpreter::interpreter::instruction::{
     encode_instruction, instruction_size, Instruction,
 };
-use xee_interpreter::{context, function, interpreter, sequence, span, xml};
+use xee_interpreter::{context, declaration, function, interpreter, sequence, span, xml};
 
 use crate::ir;
 
@@ -197,5 +197,22 @@ impl<'a> FunctionBuilder<'a> {
         function: function::InlineFunction,
     ) -> function::InlineFunctionId {
         self.program.add_function(function)
+    }
+
+    pub(crate) fn set_function(
+        &mut self,
+        function_id: function::InlineFunctionId,
+        function: function::InlineFunction,
+    ) {
+        self.program.set_function(function_id, function);
+    }
+
+    pub(crate) fn add_try_catch(&mut self, entry: declaration::TryCatch) -> u16 {
+        let id = self.program.declarations.try_catches.len();
+        if id > u16::MAX as usize {
+            panic!("too many try/catch entries");
+        }
+        self.program.declarations.try_catches.push(entry);
+        id as u16
     }
 }

@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use xee_xpath::{Queries, Query};
-use xee_xpath_load::ContextLoadable;
+use xee_xpath_load::{convert_string, ContextLoadable};
 
 use crate::catalog::LoadContext;
 
@@ -14,7 +14,7 @@ pub(crate) struct Package {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Stylesheet {
-    // TODO
+    pub(crate) path: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -53,12 +53,16 @@ impl Environment for XsltEnvironmentSpec {
 
     fn load(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let environment_spec_query = EnvironmentSpec::load_with_context(queries, context)?;
+        let file_query = queries.option("@file/string()", convert_string)?;
+        let stylesheets_query = queries.many("stylesheet", move |documents, item| {
+            let file = file_query.execute(documents, item)?;
+            Ok(Stylesheet { path: file })
+        })?;
         let xslt_environment_spec_query = queries.one(".", move |session, item| {
             Ok(XsltEnvironmentSpec {
                 environment_spec: environment_spec_query.execute(session, item)?,
-                // TODO
                 packages: vec![],
-                stylesheets: vec![],
+                stylesheets: stylesheets_query.execute(session, item)?,
                 outputs: vec![],
             })
         })?;

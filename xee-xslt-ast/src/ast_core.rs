@@ -748,6 +748,12 @@ impl From<Function> for OverrideContent {
     }
 }
 
+impl From<Function> for Declaration {
+    fn from(i: Function) -> Self {
+        Declaration::Function(Box::new(i))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Streamability {
@@ -802,6 +808,12 @@ pub struct Import {
     pub span: Span,
 }
 
+impl From<Import> for Declaration {
+    fn from(i: Import) -> Self {
+        Declaration::Import(Box::new(i))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ImportSchema {
@@ -819,6 +831,12 @@ pub struct Include {
     pub href: Uri,
 
     pub span: Span,
+}
+
+impl From<Include> for Declaration {
+    fn from(i: Include) -> Self {
+        Declaration::Include(Box::new(i))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -981,6 +999,12 @@ pub struct Mode {
     pub visibility: Option<Visibility>,
 
     pub span: Span,
+}
+
+impl From<Mode> for Declaration {
+    fn from(i: Mode) -> Self {
+        Declaration::Mode(Box::new(i))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1388,6 +1412,12 @@ impl From<Param> for OverrideContent {
     }
 }
 
+impl From<Param> for Declaration {
+    fn from(i: Param) -> Self {
+        Declaration::Param(Box::new(i))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PerformSort {
@@ -1625,6 +1655,12 @@ pub struct Try {
     pub span: Span,
 }
 
+impl From<Try> for SequenceConstructorItem {
+    fn from(i: Try) -> Self {
+        SequenceConstructorInstruction::Try(Box::new(i)).into()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum TryCatchOrFallback {
@@ -1702,6 +1738,12 @@ impl From<Variable> for SequenceConstructorItem {
 impl From<Variable> for OverrideContent {
     fn from(v: Variable) -> Self {
         OverrideContent::Variable(Box::new(v))
+    }
+}
+
+impl From<Variable> for Declaration {
+    fn from(v: Variable) -> Self {
+        Declaration::Variable(Box::new(v))
     }
 }
 
@@ -1829,6 +1871,7 @@ pub struct ElementNode {
     pub name: Name,
     pub attributes: Vec<(Name, ValueTemplate<String>)>,
     pub sequence_constructor: SequenceConstructor,
+    pub type_: Option<EqName>,
     pub span: Span,
 }
 

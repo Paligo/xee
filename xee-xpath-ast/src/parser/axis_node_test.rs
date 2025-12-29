@@ -13,8 +13,6 @@ pub(crate) struct ParserAxisNodeTestOutput<'a, I>
 where
     I: ValueInput<'a, Token = Token<'a>, Span = Span>,
 {
-    pub(crate) node_test: BoxedParser<'a, I, ast::NodeTest>,
-    pub(crate) abbrev_forward_step: BoxedParser<'a, I, (ast::Axis, ast::NodeTest)>,
     pub(crate) axis_node_test: BoxedParser<'a, I, (ast::Axis, ast::NodeTest)>,
 }
 
@@ -214,10 +212,7 @@ where
 
     let axis_node_test = reverse_step.or(forward_step).boxed();
 
-    let node_test = node_test_element_name.or(node_test_attribute_name).boxed();
     ParserAxisNodeTestOutput {
-        node_test,
-        abbrev_forward_step,
         axis_node_test,
     }
 }

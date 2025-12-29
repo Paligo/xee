@@ -1,6 +1,7 @@
 use std::sync::OnceLock;
 use xee_name::{Namespaces, VariableNames};
 use xot::Node;
+use xot::xmlname::NameStrInfo;
 
 use xee_xpath_ast::ast as xpath_ast;
 
@@ -124,10 +125,14 @@ impl InstructionParser for ast::Declaration {
 impl InstructionParser for ast::ElementNode {
     fn parse(content: &Content, attributes: &Attributes) -> Result<ast::ElementNode> {
         let mut element_attributes = Vec::new();
+        let mut type_ = None;
         for key in content.state.xot.attributes(content.node).keys() {
             let name = content.state.xot.name_ref(key, content.node)?;
             // if any name is in the xsl namespace, we skip it
             if name.namespace_id() == content.state.names.xsl_ns {
+                if name.local_name() == "type" {
+                    type_ = attributes.optional(key, attributes.eqname())?;
+                }
                 continue;
             }
             let value = attributes.required(key, attributes.value_template(attributes.string()))?;
@@ -143,6 +148,7 @@ impl InstructionParser for ast::ElementNode {
             attributes: element_attributes,
             span: content.span()?,
             sequence_constructor: content.sequence_constructor()?,
+            type_,
         })
     }
 }
@@ -1401,6 +1407,17 @@ impl InstructionParser for ast::Override {
 impl InstructionParser for ast::Param {
     fn parse(content: &Content, attributes: &Attributes) -> Result<Self> {
         let names = &content.state.names;
+        if attributes
+            .content
+            .xot_attributes()
+            .contains_key(names.visibility)
+        {
+            return Err(attributes
+                .content
+                .state
+                .attribute_unexpected(attributes.content.node, names.visibility, "unexpected attribute")
+                .into());
+        }
         Ok(ast::Param {
             name: attributes.required(names.name, attributes.eqname())?,
             select: attributes.optional(names.select, attributes.xpath())?,
@@ -1639,7 +1656,69 @@ impl InstructionParser for ast::Transform {
     }
 }
 
-// TODO: xsl:try
+impl InstructionParser for ast::Try {
+    fn parse(content: &Content, attributes: &Attributes) -> Result<Self> {
+        let names = &content.state.names;
+        let select = attributes.optional(names.select, attributes.xpath())?;
+        let rollback_output = attributes.optional(names.rollback_output, attributes.boolean())?;
+        let span = content.span()?;
+
+        let mut sequence_items = Vec::new();
+        let mut catch = None;
+        let mut catches = Vec::new();
+
+        let parse_sequence_constructor = sequence_constructor();
+        let mut next = content.state.xot.first_child(content.node);
+
+        while let Some(node) = next {
+            if let Some(element) = content.state.xot.element(node) {
+                let name = element.name();
+                if name == names.xsl_catch {
+                    let parsed = content.with_node(node).parse_element(element, |attributes| {
+                        ast::Catch::parse_and_validate(attributes)
+                    })?;
+                    if catch.is_none() {
+                        catch = Some(parsed);
+                    } else {
+                        catches.push(ast::TryCatchOrFallback::Catch(parsed));
+                    }
+                    next = content.state.next(node);
+                    continue;
+                }
+                if name == names.xsl_fallback {
+                    let parsed = content.with_node(node).parse_element(element, |attributes| {
+                        ast::Fallback::parse_and_validate(attributes)
+                    })?;
+                    catches.push(ast::TryCatchOrFallback::Fallback(parsed));
+                    next = content.state.next(node);
+                    continue;
+                }
+            }
+
+            if catch.is_some() {
+                return Err(Error::Unexpected {
+                    span: content.state.span(node).ok_or(Error::Internal)?,
+                });
+            }
+
+            let (items, new_next) =
+                parse_sequence_constructor.parse_next(Some(node), content.state, &content.context)?;
+            sequence_items.extend(items);
+            next = new_next;
+        }
+
+        let catch = catch.ok_or(Error::Unexpected { span })?;
+
+        Ok(ast::Try {
+            select,
+            rollback_output,
+            span,
+            sequence_constructor: sequence_items,
+            catch,
+            catches,
+        })
+    }
+}
 
 // TODO: xsl:use-package
 
@@ -1728,6 +1807,17 @@ impl InstructionParser for ast::WherePopulated {
 impl InstructionParser for ast::WithParam {
     fn parse(content: &Content, attributes: &Attributes) -> Result<Self> {
         let names = &content.state.names;
+        if attributes
+            .content
+            .xot_attributes()
+            .contains_key(names.required)
+        {
+            return Err(attributes
+                .content
+                .state
+                .attribute_unexpected(attributes.content.node, names.required, "unexpected attribute")
+                .into());
+        }
         Ok(ast::WithParam {
             name: attributes.required(names.name, attributes.eqname())?,
             select: attributes.optional(names.select, attributes.xpath())?,

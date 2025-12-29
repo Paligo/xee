@@ -5,6 +5,7 @@ use crate::function;
 use crate::interpreter::Interpreter;
 use crate::pattern::pattern_core::PredicateMatcher;
 use crate::sequence::Item;
+use crate::context::TypeTableRef;
 
 #[derive(Debug, Default)]
 pub struct PatternLookup<V: Clone> {
@@ -60,6 +61,10 @@ impl PredicateMatcher for Interpreter<'_> {
     fn xot(&self) -> &Xot {
         self.xot()
     }
+
+    fn type_table(&self) -> &TypeTableRef {
+        &self.state.type_table
+    }
 }
 
 impl<V: Clone> PatternLookup<V> {
@@ -82,4 +87,35 @@ impl<V: Clone> PatternLookup<V> {
             .find(|(pattern, _)| matches(pattern))
             .map(|(_, value)| value)
     }
+
+    pub(crate) fn collect_matching(
+        &self,
+        mut matches: impl FnMut(&Pattern<function::InlineFunctionId>) -> bool,
+    ) -> Vec<V>
+    where
+        V: Clone,
+    {
+        self.patterns
+            .iter()
+            .filter_map(|(pattern, value)| {
+                if matches(pattern) {
+                    Some(value.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    pub(crate) fn lookup_with_filter(
+        &self,
+        mut matches: impl FnMut(&Pattern<function::InlineFunctionId>) -> bool,
+        mut accept: impl FnMut(&V) -> bool,
+    ) -> Option<&V> {
+        self.patterns
+            .iter()
+            .find(|(pattern, value)| accept(value) && matches(pattern))
+            .map(|(_, value)| value)
+    }
+
 }

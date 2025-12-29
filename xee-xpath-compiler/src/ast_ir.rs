@@ -1,3 +1,4 @@
+use ahash::HashMap;
 use xee_interpreter::{context, error, error::Error, function, xml};
 use xee_ir::{ir, ir::AtomS, Binding, Bindings, Variables};
 use xee_schema_type::Xs;
@@ -8,8 +9,27 @@ use xot::xmlname::NameStrInfo;
 pub struct IrConverter<'a> {
     variables: &'a mut Variables,
     static_context: &'a context::StaticContext,
+    user_functions: Option<UserFunctions>,
     fn_position: ast::Name,
     fn_last: ast::Name,
+}
+
+#[derive(Debug, Clone)]
+pub struct UserFunctions {
+    lookup: HashMap<(ast::Name, u8), usize>,
+    global_param_names: Vec<ir::Name>,
+}
+
+impl UserFunctions {
+    pub fn new(
+        lookup: HashMap<(ast::Name, u8), usize>,
+        global_param_names: Vec<ir::Name>,
+    ) -> Self {
+        Self {
+            lookup,
+            global_param_names,
+        }
+    }
 }
 
 impl<'a> IrConverter<'a> {
@@ -17,6 +37,25 @@ impl<'a> IrConverter<'a> {
         Self {
             variables,
             static_context,
+            user_functions: None,
+            fn_position: ast::Name::new(
+                "position".to_string(),
+                FN_NAMESPACE.to_string(),
+                String::new(),
+            ),
+            fn_last: ast::Name::new("last".to_string(), FN_NAMESPACE.to_string(), String::new()),
+        }
+    }
+
+    pub fn new_with_user_functions(
+        variables: &'a mut Variables,
+        static_context: &'a context::StaticContext,
+        user_functions: UserFunctions,
+    ) -> Self {
+        Self {
+            variables,
+            static_context,
+            user_functions: Some(user_functions),
             fn_position: ast::Name::new(
                 "position".to_string(),
                 FN_NAMESPACE.to_string(),
@@ -600,17 +639,40 @@ impl<'a> IrConverter<'a> {
         // advice: format!("Either the function name {:?} does not exist, or you are calling it with the wrong number of arguments ({})", ast.name, arity),
         let static_function_id = self
             .static_context
-            .function_id_by_name(&ast.name.value, arity as u8)
-            .ok_or(Error::XPST0017.with_ast_span(span))?;
+            .function_id_by_name(&ast.name.value, arity as u8);
         // TODO we don't know yet how to get the proper span here
         let empty_span = (0..0).into();
-        let mut static_function_ref_bindings =
-            self.static_function_ref(static_function_id, empty_span);
-        let atom = static_function_ref_bindings.atom();
+        let mut function_ref_bindings = if let Some(static_function_id) = static_function_id {
+            self.static_function_ref(static_function_id, empty_span)
+        } else if let Some(user_functions) = &self.user_functions {
+            let key = (ast.name.value.clone(), arity as u8);
+            let index = user_functions
+                .lookup
+                .get(&key)
+                .ok_or(Error::XPST0017.with_ast_span(span))?;
+            self.user_function_ref(*index, empty_span)
+        } else {
+            return Err(Error::XPST0017.with_ast_span(span));
+        };
+        let atom = function_ref_bindings.atom();
         let (arg_bindings, atoms) = self.args(&ast.arguments)?;
+        let mut atoms = atoms;
+        if let Some(user_functions) = &self.user_functions {
+            if user_functions
+                .lookup
+                .contains_key(&(ast.name.value.clone(), arity as u8))
+            {
+                atoms.extend(
+                    user_functions
+                        .global_param_names
+                        .iter()
+                        .map(|name| Spanned::new(ir::Atom::Variable(name.clone()), empty_span)),
+                );
+            }
+        }
         let expr = ir::Expr::FunctionCall(ir::FunctionCall { atom, args: atoms });
         let binding = self.variables.new_binding(expr, span);
-        Ok(static_function_ref_bindings
+        Ok(function_ref_bindings
             .concat(arg_bindings)
             .bind(binding))
     }
@@ -623,9 +685,19 @@ impl<'a> IrConverter<'a> {
         // advice: format!("Either the function name {:?} does not exist, or you are calling it with the wrong number of arguments ({})", ast.name, ast.arity),
         let static_function_id = self
             .static_context
-            .function_id_by_name(&ast.name.value, ast.arity)
-            .ok_or(Error::XPST0017.with_ast_span(span))?;
-        Ok(self.static_function_ref(static_function_id, span))
+            .function_id_by_name(&ast.name.value, ast.arity);
+        if let Some(static_function_id) = static_function_id {
+            Ok(self.static_function_ref(static_function_id, span))
+        } else if let Some(user_functions) = &self.user_functions {
+            let key = (ast.name.value.clone(), ast.arity);
+            let index = user_functions
+                .lookup
+                .get(&key)
+                .ok_or(Error::XPST0017.with_ast_span(span))?;
+            Ok(self.user_function_ref(*index, span))
+        } else {
+            Err(Error::XPST0017.with_ast_span(span))
+        }
     }
 
     fn static_function_ref(
@@ -637,6 +709,13 @@ impl<'a> IrConverter<'a> {
             static_function_id,
             self.variables.current_context_names(),
         ));
+        let expr = ir::Expr::Atom(Spanned::new(atom, span));
+        let binding = self.variables.new_binding(expr, span);
+        Bindings::new(binding)
+    }
+
+    fn user_function_ref(&mut self, index: usize, span: Span) -> Bindings {
+        let atom = ir::Atom::Const(ir::Const::UserFunctionReference(index));
         let expr = ir::Expr::Atom(Spanned::new(atom, span));
         let binding = self.variables.new_binding(expr, span);
         Bindings::new(binding)

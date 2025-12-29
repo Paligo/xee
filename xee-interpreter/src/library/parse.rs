@@ -57,11 +57,16 @@ fn serialize1(
     arg: &sequence::Sequence,
 ) -> error::Result<String> {
     let map = function::Map::new(vec![])?;
-    let serialization_parameters = sequence::SerializationParameters::from_map(
-        map,
-        context.static_context(),
-        interpreter.xot_mut(),
-    )?;
+    let type_table = interpreter.state.type_table.clone();
+    let serialization_parameters = {
+        let type_table = type_table.borrow();
+        sequence::SerializationParameters::from_map(
+            map,
+            context.static_context(),
+            interpreter.xot(),
+            &type_table,
+        )?
+    };
     arg.serialize(serialization_parameters, interpreter.xot_mut())
 }
 
@@ -82,11 +87,16 @@ fn serialize2(
     } else {
         function::Map::new(vec![])?
     };
-    let serialization_parameters = sequence::SerializationParameters::from_map(
-        map,
-        context.static_context(),
-        interpreter.xot_mut(),
-    )?;
+    let type_table = interpreter.state.type_table.clone();
+    let serialization_parameters = {
+        let type_table = type_table.borrow();
+        sequence::SerializationParameters::from_map(
+            map,
+            context.static_context(),
+            interpreter.xot(),
+            &type_table,
+        )?
+    };
     arg.serialize(serialization_parameters, interpreter.xot_mut())
 }
 

@@ -443,13 +443,14 @@ impl<V, PA: NodeParser<V>, PB: NodeParser<V>> NodeParser<V> for OrParser<V, PA, 
         state: &State,
         context: &Context,
     ) -> Result<(V, Option<Node>)> {
-        // try the first parser, if that works, return result
-        // if it isn't working, try the other parser
-        let r = self.first.parse_next(node, state, context);
-        if r.is_ok() {
-            r
-        } else {
-            self.second.parse_next(node, state, context)
+        // Only fall back when the first parser didn't match the node.
+        // Attribute/validation errors should propagate instead of being masked.
+        match self.first.parse_next(node, state, context) {
+            Ok(result) => Ok(result),
+            Err(ElementError::Unexpected { .. } | ElementError::UnexpectedEnd) => {
+                self.second.parse_next(node, state, context)
+            }
+            Err(e) => Err(e),
         }
     }
 }

@@ -1,0 +1,6 @@
+---
+source: xee-xpath-ast/src/parser/pattern.rs
+assertion_line: 450
+expression: "parse(axis_node_test, tokens(\"text()\"), Cow::Borrowed(&namespaces))"
+---
+Ok((Child, KindTest(Text)))

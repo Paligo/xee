@@ -496,7 +496,9 @@ impl Assertable for AssertType {
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
-        let matches = sequence.matches_type(&self.0, documents.xot(), &|function| {
+        let type_table = documents.type_table();
+        let type_table = type_table.borrow();
+        let matches = sequence.matches_type(&self.0, documents.xot(), &type_table, &|function| {
             context.function_info(function).signature()
         });
         match matches {
@@ -633,7 +635,12 @@ pub struct AssertError(String);
 
 impl AssertError {
     pub(crate) fn new(code: String) -> Self {
-        Self(code)
+        let local = if let Some(rest) = code.strip_prefix("Q{") {
+            rest.split_once('}').map(|(_, local)| local).unwrap_or(&code)
+        } else {
+            code.rsplit_once(':').map(|(_, local)| local).unwrap_or(&code)
+        };
+        Self(local.to_string())
     }
 
     pub(crate) fn assert_error(&self, error: &error::ErrorValue) -> TestOutcome {
@@ -1071,9 +1078,33 @@ fn run_xpath_with_result(
     let q = queries.sequence_with_context(expr, static_context)?;
 
     let variables = AHashMap::from([(name, sequence.clone())]);
+    let context_item = sequence.iter().next();
+    let context_item = match context_item {
+        Some(Item::Node(node)) => {
+            let xot = documents.xot_mut();
+            let root = xot.root(node);
+            let item_node = match xot.value(root) {
+                xot::Value::Document => root,
+                _ => {
+                    let doc = xot.new_document();
+                    let cloned = xot.clone_node(node);
+                    xot.append(doc, cloned).unwrap();
+                    doc
+                }
+            };
+            Some(Item::Node(item_node))
+        }
+        Some(item) => Some(item),
+        None => None,
+    };
 
+    let type_table = documents.type_table().clone();
     q.execute_build_context(documents, |build| {
         build.variables(variables);
+        build.type_table(type_table.clone());
+        if let Some(item) = context_item {
+            build.context_item(item);
+        }
     })
 }
 

@@ -23,7 +23,6 @@ where
 {
     pub(crate) name: BoxedParser<'a, I, ast::NameS>,
     pub(crate) expr_single: BoxedParser<'a, I, ast::ExprSingleS>,
-    pub(crate) expr_single_core: BoxedParser<'a, I, ast::ExprSingleS>,
     pub(crate) signature: BoxedParser<'a, I, ast::Signature>,
     pub(crate) item_type: BoxedParser<'a, I, ast::ItemType>,
     pub(crate) sequence_type: BoxedParser<'a, I, ast::SequenceType>,
@@ -826,7 +825,6 @@ where
     .boxed();
 
     let name = eqname.clone().then_ignore(end()).boxed();
-    let expr_single_core = expr_single.clone();
     let expr_single = expr_single.then_ignore(end()).boxed();
     let xpath = expr_
         .clone()
@@ -854,7 +852,6 @@ where
     ParserOutput {
         name,
         expr_single,
-        expr_single_core,
         xpath,
         xpath_right_brace,
         signature,

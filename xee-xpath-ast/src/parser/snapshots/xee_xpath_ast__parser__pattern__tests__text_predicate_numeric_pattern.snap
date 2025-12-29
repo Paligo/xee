@@ -1,0 +1,25 @@
+---
+source: xee-xpath-ast/src/parser/pattern.rs
+assertion_line: 390
+expression: "pattern::Pattern::parse(\"text()[1]\", &namespaces, &variable_names)"
+---
+Ok(Expr(Path(PathExpr(
+  root: Relative,
+  steps: [
+    AxisStep(AxisStep(
+      forward: Child,
+      node_test: KindTest(Text),
+      predicates: [
+        Expr([
+          Path(PathExpr(
+            steps: [
+              PrimaryExpr(Literal(Integer((Positive, [
+                1,
+              ])))),
+            ],
+          )),
+        ]),
+      ],
+    )),
+  ],
+))))

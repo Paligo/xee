@@ -6,6 +6,6 @@ mod static_context;
 mod static_context_builder;
 
 pub use dynamic_context::{DynamicContext, Variables};
-pub use dynamic_context_builder::{DocumentsRef, DynamicContextBuilder};
+pub use dynamic_context_builder::{DocumentsRef, DynamicContextBuilder, TypeTableRef};
 pub use static_context::StaticContext;
 pub use static_context_builder::StaticContextBuilder;

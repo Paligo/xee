@@ -1,7 +1,14 @@
 use std::fmt::Write;
 
-use xee_interpreter::{error, sequence::Sequence};
-use xee_xslt_compiler::evaluate;
+use xee_interpreter::{
+    context::{StaticContext, TypeTableRef},
+    error,
+    sequence::Sequence,
+    xml::Documents,
+};
+use xee_name::{Namespaces, FN_NAMESPACE};
+use xee_schema_type::Xs;
+use xee_xslt_compiler::{evaluate, parse};
 use xot::Xot;
 
 fn xml(xot: &Xot, sequence: Sequence) -> String {
@@ -12,6 +19,44 @@ fn xml(xot: &Xot, sequence: Sequence) -> String {
             .unwrap();
     }
     f
+}
+
+fn evaluate_with_type_table(
+    xot: &mut Xot,
+    xml: &str,
+    xslt: &str,
+    type_table: TypeTableRef,
+) -> error::SpannedResult<Sequence> {
+    let namespaces = Namespaces::new(
+        Namespaces::default_namespaces(),
+        "".to_string(),
+        FN_NAMESPACE.to_string(),
+    );
+    let static_context = StaticContext::from_namespaces(namespaces);
+    let root = xot.parse(xml).unwrap();
+    let program = parse(static_context, xslt).unwrap();
+    let mut documents = Documents::new();
+    let handle = documents.add_root(None, root).unwrap();
+    let root = documents.get_node_by_handle(handle).unwrap();
+    let mut dynamic_context_builder = program.dynamic_context_builder();
+    dynamic_context_builder.context_node(root);
+    dynamic_context_builder.documents(documents);
+    dynamic_context_builder.type_table(type_table);
+    let context = dynamic_context_builder.build();
+    let runnable = program.runnable(&context);
+    runnable.many(xot)
+}
+
+fn child_element_named(xot: &Xot, parent: xot::Node, name: &str) -> xot::Node {
+    let target = xot.name(name).unwrap();
+    let mut child = xot.first_child(parent);
+    while let Some(node) = child {
+        if xot.is_element(node) && xot.node_name(node) == Some(target) {
+            return node;
+        }
+        child = xot.next_sibling(node);
+    }
+    panic!("child element not found: {}", name);
 }
 
 #[test]
@@ -1229,4 +1274,89 @@ fn test_basic_iterate_params() {
         xml(&xot, output),
         "<o><baz>1</baz><baz>2</baz><baz>4</baz></o>"
     );
+}
+
+#[test]
+fn test_try_catch_rollback_output() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <xsl:try rollback-output="yes">
+      <before/>
+      <xsl:sequence select="error()"/>
+      <xsl:catch errors="*">
+        <caught/>
+      </xsl:catch>
+    </xsl:try>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<caught/>");
+}
+
+#[test]
+fn test_type_table_for_typed_constructors() {
+    let mut xot = Xot::new();
+    let type_table = TypeTableRef::new();
+    let output = evaluate_with_type_table(
+        &mut xot,
+        "<doc><src-copy/><src-copy-of/></doc>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+               xmlns:xs="http://www.w3.org/2001/XMLSchema"
+               version="3">
+  <xsl:template match="/">
+    <root>
+      <xsl:element name="typed-element" type="xs:string"/>
+      <xsl:element name="attr-holder">
+        <xsl:attribute name="typed-attr" type="xs:integer" select="'1'"/>
+      </xsl:element>
+      <xsl:copy select="/doc/src-copy" type="xs:decimal"/>
+      <xsl:copy-of select="/doc/src-copy-of" type="xs:boolean"/>
+    </root>
+    <xsl:document type="xs:anyType">
+      <doc-child/>
+    </xsl:document>
+  </xsl:template>
+</xsl:transform>"#,
+        type_table.clone(),
+    )
+    .unwrap();
+
+    let root_name = xot.name("root").unwrap();
+    let mut root_node = None;
+    let mut document_node = None;
+    for item in output.iter() {
+        let Ok(node) = item.to_node() else {
+            continue;
+        };
+        if xot.is_element(node) && xot.node_name(node) == Some(root_name) {
+            root_node = Some(node);
+        } else if xot.is_document(node) {
+            document_node = Some(node);
+        }
+    }
+
+    let root_node = root_node.expect("root element missing from output");
+    let document_node = document_node.expect("document node missing from output");
+    let typed_element = child_element_named(&xot, root_node, "typed-element");
+    let attr_holder = child_element_named(&xot, root_node, "attr-holder");
+    let copy_node = child_element_named(&xot, root_node, "src-copy");
+    let copy_of_node = child_element_named(&xot, root_node, "src-copy-of");
+    let typed_attr = xot
+        .attributes(attr_holder)
+        .get_node(xot.name("typed-attr").unwrap())
+        .unwrap();
+
+    let type_table = type_table.borrow();
+    assert_eq!(type_table.get(typed_element), Some(Xs::String));
+    assert_eq!(type_table.get(typed_attr), Some(Xs::Integer));
+    assert_eq!(type_table.get(copy_node), Some(Xs::Decimal));
+    assert_eq!(type_table.get(copy_of_node), Some(Xs::Boolean));
+    assert_eq!(type_table.get(document_node), Some(Xs::AnyType));
 }

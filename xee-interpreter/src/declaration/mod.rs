@@ -4,4 +4,7 @@
 mod decl;
 mod globalvar;
 
-pub use decl::Declarations;
+pub use decl::{
+    CatchClause, CatchError, Declarations, GlobalParam, ModeConfig, OnNoMatch, TemplateParam,
+    TryCatch,
+};

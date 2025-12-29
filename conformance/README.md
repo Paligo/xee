@@ -30,7 +30,8 @@ there are gaps all over the place.
 
 `xsl:template`, `xsl:value-of`, `xsl:variable`, `xsl:if` `xsl:choose`,
 `xsl:when`, `xsl:otherwise`, `xsl:for-each`, `xsl:copy`, `xsl:copy-of`,
-`xsl:sequence`, `xsl:apply-templates`, `xsl:text`, `xsl:attribute`,
+`xsl:sequence`, `xsl:apply-templates`, `xsl:apply-imports`, `xsl:next-match`,
+`xsl:call-template`, `xsl:try`, `xsl:catch`, `xsl:text`, `xsl:attribute`,
 `xsl:namespace`, `xsl:comment`, `xsl:processing-instruction` all have their
 core behavior implemented.
 
@@ -38,7 +39,6 @@ See [xslt.md](xslt.md) for details.
 
 ### Tests
 
-One big task is to support XSLT tests in the test runner - the test runner has
-been prepared for this by making it generic and the test suite has been
-imported into `vendor`, but XSLT support in the test runner is not yet
-implemented.
+The XSLT test suite can now be run with the test runner, but coverage is still
+partial and many tests are filtered. The test runner continues to improve as
+more XSLT functionality lands.

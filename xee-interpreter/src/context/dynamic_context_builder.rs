@@ -19,6 +19,7 @@ pub struct DynamicContextBuilder<'a> {
     program: &'a interpreter::Program,
     context_item: Option<sequence::Item>,
     documents: DocumentsRef,
+    type_table: TypeTableRef,
     variables: Variables,
     current_datetime: chrono::DateTime<chrono::offset::FixedOffset>,
     default_collection: Option<sequence::Sequence>,
@@ -51,6 +52,35 @@ impl DocumentsRef {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct TypeTableRef(Rc<RefCell<xml::TypeTable>>);
+
+impl Deref for TypeTableRef {
+    type Target = RefCell<xml::TypeTable>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<xml::TypeTable> for TypeTableRef {
+    fn from(table: xml::TypeTable) -> Self {
+        Self(Rc::new(RefCell::new(table)))
+    }
+}
+
+impl TypeTableRef {
+    pub fn new() -> Self {
+        Self(Rc::new(RefCell::new(xml::TypeTable::new())))
+    }
+}
+
+impl Default for TypeTableRef {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Default for DocumentsRef {
     fn default() -> Self {
         Self::new()
@@ -64,6 +94,7 @@ impl<'a> DynamicContextBuilder<'a> {
             program,
             context_item: None,
             documents: DocumentsRef::new(),
+            type_table: TypeTableRef::new(),
             variables: Variables::new(),
             current_datetime: chrono::offset::Local::now().into(),
             default_collection: None,
@@ -93,6 +124,11 @@ impl<'a> DynamicContextBuilder<'a> {
     /// You can give it either owned documents or a [`DocumentsRef`].
     pub fn documents(&mut self, documents: impl Into<DocumentsRef>) -> &mut Self {
         self.documents = documents.into();
+        self
+    }
+
+    pub fn type_table(&mut self, type_table: impl Into<TypeTableRef>) -> &mut Self {
+        self.type_table = type_table.into();
         self
     }
 
@@ -173,6 +209,7 @@ impl<'a> DynamicContextBuilder<'a> {
             self.program,
             self.context_item.clone(),
             self.documents.clone(),
+            self.type_table.clone(),
             self.variables.clone(),
             self.current_datetime,
             self.default_collection.clone(),

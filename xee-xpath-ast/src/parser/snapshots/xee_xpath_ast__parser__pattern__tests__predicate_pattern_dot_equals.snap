@@ -1,0 +1,30 @@
+---
+source: xee-xpath-ast/src/parser/pattern.rs
+assertion_line: 347
+expression: "pattern::Pattern::parse(\".[.='10']\", &namespaces, &variable_names)"
+---
+Ok(Predicate(PredicatePattern(
+  predicates: [
+    Expr([
+      Path(PathExpr(
+        steps: [
+          PrimaryExpr(Expr(Some(Expr([
+            Binary(BinaryExpr(
+              operator: GenEq,
+              left: PathExpr(
+                steps: [
+                  PrimaryExpr(ContextItem),
+                ],
+              ),
+              right: PathExpr(
+                steps: [
+                  PrimaryExpr(Literal(String("10"))),
+                ],
+              ),
+            )),
+          ])))),
+        ],
+      )),
+    ]),
+  ],
+)))

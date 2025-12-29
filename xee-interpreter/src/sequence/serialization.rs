@@ -7,6 +7,7 @@ use xee_schema_type::Xs;
 use crate::{
     atomic, context, error,
     function::{self, Map},
+    xml::TypeTable,
 };
 
 use super::{
@@ -72,8 +73,9 @@ impl SerializationParameters {
         map: Map,
         static_context: &context::StaticContext,
         xot: &Xot,
+        type_table: &TypeTable,
     ) -> error::Result<Self> {
-        let c = OptionParameterConverter::new(&map, static_context, xot);
+        let c = OptionParameterConverter::new(&map, static_context, xot, type_table);
         let allow_duplicate_names =
             c.option_with_default("allow-duplicate-names", Xs::Boolean, false)?;
 
@@ -426,6 +428,13 @@ mod tests {
 
     use super::*;
 
+    fn params_for(map: Map) -> SerializationParameters {
+        let static_context = context::StaticContext::default();
+        let xot = Xot::new();
+        let type_table = TypeTable::new();
+        SerializationParameters::from_map(map, &static_context, &xot, &type_table).unwrap()
+    }
+
     #[test]
     fn test_allow_duplicate_names_true() {
         let map = Map::new(vec![(
@@ -433,9 +442,7 @@ mod tests {
             sequence::Sequence::from(vec![atomic::Atomic::Boolean(true)]),
         )])
         .unwrap();
-        let static_context = context::StaticContext::default();
-        let xot = Xot::new();
-        let params = SerializationParameters::from_map(map, &static_context, &xot).unwrap();
+        let params = params_for(map);
         assert!(params.allow_duplicate_names);
     }
 
@@ -446,9 +453,7 @@ mod tests {
             sequence::Sequence::from(vec![atomic::Atomic::Boolean(false)]),
         )])
         .unwrap();
-        let static_context = context::StaticContext::default();
-        let xot = Xot::new();
-        let params = SerializationParameters::from_map(map, &static_context, &xot).unwrap();
+        let params = params_for(map);
         assert!(!params.allow_duplicate_names);
     }
 
@@ -459,18 +464,14 @@ mod tests {
             sequence::Sequence::default(),
         )])
         .unwrap();
-        let static_context = context::StaticContext::default();
-        let xot = Xot::new();
-        let params = SerializationParameters::from_map(map, &static_context, &xot).unwrap();
+        let params = params_for(map);
         assert!(!params.allow_duplicate_names);
     }
 
     #[test]
     fn test_allow_duplicate_names_missing() {
         let map = Map::new(vec![]).unwrap();
-        let static_context = context::StaticContext::default();
-        let xot = Xot::new();
-        let params = SerializationParameters::from_map(map, &static_context, &xot).unwrap();
+        let params = params_for(map);
         assert!(!params.allow_duplicate_names);
     }
 
@@ -486,9 +487,7 @@ mod tests {
             ]),
         )])
         .unwrap();
-        let static_context = context::StaticContext::default();
-        let xot = Xot::new();
-        let params = SerializationParameters::from_map(map, &static_context, &xot).unwrap();
+        let params = params_for(map);
         assert_eq!(params.cdata_section_elements.len(), 2);
         assert_eq!(params.cdata_section_elements[0], html);
         assert_eq!(params.cdata_section_elements[1], script);
@@ -502,9 +501,7 @@ mod tests {
             sequence::Sequence::from(vec![json]),
         )])
         .unwrap();
-        let static_context = context::StaticContext::default();
-        let xot = Xot::new();
-        let params = SerializationParameters::from_map(map, &static_context, &xot).unwrap();
+        let params = params_for(map);
         assert_eq!(
             params.json_node_output_method,
             QNameOrString::String("json".to_string())
@@ -520,9 +517,7 @@ mod tests {
             sequence::Sequence::from(vec![json]),
         )])
         .unwrap();
-        let static_context = context::StaticContext::default();
-        let xot = Xot::new();
-        let params = SerializationParameters::from_map(map, &static_context, &xot).unwrap();
+        let params = params_for(map);
         assert_eq!(
             params.json_node_output_method,
             QNameOrString::QName(owned_name)
@@ -536,9 +531,7 @@ mod tests {
             sequence::Sequence::default(),
         )])
         .unwrap();
-        let static_context = context::StaticContext::default();
-        let xot = Xot::new();
-        let params = SerializationParameters::from_map(map, &static_context, &xot).unwrap();
+        let params = params_for(map);
         assert_eq!(
             params.json_node_output_method,
             QNameOrString::String("xml".to_string())
@@ -548,9 +541,7 @@ mod tests {
     #[test]
     fn test_qname_or_string_default_missing() {
         let map = Map::new(vec![]).unwrap();
-        let static_context = context::StaticContext::default();
-        let xot = Xot::new();
-        let params = SerializationParameters::from_map(map, &static_context, &xot).unwrap();
+        let params = params_for(map);
         assert_eq!(
             params.json_node_output_method,
             QNameOrString::String("xml".to_string())

@@ -3,14 +3,21 @@ use xot::Xot;
 
 use xee_xpath_ast::ast;
 
-pub(crate) fn kind_test(kind_test: &ast::KindTest, xot: &Xot, node: xot::Node) -> bool {
+use super::TypeTable;
+
+pub(crate) fn kind_test(
+    kind_test: &ast::KindTest,
+    xot: &Xot,
+    type_table: &TypeTable,
+    node: xot::Node,
+) -> bool {
     match kind_test {
-        ast::KindTest::Document(dt) => document_test(dt.as_ref(), xot, node),
-        ast::KindTest::Element(et) => element_test(et.as_ref(), xot, node),
+        ast::KindTest::Document(dt) => document_test(dt.as_ref(), xot, type_table, node),
+        ast::KindTest::Element(et) => element_test(et.as_ref(), xot, type_table, node),
         ast::KindTest::SchemaElement(_set) => {
             todo!()
         }
-        ast::KindTest::Attribute(at) => attribute_test(at.as_ref(), xot, node),
+        ast::KindTest::Attribute(at) => attribute_test(at.as_ref(), xot, type_table, node),
         ast::KindTest::SchemaAttribute(_sat) => {
             todo!()
         }
@@ -35,15 +42,36 @@ pub(crate) fn kind_test(kind_test: &ast::KindTest, xot: &Xot, node: xot::Node) -
     }
 }
 
-fn element_test(test: Option<&ast::ElementOrAttributeTest>, xot: &Xot, node: xot::Node) -> bool {
-    element_or_attribute_test(test, xot, node, |node, xot| xot.is_element(node))
+fn element_test(
+    test: Option<&ast::ElementOrAttributeTest>,
+    xot: &Xot,
+    type_table: &TypeTable,
+    node: xot::Node,
+) -> bool {
+    element_or_attribute_test(test, xot, type_table, node, |node, xot| xot.is_element(node))
 }
 
-fn attribute_test(test: Option<&ast::ElementOrAttributeTest>, xot: &Xot, node: xot::Node) -> bool {
-    element_or_attribute_test(test, xot, node, |node, xot| xot.is_attribute_node(node))
+fn attribute_test(
+    test: Option<&ast::ElementOrAttributeTest>,
+    xot: &Xot,
+    type_table: &TypeTable,
+    node: xot::Node,
+) -> bool {
+    element_or_attribute_test(
+        test,
+        xot,
+        type_table,
+        node,
+        |node, xot| xot.is_attribute_node(node),
+    )
 }
 
-fn document_test(test: Option<&ast::DocumentTest>, xot: &Xot, node: xot::Node) -> bool {
+fn document_test(
+    test: Option<&ast::DocumentTest>,
+    xot: &Xot,
+    type_table: &TypeTable,
+    node: xot::Node,
+) -> bool {
     if !xot.is_document(node) {
         return false;
     }
@@ -55,7 +83,9 @@ fn document_test(test: Option<&ast::DocumentTest>, xot: &Xot, node: xot::Node) -
         let document_element_node = xot.document_element(node).unwrap();
 
         match document_test {
-            ast::DocumentTest::Element(et) => element_test(et.as_ref(), xot, document_element_node),
+            ast::DocumentTest::Element(et) => {
+                element_test(et.as_ref(), xot, type_table, document_element_node)
+            }
             ast::DocumentTest::SchemaElement(_set) => {
                 todo!()
             }
@@ -68,6 +98,7 @@ fn document_test(test: Option<&ast::DocumentTest>, xot: &Xot, node: xot::Node) -
 fn element_or_attribute_test(
     test: Option<&ast::ElementOrAttributeTest>,
     xot: &Xot,
+    type_table: &TypeTable,
     node: xot::Node,
     node_type_match: impl Fn(xot::Node, &Xot) -> bool,
 ) -> bool {
@@ -95,7 +126,7 @@ fn element_or_attribute_test(
         }
         // the type also has to match
         if let Some(type_name) = &test.type_name {
-            type_annotation(xot, node).derives_from(type_name.name)
+            type_annotation(xot, type_table, node).derives_from(type_name.name)
             // ignoring can_be_nilled for now
         } else {
             true
@@ -106,9 +137,18 @@ fn element_or_attribute_test(
     }
 }
 
-fn type_annotation(_xot: &Xot, _node: xot::Node) -> Xs {
+fn type_annotation(xot: &Xot, type_table: &TypeTable, node: xot::Node) -> Xs {
     // for now we don't know any types of nodes yet
-    Xs::UntypedAtomic
+    if let Some(xs) = type_table.get(node) {
+        return xs;
+    }
+    if xot.is_element(node) {
+        Xs::Untyped
+    } else if xot.is_attribute_node(node) {
+        Xs::UntypedAtomic
+    } else {
+        Xs::UntypedAtomic
+    }
 }
 
 #[cfg(test)]
@@ -123,11 +163,12 @@ mod tests {
         let doc = xot.parse(r#"<root><a/><b/></root>"#).unwrap();
         let doc_el = xot.document_element(doc).unwrap();
         let a = xot.first_child(doc_el).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("node()").unwrap();
-        assert!(kind_test(&kt, &xot, doc));
-        assert!(kind_test(&kt, &xot, doc_el));
-        assert!(kind_test(&kt, &xot, a));
+        assert!(kind_test(&kt, &xot, &type_table, doc));
+        assert!(kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(kind_test(&kt, &xot, &type_table, a));
     }
 
     #[test]
@@ -137,12 +178,13 @@ mod tests {
         let doc_el = xot.document_element(doc).unwrap();
         let a = xot.first_child(doc_el).unwrap();
         let a_text = xot.first_child(a).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("text()").unwrap();
-        assert!(!kind_test(&kt, &xot, doc));
-        assert!(!kind_test(&kt, &xot, doc_el));
-        assert!(!kind_test(&kt, &xot, a));
-        assert!(kind_test(&kt, &xot, a_text));
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(!kind_test(&kt, &xot, &type_table, a));
+        assert!(kind_test(&kt, &xot, &type_table, a_text));
     }
 
     #[test]
@@ -151,11 +193,12 @@ mod tests {
         let doc = xot.parse(r#"<root><!-- comment --></root>"#).unwrap();
         let doc_el = xot.document_element(doc).unwrap();
         let comment = xot.first_child(doc_el).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("comment()").unwrap();
-        assert!(!kind_test(&kt, &xot, doc));
-        assert!(!kind_test(&kt, &xot, doc_el));
-        assert!(kind_test(&kt, &xot, comment));
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(kind_test(&kt, &xot, &type_table, comment));
     }
 
     #[test]
@@ -163,9 +206,10 @@ mod tests {
         let mut xot = Xot::new();
         let doc = xot.parse(r#"<root></root>"#).unwrap();
         let doc_el = xot.document_element(doc).unwrap();
+        let type_table = TypeTable::new();
         let kt = parse_kind_test("document-node()").unwrap();
-        assert!(kind_test(&kt, &xot, doc));
-        assert!(!kind_test(&kt, &xot, doc_el));
+        assert!(kind_test(&kt, &xot, &type_table, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc_el));
     }
 
     #[test]
@@ -175,12 +219,13 @@ mod tests {
         let doc_el = xot.document_element(doc).unwrap();
         let a = xot.first_child(doc_el).unwrap();
         let text = xot.first_child(a).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("element()").unwrap();
-        assert!(!kind_test(&kt, &xot, doc));
-        assert!(kind_test(&kt, &xot, doc_el));
-        assert!(kind_test(&kt, &xot, a));
-        assert!(!kind_test(&kt, &xot, text));
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
+        assert!(kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(kind_test(&kt, &xot, &type_table, a));
+        assert!(!kind_test(&kt, &xot, &type_table, text));
     }
 
     #[test]
@@ -190,12 +235,13 @@ mod tests {
         let doc_el = xot.document_element(doc).unwrap();
         let a = xot.first_child(doc_el).unwrap();
         let text = xot.first_child(a).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("element(*)").unwrap();
-        assert!(!kind_test(&kt, &xot, doc));
-        assert!(kind_test(&kt, &xot, doc_el));
-        assert!(kind_test(&kt, &xot, a));
-        assert!(!kind_test(&kt, &xot, text));
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
+        assert!(kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(kind_test(&kt, &xot, &type_table, a));
+        assert!(!kind_test(&kt, &xot, &type_table, text));
     }
 
     #[test]
@@ -205,12 +251,13 @@ mod tests {
         let doc_el = xot.document_element(doc).unwrap();
         let a = xot.first_child(doc_el).unwrap();
         let text = xot.first_child(a).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("element(a)").unwrap();
-        assert!(!kind_test(&kt, &xot, doc));
-        assert!(!kind_test(&kt, &xot, doc_el));
-        assert!(kind_test(&kt, &xot, a));
-        assert!(!kind_test(&kt, &xot, text));
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(kind_test(&kt, &xot, &type_table, a));
+        assert!(!kind_test(&kt, &xot, &type_table, text));
     }
 
     #[test]
@@ -220,16 +267,20 @@ mod tests {
         let doc_el = xot.document_element(doc).unwrap();
         let a = xot.first_child(doc_el).unwrap();
         let text = xot.first_child(a).unwrap();
+        let type_table = TypeTable::new();
+
+        let kt = parse_kind_test("element(a, xs:untyped)").unwrap();
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(kind_test(&kt, &xot, &type_table, a));
+        assert!(!kind_test(&kt, &xot, &type_table, text));
 
         let kt = parse_kind_test("element(a, xs:untypedAtomic)").unwrap();
-        assert!(!kind_test(&kt, &xot, doc));
-        assert!(!kind_test(&kt, &xot, doc_el));
-        assert!(kind_test(&kt, &xot, a));
-        assert!(!kind_test(&kt, &xot, text));
+        assert!(!kind_test(&kt, &xot, &type_table, a));
 
         // but we're not an xs:string
         let kt = parse_kind_test("element(a, xs:string)").unwrap();
-        assert!(!kind_test(&kt, &xot, a));
+        assert!(!kind_test(&kt, &xot, &type_table, a));
     }
 
     #[test]
@@ -245,14 +296,15 @@ mod tests {
         let text = xot.first_child(a).unwrap();
         let alpha = xot.attributes(a).get_node(alpha).unwrap();
         let beta = xot.attributes(a).get_node(beta).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("attribute()").unwrap();
-        assert!(!kind_test(&kt, &xot, doc));
-        assert!(!kind_test(&kt, &xot, doc_el));
-        assert!(!kind_test(&kt, &xot, a));
-        assert!(kind_test(&kt, &xot, alpha));
-        assert!(kind_test(&kt, &xot, beta));
-        assert!(!kind_test(&kt, &xot, text));
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(!kind_test(&kt, &xot, &type_table, a));
+        assert!(kind_test(&kt, &xot, &type_table, alpha));
+        assert!(kind_test(&kt, &xot, &type_table, beta));
+        assert!(!kind_test(&kt, &xot, &type_table, text));
     }
 
     #[test]
@@ -268,14 +320,15 @@ mod tests {
         let text = xot.first_child(a).unwrap();
         let alpha = xot.attributes(a).get_node(alpha).unwrap();
         let beta = xot.attributes(a).get_node(beta).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("attribute(alpha)").unwrap();
-        assert!(!kind_test(&kt, &xot, doc));
-        assert!(!kind_test(&kt, &xot, doc_el));
-        assert!(!kind_test(&kt, &xot, a));
-        assert!(kind_test(&kt, &xot, alpha));
-        assert!(!kind_test(&kt, &xot, beta));
-        assert!(!kind_test(&kt, &xot, text));
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(!kind_test(&kt, &xot, &type_table, a));
+        assert!(kind_test(&kt, &xot, &type_table, alpha));
+        assert!(!kind_test(&kt, &xot, &type_table, beta));
+        assert!(!kind_test(&kt, &xot, &type_table, text));
     }
 
     #[test]
@@ -291,17 +344,18 @@ mod tests {
         let text = xot.first_child(a).unwrap();
         let alpha = xot.attributes(a).get_node(alpha).unwrap();
         let beta = xot.attributes(a).get_node(beta).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("attribute(alpha, xs:untypedAtomic)").unwrap();
-        assert!(!kind_test(&kt, &xot, doc));
-        assert!(!kind_test(&kt, &xot, doc_el));
-        assert!(!kind_test(&kt, &xot, a));
-        assert!(kind_test(&kt, &xot, alpha));
-        assert!(!kind_test(&kt, &xot, beta));
-        assert!(!kind_test(&kt, &xot, text));
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(!kind_test(&kt, &xot, &type_table, a));
+        assert!(kind_test(&kt, &xot, &type_table, alpha));
+        assert!(!kind_test(&kt, &xot, &type_table, beta));
+        assert!(!kind_test(&kt, &xot, &type_table, text));
 
         let kt = parse_kind_test("attribute(alpha, xs:string)").unwrap();
-        assert!(!kind_test(&kt, &xot, alpha));
+        assert!(!kind_test(&kt, &xot, &type_table, alpha));
     }
 
     #[test]
@@ -311,17 +365,18 @@ mod tests {
         let doc_el = xot.document_element(doc).unwrap();
         let a = xot.first_child(doc_el).unwrap();
         let text = xot.first_child(a).unwrap();
+        let type_table = TypeTable::new();
 
         let kt = parse_kind_test("document-node(element(root))").unwrap();
-        assert!(kind_test(&kt, &xot, doc));
-        assert!(!kind_test(&kt, &xot, doc_el));
-        assert!(!kind_test(&kt, &xot, a));
-        assert!(!kind_test(&kt, &xot, text));
+        assert!(kind_test(&kt, &xot, &type_table, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc_el));
+        assert!(!kind_test(&kt, &xot, &type_table, a));
+        assert!(!kind_test(&kt, &xot, &type_table, text));
 
         let kt = parse_kind_test("document-node(element(a))").unwrap();
         // the document doesn't match as its root node isn't 'a'
-        assert!(!kind_test(&kt, &xot, doc));
+        assert!(!kind_test(&kt, &xot, &type_table, doc));
         // the 'a' node doesn't match either as it's not a document node
-        assert!(!kind_test(&kt, &xot, a));
+        assert!(!kind_test(&kt, &xot, &type_table, a));
     }
 }

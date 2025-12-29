@@ -108,6 +108,7 @@ impl SequenceConstructorName {
                 ast::SourceDocument::parse_sequence_constructor_item(attributes)
             }
             SequenceConstructorName::Text => ast::Text::parse_sequence_constructor_item(attributes),
+            SequenceConstructorName::Try => ast::Try::parse_sequence_constructor_item(attributes),
             SequenceConstructorName::ValueOf => {
                 ast::ValueOf::parse_sequence_constructor_item(attributes)
             }
@@ -142,6 +143,12 @@ impl DeclarationName {
             DeclarationName::Accumulator => ast::Accumulator::parse_declaration(attributes),
             DeclarationName::Template => ast::Template::parse_declaration(attributes),
             DeclarationName::Output => ast::Output::parse_declaration(attributes),
+            DeclarationName::Function => ast::Function::parse_declaration(attributes),
+            DeclarationName::Mode => ast::Mode::parse_declaration(attributes),
+            DeclarationName::Param => ast::Param::parse_declaration(attributes),
+            DeclarationName::Variable => ast::Variable::parse_declaration(attributes),
+            DeclarationName::Import => ast::Import::parse_declaration(attributes),
+            DeclarationName::Include => ast::Include::parse_declaration(attributes),
             _ => Err(ElementError::Unsupported(format!(
                 "Unsupported declaration: {:?}",
                 &self
@@ -200,6 +207,7 @@ pub(crate) struct Names {
     // XSL elements
     pub(crate) xsl_accumulator_rule: xot::NameId,
     pub(crate) xsl_attribute: xot::NameId,
+    pub(crate) xsl_catch: xot::NameId,
     pub(crate) xsl_fallback: xot::NameId,
     pub(crate) xsl_for_each: xot::NameId,
     pub(crate) xsl_for_each_group: xot::NameId,
@@ -306,6 +314,7 @@ pub(crate) struct Names {
     pub(crate) regex: xot::NameId,
     pub(crate) required: xot::NameId,
     pub(crate) result_prefix: xot::NameId,
+    pub(crate) rollback_output: xot::NameId,
     pub(crate) schema_aware: xot::NameId,
     pub(crate) schema_location: xot::NameId,
     pub(crate) select: xot::NameId,
@@ -399,6 +408,7 @@ impl Names {
             xot.add_name_ns("apply-templates", xsl_ns),
             xot.add_name_ns("attribute-set", xsl_ns),
             xot.add_name_ns("call-template", xsl_ns),
+            xot.add_name_ns("catch", xsl_ns),
             xot.add_name_ns("character-map", xsl_ns),
             xot.add_name_ns("choose", xsl_ns),
             xot.add_name_ns("evaluate", xsl_ns),
@@ -411,6 +421,7 @@ impl Names {
             xot.add_name_ns("override", xsl_ns),
             xot.add_name_ns("package", xsl_ns),
             xot.add_name_ns("stylesheet", xsl_ns),
+            xot.add_name_ns("try", xsl_ns),
             xot.add_name_ns("transform", xsl_ns),
             xot.add_name_ns("use-package", xsl_ns),
         ]
@@ -443,6 +454,7 @@ impl Names {
 
             xsl_accumulator_rule: xot.add_name_ns("accumulator-rule", xsl_ns),
             xsl_attribute: xot.add_name_ns("attribute", xsl_ns),
+            xsl_catch: xot.add_name_ns("catch", xsl_ns),
             xsl_fallback: xot.add_name_ns("fallback", xsl_ns),
             xsl_for_each: xot.add_name_ns("for-each", xsl_ns),
             xsl_for_each_group: xot.add_name_ns("for-each-group", xsl_ns),
@@ -548,6 +560,7 @@ impl Names {
             regex: xot.add_name("regex"),
             required: xot.add_name("required"),
             result_prefix: xot.add_name("result-prefix"),
+            rollback_output: xot.add_name("rollback-output"),
             schema_aware: xot.add_name("schema-aware"),
             schema_location: xot.add_name("schema-location"),
             select: xot.add_name("select"),

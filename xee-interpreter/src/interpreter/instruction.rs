@@ -75,11 +75,22 @@ pub enum Instruction {
     XmlComment,
     XmlProcessingInstruction,
     XmlAppend,
+    XmlSetType(u16),
     CopyShallow,
     CopyDeep,
     ApplyTemplates(u16),
+    ApplyTemplatesWithParams(u16, u16),
+    ApplyTemplatesCurrent,
+    ApplyTemplatesCurrentWithParams(u16),
+    ApplyImports,
+    ApplyImportsWithParams(u16),
+    ApplyNextMatch,
+    ApplyNextMatchWithParams(u16),
+    CallTemplate(u16),
+    CallTemplateWithParams(u16, u16),
     PrintTop,
     PrintStack,
+    TryCatch(u16),
 }
 
 #[derive(Debug, ToPrimitive, FromPrimitive, Clone, PartialEq, Eq, Hash)]
@@ -154,11 +165,22 @@ pub(crate) enum EncodedInstruction {
     XmlComment,
     XmlProcessingInstruction,
     XmlAppend,
+    XmlSetType,
     ApplyTemplates,
+    ApplyTemplatesWithParams,
+    ApplyTemplatesCurrent,
+    ApplyTemplatesCurrentWithParams,
+    ApplyImports,
+    ApplyImportsWithParams,
+    ApplyNextMatch,
+    ApplyNextMatchWithParams,
+    CallTemplate,
+    CallTemplateWithParams,
     CopyShallow,
     CopyDeep,
     PrintTop,
     PrintStack,
+    TryCatch,
 }
 
 // decode a single instruction from the slice
@@ -283,14 +305,57 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::XmlComment => (Instruction::XmlComment, 1),
         EncodedInstruction::XmlProcessingInstruction => (Instruction::XmlProcessingInstruction, 1),
         EncodedInstruction::XmlAppend => (Instruction::XmlAppend, 1),
+        EncodedInstruction::XmlSetType => {
+            let xs = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::XmlSetType(xs), 3)
+        }
         EncodedInstruction::CopyShallow => (Instruction::CopyShallow, 1),
         EncodedInstruction::CopyDeep => (Instruction::CopyDeep, 1),
         EncodedInstruction::ApplyTemplates => {
             let mode_id = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::ApplyTemplates(mode_id), 3)
         }
+        EncodedInstruction::ApplyTemplatesWithParams => {
+            let mode_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            let param_count = u16::from_le_bytes([bytes[3], bytes[4]]);
+            (Instruction::ApplyTemplatesWithParams(mode_id, param_count), 5)
+        }
+        EncodedInstruction::ApplyTemplatesCurrent => (Instruction::ApplyTemplatesCurrent, 1),
+        EncodedInstruction::ApplyTemplatesCurrentWithParams => {
+            let param_count = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (
+                Instruction::ApplyTemplatesCurrentWithParams(param_count),
+                3,
+            )
+        }
+        EncodedInstruction::ApplyImports => (Instruction::ApplyImports, 1),
+        EncodedInstruction::ApplyImportsWithParams => {
+            let param_count = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::ApplyImportsWithParams(param_count), 3)
+        }
+        EncodedInstruction::ApplyNextMatch => (Instruction::ApplyNextMatch, 1),
+        EncodedInstruction::ApplyNextMatchWithParams => {
+            let param_count = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::ApplyNextMatchWithParams(param_count), 3)
+        }
+        EncodedInstruction::CallTemplate => {
+            let template_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::CallTemplate(template_id), 3)
+        }
+        EncodedInstruction::CallTemplateWithParams => {
+            let template_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            let param_count = u16::from_le_bytes([bytes[3], bytes[4]]);
+            (
+                Instruction::CallTemplateWithParams(template_id, param_count),
+                5,
+            )
+        }
         EncodedInstruction::PrintTop => (Instruction::PrintTop, 1),
         EncodedInstruction::PrintStack => (Instruction::PrintStack, 1),
+        EncodedInstruction::TryCatch => {
+            let try_catch_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::TryCatch(try_catch_id), 3)
+        }
     }
 }
 
@@ -435,14 +500,57 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
                 .unwrap(),
         ),
         Instruction::XmlAppend => bytes.push(EncodedInstruction::XmlAppend.to_u8().unwrap()),
+        Instruction::XmlSetType(xs) => {
+            bytes.push(EncodedInstruction::XmlSetType.to_u8().unwrap());
+            bytes.extend_from_slice(&xs.to_le_bytes());
+        }
         Instruction::CopyShallow => bytes.push(EncodedInstruction::CopyShallow.to_u8().unwrap()),
         Instruction::CopyDeep => bytes.push(EncodedInstruction::CopyDeep.to_u8().unwrap()),
         Instruction::ApplyTemplates(mode_id) => {
             bytes.push(EncodedInstruction::ApplyTemplates.to_u8().unwrap());
             bytes.extend_from_slice(&mode_id.to_le_bytes());
         }
+        Instruction::ApplyTemplatesWithParams(mode_id, param_count) => {
+            bytes.push(EncodedInstruction::ApplyTemplatesWithParams.to_u8().unwrap());
+            bytes.extend_from_slice(&mode_id.to_le_bytes());
+            bytes.extend_from_slice(&param_count.to_le_bytes());
+        }
+        Instruction::ApplyTemplatesCurrent => {
+            bytes.push(EncodedInstruction::ApplyTemplatesCurrent.to_u8().unwrap());
+        }
+        Instruction::ApplyTemplatesCurrentWithParams(param_count) => {
+            bytes.push(EncodedInstruction::ApplyTemplatesCurrentWithParams.to_u8().unwrap());
+            bytes.extend_from_slice(&param_count.to_le_bytes());
+        }
+        Instruction::ApplyImports => {
+            bytes.push(EncodedInstruction::ApplyImports.to_u8().unwrap());
+        }
+        Instruction::ApplyImportsWithParams(param_count) => {
+            bytes.push(EncodedInstruction::ApplyImportsWithParams.to_u8().unwrap());
+            bytes.extend_from_slice(&param_count.to_le_bytes());
+        }
+        Instruction::ApplyNextMatch => {
+            bytes.push(EncodedInstruction::ApplyNextMatch.to_u8().unwrap());
+        }
+        Instruction::ApplyNextMatchWithParams(param_count) => {
+            bytes.push(EncodedInstruction::ApplyNextMatchWithParams.to_u8().unwrap());
+            bytes.extend_from_slice(&param_count.to_le_bytes());
+        }
+        Instruction::CallTemplate(template_id) => {
+            bytes.push(EncodedInstruction::CallTemplate.to_u8().unwrap());
+            bytes.extend_from_slice(&template_id.to_le_bytes());
+        }
+        Instruction::CallTemplateWithParams(template_id, param_count) => {
+            bytes.push(EncodedInstruction::CallTemplateWithParams.to_u8().unwrap());
+            bytes.extend_from_slice(&template_id.to_le_bytes());
+            bytes.extend_from_slice(&param_count.to_le_bytes());
+        }
         Instruction::PrintTop => bytes.push(EncodedInstruction::PrintTop.to_u8().unwrap()),
         Instruction::PrintStack => bytes.push(EncodedInstruction::PrintStack.to_u8().unwrap()),
+        Instruction::TryCatch(try_catch_id) => {
+            bytes.push(EncodedInstruction::TryCatch.to_u8().unwrap());
+            bytes.extend_from_slice(&try_catch_id.to_le_bytes());
+        }
     }
 }
 
@@ -528,8 +636,17 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::InstanceOf(_)
         | Instruction::Treat(_)
         | Instruction::ReturnConvert(_)
-        | Instruction::JumpIfFalse(_) => 3,
-        Instruction::ApplyTemplates(_) => 3,
+        | Instruction::XmlSetType(_)
+        | Instruction::JumpIfFalse(_)
+        | Instruction::TryCatch(_) => 3,
+        Instruction::ApplyTemplates(_) | Instruction::CallTemplate(_) => 3,
+        Instruction::ApplyImports => 1,
+        Instruction::ApplyImportsWithParams(_) => 3,
+        Instruction::ApplyNextMatch => 1,
+        Instruction::ApplyNextMatchWithParams(_) => 3,
+        Instruction::ApplyTemplatesWithParams(_, _) | Instruction::CallTemplateWithParams(_, _) => 5,
+        Instruction::ApplyTemplatesCurrent => 1,
+        Instruction::ApplyTemplatesCurrentWithParams(_) => 3,
     }
 }
 

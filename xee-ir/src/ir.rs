@@ -9,6 +9,7 @@ use rust_decimal::Decimal;
 
 pub use xee_interpreter::function::Name;
 use xee_interpreter::function::{CastType, Signature, StaticFunctionId};
+use xee_interpreter::declaration::CatchError;
 use xee_interpreter::sequence::SerializationParameters;
 use xee_interpreter::xml;
 use xee_schema_type::Xs;
@@ -25,6 +26,7 @@ pub enum Expr {
     Atom(AtomS),
     Let(Let),
     If(If),
+    TryCatch(TryCatch),
     Binary(Binary),
     Unary(Unary),
     FunctionDefinition(FunctionDefinition),
@@ -55,7 +57,11 @@ pub enum Expr {
     XmlComment(XmlComment),
     XmlProcessingInstruction(XmlProcessingInstruction),
     XmlAppend(XmlAppend),
+    XmlSetType(XmlSetType),
     ApplyTemplates(ApplyTemplates),
+    ApplyImports(ApplyImports),
+    NextMatch(NextMatch),
+    CallTemplate(CallTemplate),
     CopyShallow(CopyShallow),
     CopyDeep(CopyDeep),
 }
@@ -74,6 +80,7 @@ pub enum Const {
     Double(OrderedFloat<f64>),
     Decimal(Decimal),
     StaticFunctionReference(StaticFunctionId, Option<ContextNames>),
+    UserFunctionReference(usize),
     // XXX replace this with a sequence constant? useful once we have constant folding
     EmptySequence,
 }
@@ -97,6 +104,19 @@ pub struct If {
     pub condition: AtomS,
     pub then: Box<ExprS>,
     pub else_: Box<ExprS>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TryCatch {
+    pub try_body: FunctionDefinition,
+    pub catches: Vec<CatchClause>,
+    pub rollback_output: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CatchClause {
+    pub errors: Vec<CatchError>,
+    pub body: FunctionDefinition,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -330,9 +350,38 @@ pub struct XmlAppend {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct XmlSetType {
+    pub node: AtomS,
+    pub xs: Xs,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WithParam {
+    pub name: xmlname::OwnedName,
+    pub value: AtomS,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ApplyTemplates {
     pub mode: ApplyTemplatesModeValue,
     pub select: AtomS,
+    pub params: Vec<WithParam>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApplyImports {
+    pub params: Vec<WithParam>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NextMatch {
+    pub params: Vec<WithParam>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallTemplate {
+    pub name: xmlname::OwnedName,
+    pub params: Vec<WithParam>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -356,8 +405,11 @@ pub struct CopyDeep {
 pub struct Rule {
     pub modes: Vec<ModeValue>,
     pub priority: Decimal,
+    pub import_level: u32,
+    pub is_builtin: bool,
     pub pattern: Pattern<FunctionDefinition>,
     pub function_definition: FunctionDefinition,
+    pub template_params: Vec<TemplateParam>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -368,13 +420,27 @@ pub enum ModeValue {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Mode {}
+pub struct Mode {
+    pub on_no_match: Option<OnNoMatch>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OnNoMatch {
+    DeepCopy,
+    ShallowCopy,
+    DeepSkip,
+    ShallowSkip,
+    TextOnlyCopy,
+    Fail,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Declarations {
     pub rules: Vec<Rule>,
     pub modes: HashMap<Option<xmlname::OwnedName>, Mode>,
     pub functions: Vec<FunctionBinding>,
+    pub named_templates: Vec<NamedTemplate>,
+    pub global_params: Vec<GlobalParam>,
     pub main: FunctionDefinition,
     pub serialization_params: SerializationParameters,
 }
@@ -385,6 +451,8 @@ impl Declarations {
             rules: Vec::new(),
             modes: HashMap::new(),
             functions: Vec::new(),
+            named_templates: Vec::new(),
+            global_params: Vec::new(),
             main,
             serialization_params: SerializationParameters::new(),
         }
@@ -392,7 +460,33 @@ impl Declarations {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GlobalParam {
+    pub name: xmlname::OwnedName,
+    pub var_name: Name,
+    pub required: bool,
+    pub overrideable: bool,
+    pub default_expr: Option<ExprS>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TemplateParam {
+    pub name: xmlname::OwnedName,
+    pub var_name: Name,
+    pub required: bool,
+    pub default_expr: Option<ExprS>,
+    pub type_: Option<SequenceType>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NamedTemplate {
+    pub name: xmlname::OwnedName,
+    pub function_definition: FunctionDefinition,
+    pub template_params: Vec<TemplateParam>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionBinding {
-    pub name: Name,
+    pub name: xmlname::OwnedName,
+    pub arity: u8,
     pub main: FunctionDefinition,
 }

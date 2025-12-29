@@ -1,0 +1,26 @@
+---
+source: xee-xpath-ast/src/parser/pattern.rs
+assertion_line: 358
+expression: "ast::XPath::parse(\".='10'\", &namespaces, &variable_names)"
+---
+Ok(XPath(Expr([
+  Path(PathExpr(
+    steps: [
+      PrimaryExpr(Expr(Some(Expr([
+        Binary(BinaryExpr(
+          operator: GenEq,
+          left: PathExpr(
+            steps: [
+              PrimaryExpr(ContextItem),
+            ],
+          ),
+          right: PathExpr(
+            steps: [
+              PrimaryExpr(Literal(String("10"))),
+            ],
+          ),
+        )),
+      ])))),
+    ],
+  )),
+])))

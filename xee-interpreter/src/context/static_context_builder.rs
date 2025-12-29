@@ -1,17 +1,31 @@
-use ahash::HashMap;
+use ahash::{HashMap, HashMapExt};
 use iri_string::types::IriAbsoluteString;
 use xee_name::Namespaces;
 use xot::xmlname::OwnedName;
 
 use crate::context;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct StaticContextBuilder<'a> {
     variable_names: Vec<OwnedName>,
     namespaces: HashMap<&'a str, &'a str>,
     default_element_namespace: &'a str,
     default_function_namespace: &'a str,
     static_base_uri: Option<IriAbsoluteString>,
+    assertions_enabled: bool,
+}
+
+impl Default for StaticContextBuilder<'_> {
+    fn default() -> Self {
+        Self {
+            variable_names: Vec::new(),
+            namespaces: HashMap::new(),
+            default_element_namespace: "",
+            default_function_namespace: "",
+            static_base_uri: None,
+            assertions_enabled: true,
+        }
+    }
 }
 
 impl<'a> StaticContextBuilder<'a> {
@@ -75,6 +89,11 @@ impl<'a> StaticContextBuilder<'a> {
         self
     }
 
+    pub fn assertions_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.assertions_enabled = enabled;
+        self
+    }
+
     /// Build the static context.
     ///
     /// This will always include the default known namespaces for
@@ -96,7 +115,12 @@ impl<'a> StaticContextBuilder<'a> {
             default_function_namespace.to_string(),
         );
         let variable_names = self.variable_names.clone().into_iter().collect();
-        context::StaticContext::new(namespaces, variable_names, self.static_base_uri.clone())
+        context::StaticContext::new(
+            namespaces,
+            variable_names,
+            self.static_base_uri.clone(),
+            self.assertions_enabled,
+        )
     }
 }
 
