@@ -10,6 +10,9 @@ type Pattern = pattern::Pattern<ast::ExprS>;
 pub(crate) fn default_priority<'a>(
     pattern: &'a Pattern,
 ) -> Box<dyn Iterator<Item = (Cow<'a, Pattern>, Decimal)> + 'a> {
+    if let Some(binary_expr) = top_level_binary_expr(pattern) {
+        return default_priority_top_level_binary(Cow::Borrowed(pattern), binary_expr);
+    }
     match pattern {
         pattern::Pattern::Predicate(predicate) => {
             if !predicate.predicates.is_empty() {
@@ -25,6 +28,32 @@ pub(crate) fn default_priority<'a>(
         pattern::Pattern::Expr(pattern::ExprPattern::BinaryExpr(binary_expr)) => Box::new(
             default_priority_top_level_binary(Cow::Borrowed(pattern), binary_expr),
         ),
+    }
+}
+
+fn top_level_binary_expr(
+    pattern: &Pattern,
+) -> Option<&pattern::BinaryExpr<ast::ExprS>> {
+    match pattern {
+        pattern::Pattern::Expr(pattern::ExprPattern::BinaryExpr(binary_expr)) => Some(binary_expr),
+        pattern::Pattern::Expr(pattern::ExprPattern::Path(path)) => {
+            path_top_level_binary_expr(path)
+        }
+        _ => None,
+    }
+}
+
+fn path_top_level_binary_expr(
+    path: &pattern::PathExpr<ast::ExprS>,
+) -> Option<&pattern::BinaryExpr<ast::ExprS>> {
+    match path.steps.as_slice() {
+        [pattern::StepExpr::PostfixExpr(postfix)] if postfix.predicates.is_empty() => {
+            match &postfix.expr {
+                pattern::ExprPattern::BinaryExpr(binary_expr) => Some(binary_expr),
+                _ => None,
+            }
+        }
+        _ => None,
     }
 }
 
@@ -189,23 +218,37 @@ mod tests {
         v[0].1
     }
 
+    fn flatten_union(pattern: &Pattern) -> Vec<Pattern> {
+        let mut out = Vec::new();
+        flatten_union_inner(pattern, &mut out);
+        out
+    }
+
+    fn flatten_union_inner(pattern: &Pattern, out: &mut Vec<Pattern>) {
+        if let Some(binary_expr) = top_level_binary_expr(pattern) {
+            if binary_expr.operator == pattern::Operator::Union {
+                let left = Pattern::Expr(binary_expr.left.as_ref().clone());
+                flatten_union_inner(&left, out);
+                let right = Pattern::Expr(binary_expr.right.as_ref().clone());
+                flatten_union_inner(&right, out);
+                return;
+            }
+        }
+        out.push(pattern.clone());
+    }
+
     #[test]
     fn test_2_top_level_union_is_multiple_patterns() {
         let pattern = parse("foo | bar");
-        let (first_pattern, second_pattern) = match pattern.clone() {
-            Pattern::Expr(pattern::ExprPattern::BinaryExpr(binary_expr)) => (
-                pattern::Pattern::Expr(binary_expr.left.as_ref().clone()),
-                pattern::Pattern::Expr(binary_expr.right.as_ref().clone()),
-            ),
-            _ => panic!("Expected binary expression"),
-        };
+        let parts = flatten_union(&pattern);
+        assert_eq!(parts.len(), 2);
 
         let priorities = default_priority(&pattern).collect::<Vec<_>>();
         assert_eq!(
             priorities,
             vec![
-                (Cow::Owned(first_pattern), dec!(0)),
-                (Cow::Owned(second_pattern), dec!(0))
+                (Cow::Owned(parts[0].clone()), dec!(0)),
+                (Cow::Owned(parts[1].clone()), dec!(0))
             ]
         );
     }
@@ -213,20 +256,15 @@ mod tests {
     #[test]
     fn test_2_top_level_union_is_multiple_patterns_different_priority() {
         let pattern = parse("(/) | bar");
-        let (first_pattern, second_pattern) = match pattern.clone() {
-            Pattern::Expr(pattern::ExprPattern::BinaryExpr(binary_expr)) => (
-                pattern::Pattern::Expr(binary_expr.left.as_ref().clone()),
-                pattern::Pattern::Expr(binary_expr.right.as_ref().clone()),
-            ),
-            _ => panic!("Expected binary expression"),
-        };
+        let parts = flatten_union(&pattern);
+        assert_eq!(parts.len(), 2);
 
         let priorities = default_priority(&pattern).collect::<Vec<_>>();
         assert_eq!(
             priorities,
             vec![
-                (Cow::Owned(first_pattern), dec!(-0.5)),
-                (Cow::Owned(second_pattern), dec!(0))
+                (Cow::Owned(parts[0].clone()), dec!(-0.5)),
+                (Cow::Owned(parts[1].clone()), dec!(0))
             ]
         );
     }
@@ -234,27 +272,16 @@ mod tests {
     #[test]
     fn test_2_top_level_union_more_unions() {
         let pattern = parse("foo | bar | baz");
-        let ((first_pattern, second_pattern), third_pattern) = match pattern.clone() {
-            Pattern::Expr(pattern::ExprPattern::BinaryExpr(binary_expr)) => (
-                match binary_expr.left.as_ref() {
-                    pattern::ExprPattern::BinaryExpr(binary_expr) => (
-                        pattern::Pattern::Expr(binary_expr.left.as_ref().clone()),
-                        pattern::Pattern::Expr(binary_expr.right.as_ref().clone()),
-                    ),
-                    _ => panic!("Expected binary expression"),
-                },
-                pattern::Pattern::Expr(binary_expr.right.as_ref().clone()),
-            ),
-            _ => panic!("Expected binary expression"),
-        };
+        let parts = flatten_union(&pattern);
+        assert_eq!(parts.len(), 3);
 
         let priorities = default_priority(&pattern).collect::<Vec<_>>();
         assert_eq!(
             priorities,
             vec![
-                (Cow::Owned(first_pattern), dec!(0)),
-                (Cow::Owned(second_pattern), dec!(0)),
-                (Cow::Owned(third_pattern), dec!(0))
+                (Cow::Owned(parts[0].clone()), dec!(0)),
+                (Cow::Owned(parts[1].clone()), dec!(0)),
+                (Cow::Owned(parts[2].clone()), dec!(0))
             ]
         );
     }
