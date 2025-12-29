@@ -6,7 +6,7 @@ use crate::function::{self, Function};
 use crate::{error::Error, interpreter::Program};
 use crate::{interpreter, sequence};
 
-use super::{DocumentsRef, StaticContext};
+use super::{DocumentsRef, StaticContext, TypeTableRef};
 
 /// A map of variables
 ///
@@ -27,6 +27,7 @@ pub struct DynamicContext<'a> {
     // multiple spots. We use RefCell to manage that during runtime so we don't
     // need to make the whole thing immutable.
     documents: DocumentsRef,
+    type_table: TypeTableRef,
     variables: Variables,
     // TODO: we want to be able to control the creation of this outside,
     // as it needs to be the same for all evalutions of XSLT I believe
@@ -49,6 +50,7 @@ impl<'a> DynamicContext<'a> {
         program: &'a Program,
         context_item: Option<sequence::Item>,
         documents: DocumentsRef,
+        type_table: TypeTableRef,
         variables: Variables,
         current_datetime: chrono::DateTime<chrono::offset::FixedOffset>,
         default_collection: Option<sequence::Sequence>,
@@ -61,6 +63,7 @@ impl<'a> DynamicContext<'a> {
             program,
             context_item,
             documents,
+            type_table,
             variables,
             current_datetime,
             default_collection,
@@ -84,6 +87,10 @@ impl<'a> DynamicContext<'a> {
     /// The documents in this context.
     pub fn documents(&self) -> DocumentsRef {
         self.documents.clone()
+    }
+
+    pub fn type_table(&self) -> TypeTableRef {
+        self.type_table.clone()
     }
 
     /// The variables in this context.

@@ -8,8 +8,10 @@ use xot::Xot;
 
 use crate::error;
 use crate::function;
+use crate::pattern::{ModeId, RuleEntry};
 use crate::sequence;
 use crate::stack;
+use crate::context::TypeTableRef;
 
 const FRAMES_MAX: usize = 64;
 
@@ -18,6 +20,9 @@ pub(crate) struct Frame {
     function: function::InlineFunctionId,
     base: usize,
     pub(crate) ip: usize,
+    pub(crate) mode: Option<ModeId>,
+    pub(crate) rule: Option<RuleEntry>,
+    pub(crate) rule_index: Option<usize>,
 }
 
 impl Frame {
@@ -41,15 +46,26 @@ pub struct State<'a> {
     build_stack: Vec<BuildStackEntry>,
     frames: ArrayVec<Frame, FRAMES_MAX>,
     regex_cache: RefCell<HashMap<RegexKey, Rc<regexml::Regex>>>,
+    global_params: Vec<sequence::Sequence>,
     pub(crate) xot: &'a mut Xot,
+    pub(crate) type_table: TypeTableRef,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub(crate) struct StateSnapshot {
+    stack: Vec<stack::Value>,
+    build_stack: Vec<BuildStackEntry>,
+    frames: ArrayVec<Frame, FRAMES_MAX>,
+    xot: Option<Xot>,
+    type_table: Option<crate::xml::TypeTable>,
+}
+
+#[derive(Debug, Clone)]
 struct ItemBuildStackEntry {
     build_stack: Vec<sequence::Item>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct BuildStackEntry {
     item: ItemBuildStackEntry,
 }
@@ -88,8 +104,85 @@ impl<'a> State<'a> {
             build_stack: vec![],
             frames: ArrayVec::new(),
             regex_cache: RefCell::new(HashMap::new()),
+            global_params: Vec::new(),
             xot,
+            type_table: TypeTableRef::new(),
         }
+    }
+
+    pub(crate) fn new_with_type_table(xot: &'a mut Xot, type_table: TypeTableRef) -> Self {
+        Self {
+            stack: vec![],
+            build_stack: vec![],
+            frames: ArrayVec::new(),
+            regex_cache: RefCell::new(HashMap::new()),
+            global_params: Vec::new(),
+            xot,
+            type_table,
+        }
+    }
+
+    pub(crate) fn snapshot(&self, include_xot: bool) -> StateSnapshot {
+        StateSnapshot {
+            stack: self.stack.clone(),
+            build_stack: self.build_stack.clone(),
+            frames: self.frames.clone(),
+            xot: include_xot.then(|| self.xot.clone()),
+            type_table: include_xot.then(|| self.type_table.borrow().clone()),
+        }
+    }
+
+    pub(crate) fn restore(&mut self, snapshot: StateSnapshot) {
+        self.stack = snapshot.stack;
+        self.build_stack = snapshot.build_stack;
+        self.frames = snapshot.frames;
+        if let Some(xot) = snapshot.xot {
+            *self.xot = xot;
+        }
+        if let Some(type_table) = snapshot.type_table {
+            *self.type_table.borrow_mut() = type_table;
+        }
+    }
+
+    pub(crate) fn set_global_params(&mut self, params: Vec<sequence::Sequence>) {
+        self.global_params = params;
+    }
+
+    pub(crate) fn set_node_type(&mut self, node: xot::Node, xs: xee_schema_type::Xs) {
+        self.type_table.borrow_mut().set(node, xs);
+    }
+
+    pub(crate) fn node_type(&self, node: xot::Node) -> Option<xee_schema_type::Xs> {
+        self.type_table.borrow().get(node)
+    }
+
+    pub(crate) fn clone_node_with_type(&mut self, node: xot::Node) -> xot::Node {
+        let cloned = self.xot.clone_node(node);
+        self.type_table.borrow_mut().copy_type(node, cloned);
+        cloned
+    }
+
+    pub(crate) fn global_params(&self) -> &[sequence::Sequence] {
+        &self.global_params
+    }
+
+    pub(crate) fn context_args(
+        &self,
+    ) -> error::Result<(sequence::Sequence, sequence::Sequence, sequence::Sequence)> {
+        let base = self.frame().base();
+        let item = sequence::Sequence::try_from(&self.stack[base])?;
+        let position = sequence::Sequence::try_from(&self.stack[base + 1])?;
+        let size = sequence::Sequence::try_from(&self.stack[base + 2])?;
+        Ok((item, position, size))
+    }
+
+    pub(crate) fn context_values(&self) -> (stack::Value, stack::Value, stack::Value) {
+        let base = self.frame().base();
+        (
+            self.stack[base].clone(),
+            self.stack[base + 1].clone(),
+            self.stack[base + 2].clone(),
+        )
     }
 
     pub(crate) fn push<T>(&mut self, sequence: T)
@@ -169,6 +262,9 @@ impl<'a> State<'a> {
             function: function_id,
             ip: 0,
             base: 0,
+            mode: None,
+            rule: None,
+            rule_index: None,
         });
     }
 
@@ -184,6 +280,31 @@ impl<'a> State<'a> {
             function: function_id,
             ip: 0,
             base: self.stack.len() - arity,
+            mode: None,
+            rule: None,
+            rule_index: None,
+        });
+        Ok(())
+    }
+
+    pub(crate) fn push_frame_with_rule(
+        &mut self,
+        function_id: function::InlineFunctionId,
+        arity: usize,
+        mode: ModeId,
+        rule: RuleEntry,
+        rule_index: usize,
+    ) -> error::Result<()> {
+        if self.frames.len() >= self.frames.capacity() {
+            return Err(error::Error::StackOverflow);
+        }
+        self.frames.push(Frame {
+            function: function_id,
+            ip: 0,
+            base: self.stack.len() - arity,
+            mode: Some(mode),
+            rule: Some(rule),
+            rule_index: Some(rule_index),
         });
         Ok(())
     }
@@ -273,5 +394,44 @@ impl<'a> State<'a> {
 
     pub fn xot_mut(&mut self) -> &mut Xot {
         self.xot
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::State;
+    use xee_schema_type::Xs;
+    use xot::Xot;
+
+    #[test]
+    fn snapshot_restores_type_table_with_xot() {
+        let mut xot = Xot::new();
+        let doc = xot.parse(r#"<root><a/></root>"#).unwrap();
+        let doc_el = xot.document_element(doc).unwrap();
+        let a = xot.first_child(doc_el).unwrap();
+        let mut state = State::new(&mut xot);
+        state.set_node_type(a, Xs::String);
+        let snapshot = state.snapshot(true);
+
+        state.set_node_type(a, Xs::UntypedAtomic);
+        state.restore(snapshot);
+
+        assert_eq!(state.node_type(a), Some(Xs::String));
+    }
+
+    #[test]
+    fn snapshot_does_not_restore_type_table_without_xot() {
+        let mut xot = Xot::new();
+        let doc = xot.parse(r#"<root><a/></root>"#).unwrap();
+        let doc_el = xot.document_element(doc).unwrap();
+        let a = xot.first_child(doc_el).unwrap();
+        let mut state = State::new(&mut xot);
+        state.set_node_type(a, Xs::String);
+        let snapshot = state.snapshot(false);
+
+        state.set_node_type(a, Xs::UntypedAtomic);
+        state.restore(snapshot);
+
+        assert_eq!(state.node_type(a), Some(Xs::UntypedAtomic));
     }
 }

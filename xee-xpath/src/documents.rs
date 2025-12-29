@@ -1,6 +1,7 @@
 use iri_string::types::IriStr;
 use xee_interpreter::{
     context::DocumentsRef,
+    context::TypeTableRef,
     xml::{DocumentHandle, DocumentsError},
 };
 use xot::Xot;
@@ -16,6 +17,7 @@ use xot::Xot;
 pub struct Documents {
     pub(crate) xot: Xot,
     pub(crate) documents: DocumentsRef,
+    pub(crate) type_table: TypeTableRef,
 }
 
 impl Documents {
@@ -24,6 +26,7 @@ impl Documents {
         Self {
             xot: Xot::new(),
             documents: DocumentsRef::new(),
+            type_table: TypeTableRef::new(),
         }
     }
 
@@ -59,6 +62,11 @@ impl Documents {
     /// Get a reference to the documents
     pub fn documents(&self) -> &DocumentsRef {
         &self.documents
+    }
+
+    /// Get a reference to the schema type table.
+    pub fn type_table(&self) -> &TypeTableRef {
+        &self.type_table
     }
 
     /// Get a reference to the Xot arena

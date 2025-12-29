@@ -2,6 +2,7 @@ const XS_NAMESPACE: &str = "http://www.w3.org/2001/XMLSchema";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[repr(u16)]
 pub enum Xs {
     AnyType,
     AnySimpleType,
@@ -87,6 +88,68 @@ impl RustInfo {
 }
 
 impl Xs {
+    pub const fn to_u16(self) -> u16 {
+        self as u16
+    }
+
+    pub const fn from_u16(value: u16) -> Option<Self> {
+        use Xs::*;
+        match value {
+            x if x == AnyType as u16 => Some(AnyType),
+            x if x == AnySimpleType as u16 => Some(AnySimpleType),
+            x if x == Error as u16 => Some(Error),
+            x if x == Untyped as u16 => Some(Untyped),
+            x if x == AnyAtomicType as u16 => Some(AnyAtomicType),
+            x if x == Numeric as u16 => Some(Numeric),
+            x if x == String as u16 => Some(String),
+            x if x == UntypedAtomic as u16 => Some(UntypedAtomic),
+            x if x == Boolean as u16 => Some(Boolean),
+            x if x == Decimal as u16 => Some(Decimal),
+            x if x == NonPositiveInteger as u16 => Some(NonPositiveInteger),
+            x if x == NegativeInteger as u16 => Some(NegativeInteger),
+            x if x == NonNegativeInteger as u16 => Some(NonNegativeInteger),
+            x if x == PositiveInteger as u16 => Some(PositiveInteger),
+            x if x == Integer as u16 => Some(Integer),
+            x if x == Long as u16 => Some(Long),
+            x if x == Int as u16 => Some(Int),
+            x if x == Short as u16 => Some(Short),
+            x if x == Byte as u16 => Some(Byte),
+            x if x == UnsignedLong as u16 => Some(UnsignedLong),
+            x if x == UnsignedInt as u16 => Some(UnsignedInt),
+            x if x == UnsignedShort as u16 => Some(UnsignedShort),
+            x if x == UnsignedByte as u16 => Some(UnsignedByte),
+            x if x == Float as u16 => Some(Float),
+            x if x == Double as u16 => Some(Double),
+            x if x == QName as u16 => Some(QName),
+            x if x == Notation as u16 => Some(Notation),
+            x if x == Duration as u16 => Some(Duration),
+            x if x == YearMonthDuration as u16 => Some(YearMonthDuration),
+            x if x == DayTimeDuration as u16 => Some(DayTimeDuration),
+            x if x == Time as u16 => Some(Time),
+            x if x == GYearMonth as u16 => Some(GYearMonth),
+            x if x == GYear as u16 => Some(GYear),
+            x if x == GMonthDay as u16 => Some(GMonthDay),
+            x if x == GMonth as u16 => Some(GMonth),
+            x if x == GDay as u16 => Some(GDay),
+            x if x == Base64Binary as u16 => Some(Base64Binary),
+            x if x == HexBinary as u16 => Some(HexBinary),
+            x if x == AnyURI as u16 => Some(AnyURI),
+            x if x == DateTime as u16 => Some(DateTime),
+            x if x == DateTimeStamp as u16 => Some(DateTimeStamp),
+            x if x == Date as u16 => Some(Date),
+            x if x == NormalizedString as u16 => Some(NormalizedString),
+            x if x == Token as u16 => Some(Token),
+            x if x == Language as u16 => Some(Language),
+            x if x == NMTOKEN as u16 => Some(NMTOKEN),
+            x if x == Name as u16 => Some(Name),
+            x if x == NCName as u16 => Some(NCName),
+            x if x == ID as u16 => Some(ID),
+            x if x == IDREF as u16 => Some(IDREF),
+            x if x == ENTITY as u16 => Some(ENTITY),
+            _ => None,
+        }
+    }
+
     pub fn by_name(namespace: &str, local_name: &str) -> Option<Self> {
         if namespace == XS_NAMESPACE {
             Xs::by_local_name(local_name)
