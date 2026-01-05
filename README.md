@@ -208,3 +208,7 @@ Some affiliated projects exist as well maintained outside of this project:
 
 - [`vendor`](vendor) - the QT3 test suite (`xpath-tests`) and `xslt-tests`
   vendored into this project for purposes of easy of access and stability.
+
+## Discussion and Development
+
+There's a Xee [discord server](https://discord.gg/Y4F3ReHC)
