@@ -2,7 +2,7 @@
 
 use xee_xpath_macros::xpath_fn;
 
-use crate::{context, error, function, interpreter::Interpreter, sequence, wrap_xpath_fn};
+use crate::{context, context::BorrowWith, error, function, interpreter::Interpreter, sequence, wrap_xpath_fn};
 
 use super::StaticFunctionDescription;
 

@@ -21,6 +21,7 @@ use crate::span::SourceSpan;
 use crate::stack;
 use crate::xml;
 use crate::{error, pattern};
+use crate::context::BorrowWith;
 
 use super::instruction::{read_i16, read_instruction, read_u16, read_u8, EncodedInstruction};
 use super::runnable::Runnable;
