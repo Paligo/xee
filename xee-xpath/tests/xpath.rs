@@ -3,7 +3,7 @@ use xee_xpath::{context::Variables, error, Atomic, Item, Sequence};
 
 mod common;
 
-use common::{assert_nodes, run, run_with_variables, run_xml, run_xml_default_ns};
+use common::{assert_nodes, run, run_with_variables, run_xml, run_xml_default_ns, run_xml_with_ns};
 
 #[test]
 fn test_compile_add() {
@@ -1335,4 +1335,88 @@ fn test_curly_map() {
 #[test]
 fn test_cast_negative_zero() {
     assert_debug_snapshot!(run("xs:unsignedLong('-0')"));
+}
+
+// XML elements whose local names match XPath axis names or keywords must be
+// addressable via qualified names like `ex:child`, `ex:parent`, etc.
+//
+// Example XML that uses axis names as element names:
+//
+//   <data xmlns:ex="http://example.com/ex">
+//     <ex:child>...</ex:child>
+//     <ex:parent>...</ex:parent>
+//     <ex:self>...</ex:self>
+//   </data>
+
+#[test]
+fn test_keyword_element_name_unprefixed() {
+    // "child" as a plain element name (no namespace prefix) — the parser
+    // handles this via parser_keyword() which already includes all keywords
+    assert_debug_snapshot!(run_xml(
+        "<data><child>found it</child></data>",
+        "//child/string()",
+    ));
+}
+
+#[test]
+fn test_keyword_qname_child() {
+    assert_debug_snapshot!(run_xml_with_ns(
+        r#"<data xmlns:ex="http://example.com/ex"><ex:child>found it</ex:child></data>"#,
+        "//ex:child/string()",
+        &[("ex", "http://example.com/ex")]
+    ));
+}
+
+#[test]
+fn test_keyword_qname_parent() {
+    assert_debug_snapshot!(run_xml_with_ns(
+        r#"<data xmlns:ex="http://example.com/ex"><ex:parent>found it</ex:parent></data>"#,
+        "//ex:parent/string()",
+        &[("ex", "http://example.com/ex")]
+    ));
+}
+
+#[test]
+fn test_keyword_qname_self() {
+    assert_debug_snapshot!(run_xml_with_ns(
+        r#"<data xmlns:ex="http://example.com/ex"><ex:self>found it</ex:self></data>"#,
+        "//ex:self/string()",
+        &[("ex", "http://example.com/ex")]
+    ));
+}
+
+#[test]
+fn test_keyword_qname_descendant() {
+    assert_debug_snapshot!(run_xml_with_ns(
+        r#"<data xmlns:ex="http://example.com/ex"><ex:descendant>found it</ex:descendant></data>"#,
+        "//ex:descendant/string()",
+        &[("ex", "http://example.com/ex")]
+    ));
+}
+
+#[test]
+fn test_keyword_qname_ancestor() {
+    assert_debug_snapshot!(run_xml_with_ns(
+        r#"<data xmlns:ex="http://example.com/ex"><ex:ancestor>found it</ex:ancestor></data>"#,
+        "//ex:ancestor/string()",
+        &[("ex", "http://example.com/ex")]
+    ));
+}
+
+#[test]
+fn test_keyword_qname_or() {
+    assert_debug_snapshot!(run_xml_with_ns(
+        r#"<data xmlns:ex="http://example.com/ex"><ex:or>found it</ex:or></data>"#,
+        "//ex:or/string()",
+        &[("ex", "http://example.com/ex")]
+    ));
+}
+
+#[test]
+fn test_keyword_qname_and() {
+    assert_debug_snapshot!(run_xml_with_ns(
+        r#"<data xmlns:ex="http://example.com/ex"><ex:and>found it</ex:and></data>"#,
+        "//ex:and/string()",
+        &[("ex", "http://example.com/ex")]
+    ));
 }

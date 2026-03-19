@@ -63,6 +63,22 @@ where
     Ok(())
 }
 
+pub(crate) fn run_xml_with_ns(
+    xml: &str,
+    xpath: &str,
+    namespaces: &[(&str, &str)],
+) -> error::Result<Sequence> {
+    let mut documents = Documents::new();
+    let handle = documents.add_string_without_uri(xml).unwrap();
+    let mut static_context_builder = StaticContextBuilder::default();
+    for (prefix, uri) in namespaces {
+        static_context_builder.add_namespace(prefix, uri);
+    }
+    let queries = Queries::new(static_context_builder);
+    let q = queries.sequence(xpath)?;
+    q.execute(&mut documents, handle)
+}
+
 fn xot_nodes_to_items(node: &[xot::Node]) -> Sequence {
     Sequence::from(
         node.iter()

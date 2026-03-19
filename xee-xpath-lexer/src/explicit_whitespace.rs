@@ -305,4 +305,101 @@ mod tests {
         assert_eq!(iter.next(), Some((Token::CommentStart, 6..13)));
         assert_eq!(iter.next(), Some((Token::NCName("ncname"), 13..19)));
     }
+
+    // Axis names and other keywords must be valid as local names in QNames.
+    // For example, "ex:child" must produce a PrefixedQName, not separate tokens.
+    #[test]
+    fn test_prefixed_qname_with_axis_name_local_names() {
+        let cases = [
+            ("ex:child", "child", 8),
+            ("ex:parent", "parent", 9),
+            ("ex:self", "self", 7),
+            ("ex:attribute", "attribute", 12),
+            ("ex:descendant", "descendant", 13),
+            ("ex:descendant-or-self", "descendant-or-self", 21),
+            ("ex:ancestor", "ancestor", 11),
+            ("ex:ancestor-or-self", "ancestor-or-self", 19),
+            ("ex:following", "following", 12),
+            ("ex:following-sibling", "following-sibling", 20),
+            ("ex:preceding", "preceding", 12),
+            ("ex:preceding-sibling", "preceding-sibling", 20),
+            ("ex:namespace", "namespace", 12),
+        ];
+        for (input, local_name, len) in cases {
+            let mut iter = ExplicitWhitespace::from_str(input);
+            assert_eq!(
+                iter.next(),
+                Some((
+                    Token::PrefixedQName(PrefixedQName {
+                        prefix: "ex",
+                        local_name
+                    }),
+                    0..len
+                )),
+                "failed for input: {input}"
+            );
+            assert_eq!(iter.next(), None, "unexpected trailing token for: {input}");
+        }
+    }
+
+    #[test]
+    fn test_prefixed_qname_with_keyword_local_names() {
+        let cases = [
+            ("ex:and", "and", 6),
+            ("ex:or", "or", 5),
+            ("ex:div", "div", 6),
+            ("ex:mod", "mod", 6),
+            ("ex:for", "for", 6),
+            ("ex:let", "let", 6),
+            ("ex:some", "some", 7),
+            ("ex:every", "every", 8),
+            ("ex:is", "is", 5),
+            ("ex:to", "to", 5),
+            ("ex:union", "union", 8),
+            ("ex:intersect", "intersect", 12),
+            ("ex:except", "except", 9),
+            ("ex:instance", "instance", 11),
+            ("ex:treat", "treat", 8),
+            ("ex:cast", "cast", 7),
+            ("ex:castable", "castable", 11),
+            ("ex:as", "as", 5),
+            ("ex:in", "in", 5),
+            ("ex:return", "return", 9),
+            ("ex:satisfies", "satisfies", 12),
+            ("ex:then", "then", 7),
+            ("ex:else", "else", 7),
+        ];
+        for (input, local_name, len) in cases {
+            let mut iter = ExplicitWhitespace::from_str(input);
+            assert_eq!(
+                iter.next(),
+                Some((
+                    Token::PrefixedQName(PrefixedQName {
+                        prefix: "ex",
+                        local_name
+                    }),
+                    0..len
+                )),
+                "failed for input: {input}"
+            );
+            assert_eq!(iter.next(), None, "unexpected trailing token for: {input}");
+        }
+    }
+
+    // Keywords should also work as prefixes in QNames
+    #[test]
+    fn test_prefixed_qname_with_keyword_prefix() {
+        let mut iter = ExplicitWhitespace::from_str("child:foo");
+        assert_eq!(
+            iter.next(),
+            Some((
+                Token::PrefixedQName(PrefixedQName {
+                    prefix: "child",
+                    local_name: "foo"
+                }),
+                0..9
+            ))
+        );
+        assert_eq!(iter.next(), None);
+    }
 }

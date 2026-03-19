@@ -1,0 +1,17 @@
+---
+source: xee-xpath/tests/xpath.rs
+assertion_line: 1355
+expression: "run_xml(\"<data><child>found it</child></data>\", \"//child/string()\",)"
+---
+Ok(
+    One(
+        One {
+            item: Atomic(
+                String(
+                    String,
+                    "found it",
+                ),
+            ),
+        },
+    ),
+)

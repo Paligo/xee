@@ -1,0 +1,17 @@
+---
+source: xee-xpath/tests/xpath.rs
+assertion_line: 1353
+expression: "run_xml_with_ns(r#\"<data xmlns:ex=\"http://example.com/ex\"><ex:child>found it</ex:child></data>\"#,\n\"//ex:child/string()\", &[(\"ex\", \"http://example.com/ex\")])"
+---
+Ok(
+    One(
+        One {
+            item: Atomic(
+                String(
+                    String,
+                    "found it",
+                ),
+            ),
+        },
+    ),
+)
