@@ -211,4 +211,4 @@ Some affiliated projects exist as well maintained outside of this project:
 
 ## Discussion and Development
 
-There's a Xee [discord server](https://discord.gg/Y4F3ReHC)
+There's a Xee [discord server](https://discord.gg/gXv7YdXPx9)
