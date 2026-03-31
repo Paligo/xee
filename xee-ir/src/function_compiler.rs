@@ -164,7 +164,11 @@ impl<'a> FunctionCompiler<'a> {
                     self.builder.emit(Instruction::GlobalVar(*index), span);
                     Ok(())
                 } else {
-                    Err(Error::Unsupported(String::from("Internal bug: variable not found?")).into())
+                    Err(Error::Unsupported(format!(
+                        "Internal bug: variable not found: {}",
+                        name.as_str()
+                    ))
+                    .into())
                 }
             }
         }
@@ -1092,6 +1096,16 @@ impl<'a> FunctionCompiler<'a> {
         
         if let Some(&template_id) = self.template_ids.get(&template_name_key) {
             self.builder.emit(Instruction::NamedTemplate(template_id), span);
+
+            if let Some(context_names) = &call_template.context {
+                self.compile_variable(&context_names.item, span)?;
+                self.compile_variable(&context_names.position, span)?;
+                self.compile_variable(&context_names.last, span)?;
+            } else {
+                self.builder.emit(Instruction::Absent, span);
+                self.builder.emit(Instruction::Absent, span);
+                self.builder.emit(Instruction::Absent, span);
+            }
             
             // Look up the template's expected parameters
             let template_params = self.template_params.get(&template_name_key).cloned().unwrap_or_default();
@@ -1141,7 +1155,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             
             // Emit a Call instruction with the correct number of parameters
-            let arity = template_params.len() as u8;
+            let arity = (template_params.len() + 3) as u8;
             self.builder.emit(Instruction::Call(arity), span);
             Ok(())
         } else {

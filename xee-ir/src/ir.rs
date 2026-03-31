@@ -350,6 +350,7 @@ pub enum ApplyTemplatesModeValue {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallTemplate {
     pub name: Name,
+    pub context: Option<ContextNames>,
     pub params: Vec<WithParam>,
 }
 

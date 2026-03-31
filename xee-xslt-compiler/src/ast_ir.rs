@@ -368,11 +368,36 @@ impl<'a> IrConverter<'a> {
         &mut self,
         template: &ast::Template,
     ) -> error::SpannedResult<ir::FunctionDefinition> {
-        let _context_names = self.variables.push_context();
+        let context_names = self.variables.push_context();
+        self.variables.push_scope();
         let param_names = self.register_template_param_names(template);
 
         let bindings = self.sequence_constructor(&template.sequence_constructor)?;
-        let params = self.template_params(template, param_names)?;
+        let mut params = vec![
+            ir::Param {
+                name: context_names.item,
+                type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+            },
+            ir::Param {
+                name: context_names.position,
+                type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+            },
+            ir::Param {
+                name: context_names.last,
+                type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+            },
+        ];
+        params.extend(self.template_params(template, param_names)?);
+        self.variables.pop_scope();
         self.variables.pop_context();
 
         Ok(ir::FunctionDefinition {
@@ -387,6 +412,7 @@ impl<'a> IrConverter<'a> {
         template: &ast::Template,
     ) -> error::SpannedResult<ir::FunctionDefinition> {
         let context_names = self.variables.push_context();
+        self.variables.push_scope();
         let param_names = self.register_template_param_names(template);
         let bindings = self.sequence_constructor(&template.sequence_constructor)?;
 
@@ -414,6 +440,7 @@ impl<'a> IrConverter<'a> {
             },
         ];
         params.extend(self.template_params(template, param_names)?);
+        self.variables.pop_scope();
         self.variables.pop_context();
 
         Ok(ir::FunctionDefinition {
@@ -429,7 +456,7 @@ impl<'a> IrConverter<'a> {
     ) -> Vec<(String, ir::Name)> {
         let mut param_names = Vec::new();
         for param in &template.params {
-            let var_name = self.variables.new_var_name(&param.name);
+            let var_name = self.variables.declare_var_name(&param.name);
             param_names.push((param.name.local_name().to_string(), var_name));
         }
         param_names
@@ -648,6 +675,16 @@ impl<'a> IrConverter<'a> {
         &mut self,
         sequence_constructor: &[ast::SequenceConstructorItem],
     ) -> error::SpannedResult<Bindings> {
+        self.variables.push_scope();
+        let result = self.sequence_constructor_in_scope(sequence_constructor);
+        self.variables.pop_scope();
+        result
+    }
+
+    fn sequence_constructor_in_scope(
+        &mut self,
+        sequence_constructor: &[ast::SequenceConstructorItem],
+    ) -> error::SpannedResult<Bindings> {
         let mut items = sequence_constructor.iter();
         let left = items.next();
         if let Some(left) = left {
@@ -655,31 +692,18 @@ impl<'a> IrConverter<'a> {
                 let expr = ir::Expr::Let(ir::Let {
                     name,
                     var_expr: Box::new(var_bindings.expr()),
-                    return_expr: Box::new(self.sequence_constructor(items.as_slice())?.expr()),
+                    return_expr: Box::new(self.sequence_constructor_in_scope(items.as_slice())?.expr()),
                 });
                 return Ok(Bindings::new(
                     self.variables.new_binding(expr, (0..0).into()),
                 ));
             }
-            self.sequence_constructor_concat(left, items)
-        } else {
-            let empty_sequence = self.empty_sequence();
-            Ok(Bindings::new(
-                self.variables
-                    .new_binding(empty_sequence.value, empty_sequence.span),
-            ))
-        }
-    }
 
-    fn sequence_constructor_concat<'b>(
-        &mut self,
-        left: &ast::SequenceConstructorItem,
-        items: impl Iterator<Item = &'b ast::SequenceConstructorItem>,
-    ) -> error::SpannedResult<Bindings> {
-        let left_bindings = Ok(self.sequence_constructor_item(left)?);
-        items.fold(left_bindings, |left, right| {
-            let mut left_bindings = left?;
-            let mut right_bindings = self.sequence_constructor_item(right)?;
+            let mut left_bindings = self.sequence_constructor_item(left)?;
+            if items.as_slice().is_empty() {
+                return Ok(left_bindings);
+            }
+            let mut right_bindings = self.sequence_constructor_in_scope(items.as_slice())?;
             let expr = ir::Expr::Binary(ir::Binary {
                 left: left_bindings.atom(),
                 op: ir::BinaryOperator::Comma,
@@ -687,7 +711,13 @@ impl<'a> IrConverter<'a> {
             });
             let binding = self.variables.new_binding_no_span(expr);
             Ok(left_bindings.concat(right_bindings).bind(binding))
-        })
+        } else {
+            let empty_sequence = self.empty_sequence();
+            Ok(Bindings::new(
+                self.variables
+                    .new_binding(empty_sequence.value, empty_sequence.span),
+            ))
+        }
     }
 
     fn sequence_constructor_item(
@@ -921,6 +951,7 @@ impl<'a> IrConverter<'a> {
 
         let call_template_expr = ir::Expr::CallTemplate(ir::CallTemplate {
             name: ir::Name::new(call_template.name.local_name().to_string()),
+            context: self.variables.current_context_names(),
             params,
         });
 
@@ -1058,12 +1089,12 @@ impl<'a> IrConverter<'a> {
             ast::SequenceConstructorInstruction::Variable(variable),
         ) = item
         {
-            let name = self.variables.new_var_name(&variable.name);
             let var_bindings = if let Some(select) = &variable.select {
                 self.expression(select)?
             } else {
                 self.sequence_constructor(&variable.sequence_constructor)?
             };
+            let name = self.variables.declare_var_name(&variable.name);
             Ok(Some((name, var_bindings)))
         } else {
             Ok(None)
@@ -1153,7 +1184,7 @@ impl<'a> IrConverter<'a> {
             .iter()
             .map(|param| -> error::SpannedResult<ir::IterateParam> {
                 let param_bindings = self.select_or_sequence_constructor(param)?;
-                let name = self.variables.new_var_name(&param.name);
+                let name = self.variables.declare_var_name(&param.name);
                 Ok(ir::IterateParam {
                     name,
                     value: Box::new(param_bindings.expr()),

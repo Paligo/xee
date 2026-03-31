@@ -145,7 +145,7 @@ impl<'a> DeclarationCompiler<'a> {
             let template_name_key = function_binding.name.as_str().to_string();
             self.template_ids.insert(template_name_key.clone(), index as u16);
             self.template_params
-                .insert(template_name_key, function_binding.main.params.clone());
+                .insert(template_name_key, function_binding.main.params.iter().skip(3).cloned().collect());
         }
         Ok(())
     }

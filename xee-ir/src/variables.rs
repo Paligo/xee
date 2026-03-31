@@ -17,7 +17,7 @@ enum ContextItem {
 #[derive(Debug, Default)]
 pub struct Variables {
     counter: usize,
-    variables: HashMap<ast::Name, ir::Name>,
+    variables: Vec<HashMap<ast::Name, ir::Name>>,
     context_scope: Vec<ContextItem>,
 }
 
@@ -25,7 +25,7 @@ impl Variables {
     pub fn new() -> Self {
         Self {
             counter: 0,
-            variables: HashMap::new(),
+            variables: vec![HashMap::new()],
             context_scope: Vec::new(),
         }
     }
@@ -47,11 +47,32 @@ impl Variables {
     }
 
     pub fn new_var_name(&mut self, name: &ast::Name) -> ir::Name {
-        self.variables.get(name).cloned().unwrap_or_else(|| {
-            let new_name = self.new_name();
-            self.variables.insert(name.clone(), new_name.clone());
-            new_name
-        })
+        self.lookup_var_name(name)
+            .unwrap_or_else(|| self.declare_var_name(name))
+    }
+
+    pub fn declare_var_name(&mut self, name: &ast::Name) -> ir::Name {
+        let new_name = self.new_name();
+        self.variables
+            .last_mut()
+            .unwrap()
+            .insert(name.clone(), new_name.clone());
+        new_name
+    }
+
+    pub fn lookup_var_name(&self, name: &ast::Name) -> Option<ir::Name> {
+        self.variables
+            .iter()
+            .rev()
+            .find_map(|scope| scope.get(name).cloned())
+    }
+
+    pub fn push_scope(&mut self) {
+        self.variables.push(HashMap::new());
+    }
+
+    pub fn pop_scope(&mut self) {
+        self.variables.pop();
     }
 
     pub fn push_context(&mut self) -> ir::ContextNames {
@@ -94,8 +115,7 @@ impl Variables {
 
     pub fn var_ref(&mut self, name: &ast::Name, span: Span) -> error::SpannedResult<Bindings> {
         let ir_name = self
-            .variables
-            .get(name)
+            .lookup_var_name(name)
             .ok_or(Error::XPST0008.with_ast_span(span))?;
         Ok(Bindings::new(Binding::new(
             ir_name.clone(),
