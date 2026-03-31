@@ -51,18 +51,21 @@ impl<'a> IrConverter<'a> {
                 name: context_names.item,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             },
             ir::Param {
                 name: context_names.position,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             },
             ir::Param {
                 name: context_names.last,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             },
         ];
@@ -72,6 +75,7 @@ impl<'a> IrConverter<'a> {
                 name: ir_name,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             });
         }
@@ -574,6 +578,7 @@ impl<'a> IrConverter<'a> {
             name: self.variables.new_var_name(&param.name),
             type_: param.type_.clone(),
             default: None,
+            required: false,
             original_name: None,
         }
     }

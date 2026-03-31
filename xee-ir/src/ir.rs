@@ -137,6 +137,7 @@ pub struct Param {
     pub name: Name,
     pub type_: Option<SequenceType>,
     pub default: Option<Box<Expr>>,
+    pub required: bool,
     pub original_name: Option<String>,  // For template parameters - tracks the original xsl:param name for matching with xsl:with-param
 }
 

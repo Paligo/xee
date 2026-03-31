@@ -22,7 +22,7 @@ use crate::stack;
 use crate::xml;
 use crate::{error, pattern};
 
-use super::instruction::{read_i16, read_instruction, read_u16, read_u8, EncodedInstruction};
+use super::instruction::{read_i16, read_instruction, read_u16, read_u8, EncodedInstruction, RaisedError};
 use super::runnable::Runnable;
 use super::state::State;
 
@@ -674,6 +674,12 @@ impl<'a> Interpreter<'a> {
                     let value = self.apply_templates_sequence(mode, value)?;
                     self.state.push(value);
                 }
+                EncodedInstruction::RaiseError => {
+                    let error = match RaisedError::from_u16(self.read_u16()) {
+                        RaisedError::XTDE0700 => error::Error::XTDE0700,
+                    };
+                    return Err(error);
+                }
                 EncodedInstruction::PrintTop => {
                     let top = self.state.top()?;
                     println!("{:#?}", top);
@@ -749,6 +755,9 @@ impl<'a> Interpreter<'a> {
                         self.global_variables[index] = GlobalValueState::Resolved(value.clone());
                         return Ok(value);
                     }
+                    if global.required {
+                        return Err(error::Error::XTDE0050);
+                    }
                 }
 
                 self.global_variables[index] = GlobalValueState::Resolving;
@@ -779,13 +788,30 @@ impl<'a> Interpreter<'a> {
         function: &function::Function,
         arguments: &[sequence::Sequence],
     ) -> error::Result<sequence::Sequence> {
+        let arguments = arguments
+            .iter()
+            .cloned()
+            .map(Some)
+            .collect::<Vec<_>>();
+        self.call_function_with_optional_arguments(function, &arguments)
+    }
+
+    pub(crate) fn call_function_with_optional_arguments(
+        &mut self,
+        function: &function::Function,
+        arguments: &[Option<sequence::Sequence>],
+    ) -> error::Result<sequence::Sequence> {
         // put function onto the stack
         let item: sequence::Item = function.clone().into();
         self.state.push(item);
         // then arguments
         let arity = arguments.len() as u8;
         for arg in arguments.iter() {
-            self.state.push(arg.clone());
+            if let Some(arg) = arg {
+                self.state.push(arg.clone());
+            } else {
+                self.state.push_value(stack::Value::Absent);
+            }
         }
         self.call_function(function, arity)?;
         if matches!(function, function::Function::Inline(_)) {

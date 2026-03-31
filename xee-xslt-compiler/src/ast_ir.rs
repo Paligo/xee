@@ -271,6 +271,7 @@ impl<'a> IrConverter<'a> {
                     });
                 }
                 ast::Declaration::Param(param) => {
+                    self.validate_param(param)?;
                     let name = self.variables.new_var_name(&param.name);
                     let expr = self.global_expr(param.select.as_ref(), &param.sequence_constructor)?;
                     globals.push(ir::GlobalVariable {
@@ -284,6 +285,13 @@ impl<'a> IrConverter<'a> {
             }
         }
         Ok(globals)
+    }
+
+    fn validate_param(&self, param: &ast::Param) -> error::SpannedResult<()> {
+        if param.required && (param.select.is_some() || !param.sequence_constructor.is_empty()) {
+            return Err(error::Error::XTSE0010.into());
+        }
+        Ok(())
     }
 
     fn global_expr(
@@ -308,6 +316,9 @@ impl<'a> IrConverter<'a> {
         declarations: &mut ir::Declarations,
         template: &ast::Template,
     ) -> error::SpannedResult<()> {
+        for param in &template.params {
+            self.validate_param(param)?;
+        }
         // Determine type of template first before creating function definition
         if let Some(pattern) = &template.match_ {
             // Pattern-based template (match attribute) - no parameters
@@ -378,6 +389,7 @@ impl<'a> IrConverter<'a> {
         for (original_name, runtime_name) in param_names {
             // Find the corresponding ast::Param for default extraction
             let ast_param = template.params.iter().find(|p| p.name.local_name() == original_name);
+            let required = ast_param.map(|param| param.required).unwrap_or(false);
             
             let default = if let Some(ast_param) = ast_param {
                 if !ast_param.sequence_constructor.is_empty() {
@@ -401,6 +413,7 @@ impl<'a> IrConverter<'a> {
                 name: runtime_name,
                 type_: template.params.iter().find(|p| p.name.local_name() == original_name).and_then(|p| p.as_.clone()),
                 default,
+                required,
                 original_name: Some(original_name),
             });
         }
@@ -554,18 +567,21 @@ impl<'a> IrConverter<'a> {
                 name: context_names.item,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             },
             ir::Param {
                 name: context_names.position,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             },
             ir::Param {
                 name: context_names.last,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             },
         ];
@@ -1380,18 +1396,21 @@ impl<'a> IrConverter<'a> {
                 name: context_names.item,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             },
             ir::Param {
                 name: context_names.position,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             },
             ir::Param {
                 name: context_names.last,
                 type_: None,
                 default: None,
+                required: false,
                 original_name: None,
             },
         ];

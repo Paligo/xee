@@ -2,7 +2,7 @@ use ibig::{ibig, IBig};
 
 use xee_interpreter::error::Error;
 use xee_interpreter::function::FunctionRule;
-use xee_interpreter::interpreter::instruction::Instruction;
+use xee_interpreter::interpreter::instruction::{Instruction, RaisedError};
 use xee_interpreter::span::SourceSpan;
 use xee_interpreter::{error, function, sequence};
 
@@ -364,10 +364,10 @@ impl<'a> FunctionCompiler<'a> {
             compiler.scopes.push_name(&param.name);
         }
         for (index, param) in function_definition.params.iter().enumerate() {
+            if index > u16::MAX as usize {
+                return Err(Error::XPDY0130.with_span(span));
+            }
             if let Some(default) = &param.default {
-                if index > u16::MAX as usize {
-                    return Err(Error::XPDY0130.with_span(span));
-                }
                 compiler
                     .builder
                     .emit(Instruction::VarIsAbsent(index as u16), span);
@@ -378,6 +378,17 @@ impl<'a> FunctionCompiler<'a> {
                 compiler.compile_expr(&default_expr)?;
                 compiler.compile_variable_set(&param.name, span)?;
                 compiler.builder.patch_jump(skip_default);
+            } else if param.required {
+                compiler
+                    .builder
+                    .emit(Instruction::VarIsAbsent(index as u16), span);
+                let skip_error = compiler
+                    .builder
+                    .emit_jump_forward(JumpCondition::False, span);
+                compiler
+                    .builder
+                    .emit(Instruction::RaiseError(RaisedError::XTDE0700), span);
+                compiler.builder.patch_jump(skip_error);
             }
         }
         compiler.compile_expr(&function_definition.body)?;
@@ -1064,7 +1075,7 @@ impl<'a> FunctionCompiler<'a> {
         span: SourceSpan,
     ) -> error::SpannedResult<()> {
         // Look up the named template by name
-        let template_name_key = format!("{:?}", &call_template.name);
+        let template_name_key = call_template.name.as_str().to_string();
         
         if let Some(&template_id) = self.template_ids.get(&template_name_key) {
             self.builder.emit(Instruction::NamedTemplate(template_id), span);
@@ -1072,21 +1083,35 @@ impl<'a> FunctionCompiler<'a> {
             // Look up the template's expected parameters
             let template_params = self.template_params.get(&template_name_key).cloned().unwrap_or_default();
             
-            // Build a map of with-param ORIGINAL names for quick lookup
+            // Build a map of with-param names for quick lookup.
             let mut with_param_map: std::collections::HashMap<String, &ir::WithParam> = std::collections::HashMap::new();
             for with_param in &call_template.params {
-                let param_key = format!("{:?}", &with_param.name);
+                let param_key = with_param.name.as_str().to_string();
                 with_param_map.insert(param_key, with_param);
+            }
+
+            let valid_param_names: std::collections::HashSet<String> = template_params
+                .iter()
+                .map(|param| {
+                    param
+                        .original_name
+                        .clone()
+                        .unwrap_or_else(|| param.name.as_str().to_string())
+                })
+                .collect();
+            if with_param_map
+                .keys()
+                .any(|param_name| !valid_param_names.contains(param_name))
+            {
+                return Err(error::Error::XTSE0680.into());
             }
             
             // For each expected parameter, emit code to push its value on the stack
             for param in &template_params {
-                // Use the ORIGINAL parameter name (if available) for matching with with-params
-                let param_match_key = if let Some(original_name) = &param.original_name {
-                    format!("Name(\"{}\")", original_name)
-                } else {
-                    format!("{:?}", &param.name)
-                };
+                let param_match_key = param
+                    .original_name
+                    .clone()
+                    .unwrap_or_else(|| param.name.as_str().to_string());
                 
                 if let Some(with_param) = with_param_map.get(&param_match_key) {
                     // Parameter was provided via with-param

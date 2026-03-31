@@ -546,7 +546,18 @@ pub enum Error {
     /// binding of a global variable with the same name and same import
     /// precedence, unless it also contains another binding with the same name
     /// and higher import precedence.
+    XTSE0010,
+    /// Required global parameter not supplied.
+    ///
+    /// It is a dynamic error if a stylesheet parameter is declared with
+    /// required="yes" and no value is supplied.
+    XTDE0050,
     XTSE0630,
+    /// xsl:with-param does not match any declared template parameter.
+    ///
+    /// It is a static error if xsl:call-template supplies a non-tunnel
+    /// parameter that is not declared by the called template.
+    XTSE0680,
     /// xsl:break or xsl:next-iteration outside of xsl:iterate's tail position
     ///
     /// It is a static error if an xsl:break or xsl:next-iteration element
@@ -562,6 +573,10 @@ pub enum Error {
     ///
     /// Circularity in global declarations is now allowed.
     XTDE0640,
+    /// Required template parameter not supplied.
+    ///
+    /// It is a dynamic error if a required template parameter is not supplied.
+    XTDE0700,
     /// Shallow copy
     ///
     /// Shallow copy of sequence of more than one item is not allowed.

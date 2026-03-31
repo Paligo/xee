@@ -142,7 +142,7 @@ impl<'a> DeclarationCompiler<'a> {
             if index > u16::MAX as usize {
                 return Err(error::Error::Unsupported("too many named templates".to_string()).into());
             }
-            let template_name_key = format!("{:?}", function_binding.name);
+            let template_name_key = function_binding.name.as_str().to_string();
             self.template_ids.insert(template_name_key.clone(), index as u16);
             self.template_params
                 .insert(template_name_key, function_binding.main.params.clone());

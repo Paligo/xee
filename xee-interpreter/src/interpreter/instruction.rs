@@ -1,5 +1,25 @@
 use num::{FromPrimitive, ToPrimitive};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RaisedError {
+    XTDE0700,
+}
+
+impl RaisedError {
+    pub(crate) fn to_u16(self) -> u16 {
+        match self {
+            RaisedError::XTDE0700 => 0,
+        }
+    }
+
+    pub(crate) fn from_u16(value: u16) -> Self {
+        match value {
+            0 => RaisedError::XTDE0700,
+            _ => panic!("unknown raised error id: {value}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Instruction {
     // binary operators
@@ -82,6 +102,7 @@ pub enum Instruction {
     CopyShallow,
     CopyDeep,
     ApplyTemplates(u16),
+    RaiseError(RaisedError),
     PrintTop,
     PrintStack,
 }
@@ -165,6 +186,7 @@ pub(crate) enum EncodedInstruction {
     ApplyTemplates,
     CopyShallow,
     CopyDeep,
+    RaiseError,
     PrintTop,
     PrintStack,
 }
@@ -309,6 +331,10 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::ApplyTemplates => {
             let mode_id = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::ApplyTemplates(mode_id), 3)
+        }
+        EncodedInstruction::RaiseError => {
+            let error_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::RaiseError(RaisedError::from_u16(error_id)), 3)
         }
         EncodedInstruction::PrintTop => (Instruction::PrintTop, 1),
         EncodedInstruction::PrintStack => (Instruction::PrintStack, 1),
@@ -475,6 +501,10 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
             bytes.push(EncodedInstruction::ApplyTemplates.to_u8().unwrap());
             bytes.extend_from_slice(&mode_id.to_le_bytes());
         }
+        Instruction::RaiseError(error) => {
+            bytes.push(EncodedInstruction::RaiseError.to_u8().unwrap());
+            bytes.extend_from_slice(&error.to_u16().to_le_bytes());
+        }
         Instruction::PrintTop => bytes.push(EncodedInstruction::PrintTop.to_u8().unwrap()),
         Instruction::PrintStack => bytes.push(EncodedInstruction::PrintStack.to_u8().unwrap()),
     }
@@ -566,8 +596,9 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::InstanceOf(_)
         | Instruction::Treat(_)
         | Instruction::ReturnConvert(_)
-        | Instruction::JumpIfFalse(_) => 3,
-        Instruction::ApplyTemplates(_) => 3,
+        | Instruction::JumpIfFalse(_)
+        | Instruction::ApplyTemplates(_)
+        | Instruction::RaiseError(_) => 3,
     }
 }
 

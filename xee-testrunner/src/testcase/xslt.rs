@@ -18,6 +18,7 @@ use crate::{
 };
 
 use super::{
+    assert::TestCaseResult,
     core::{Runnable, TestCase},
     outcome::TestOutcome,
 };
@@ -34,6 +35,7 @@ impl XsltTestCase {}
 pub(crate) struct XsltTest {
     pub(crate) base_dir: PathBuf,
     pub(crate) stylesheets: Vec<Stylesheet>,
+    pub(crate) initial_template: Option<String>,
 }
 
 impl Runnable<XsltLanguage> for XsltTestCase {
@@ -85,10 +87,13 @@ impl Runnable<XsltLanguage> for XsltTestCase {
         let program = match program {
             Ok(program) => program,
             Err(error) => {
-                return TestOutcome::EnvironmentError(format!(
-                    "Error parsing stylesheet: {}",
-                    error
-                ))
+                return match &self.test_case.result {
+                    TestCaseResult::AssertError(assert_error) => {
+                        assert_error.assert_error(&error.error)
+                    }
+                    TestCaseResult::AnyOf(any_of) => any_of.assert_error(&error.error),
+                    _ => TestOutcome::CompilationError(error.error),
+                }
             }
         };
 
@@ -133,6 +138,14 @@ impl Runnable<XsltLanguage> for XsltTestCase {
             Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
         };
 
+        let variables =
+            self.test_case
+                .variables(run_context, catalog, test_set, static_base_uri.as_deref());
+        let variables = match variables {
+            Ok(variables) => variables,
+            Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
+        };
+
         // now construct the dynamic context. We want to have one here
         // explicitly so we can use it later in the assertions
         let mut builder = program.dynamic_context_builder();
@@ -140,11 +153,15 @@ impl Runnable<XsltLanguage> for XsltTestCase {
             builder.context_item(context_item);
         }
         builder.documents(run_context.documents.documents().clone());
-        // builder.variables(variables.clone());
+        builder.variables(variables);
         builder.current_datetime(chrono::offset::Utc::now().into());
         let context = builder.build();
         let runnable = program.runnable(&context);
-        let result = runnable.many(run_context.documents.xot_mut());
+        let result = if let Some(initial_template) = &self.test.initial_template {
+            runnable.named_template(initial_template, run_context.documents.xot_mut())
+        } else {
+            runnable.many(run_context.documents.xot_mut())
+        };
 
         self.test_case.result.assert_result(
             &context,
@@ -167,6 +184,7 @@ impl ContextLoadable<LoadContext> for XsltTestCase {
 
     fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let file_query = queries.option("@file/string()", convert_string)?;
+        let initial_template_query = queries.option("initial-template/@name/string()", convert_string)?;
         let stylesheets_query = queries.many("stylesheet", move |documents, item| {
             let file = file_query.execute(documents, item)?;
             Ok(Stylesheet { path: file })
@@ -178,9 +196,11 @@ impl ContextLoadable<LoadContext> for XsltTestCase {
             let base_dir = context.path.parent().unwrap();
 
             let stylesheets = stylesheets_query.execute(documents, item)?;
+            let initial_template = initial_template_query.execute(documents, item)?;
             Ok(XsltTest {
                 stylesheets,
                 base_dir: base_dir.to_path_buf(),
+                initial_template,
             })
         })?;
         let test_case_query = TestCase::load_with_context(queries, context)?;

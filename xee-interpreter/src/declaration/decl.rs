@@ -46,4 +46,10 @@ impl Declarations {
     pub fn named_template(&self, index: usize) -> &NamedTemplateDeclaration {
         &self.named_templates[index]
     }
+
+    pub fn named_template_by_name(&self, name: &str) -> Option<&NamedTemplateDeclaration> {
+        self.named_templates
+            .iter()
+            .find(|named_template| named_template.name == function::Name::new(name.to_string()))
+    }
 }
