@@ -140,8 +140,22 @@ impl DeclarationName {
     pub(crate) fn parse(&self, attributes: &Attributes) -> Result<ast::Declaration, ElementError> {
         match self {
             DeclarationName::Accumulator => ast::Accumulator::parse_declaration(attributes),
-            DeclarationName::Template => ast::Template::parse_declaration(attributes),
+            DeclarationName::CharacterMap => ast::CharacterMap::parse_declaration(attributes),
+            DeclarationName::DecimalFormat => ast::DecimalFormat::parse_declaration(attributes),
+            DeclarationName::Function => ast::Function::parse_declaration(attributes),
+            DeclarationName::GlobalContextItem => ast::GlobalContextItem::parse_declaration(attributes),
+            DeclarationName::Import => ast::Import::parse_declaration(attributes),
+            DeclarationName::ImportSchema => ast::ImportSchema::parse_declaration(attributes),
+            DeclarationName::Include => ast::Include::parse_declaration(attributes),
+            DeclarationName::Key => ast::Key::parse_declaration(attributes),
+            DeclarationName::Mode => ast::Mode::parse_declaration(attributes),
+            DeclarationName::NamespaceAlias => ast::NamespaceAlias::parse_declaration(attributes),
             DeclarationName::Output => ast::Output::parse_declaration(attributes),
+            DeclarationName::Param => ast::Param::parse_declaration(attributes),
+            DeclarationName::PreserveSpace => ast::PreserveSpace::parse_declaration(attributes),
+            DeclarationName::StripSpace => ast::StripSpace::parse_declaration(attributes),
+            DeclarationName::Template => ast::Template::parse_declaration(attributes),
+            DeclarationName::Variable => ast::Variable::parse_declaration(attributes),
             _ => Err(ElementError::Unsupported(format!(
                 "Unsupported declaration: {:?}",
                 &self

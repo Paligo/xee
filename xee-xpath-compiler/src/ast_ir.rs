@@ -50,14 +50,20 @@ impl<'a> IrConverter<'a> {
             ir::Param {
                 name: context_names.item,
                 type_: None,
+                default: None,
+                original_name: None,
             },
             ir::Param {
                 name: context_names.position,
                 type_: None,
+                default: None,
+                original_name: None,
             },
             ir::Param {
                 name: context_names.last,
                 type_: None,
+                default: None,
+                original_name: None,
             },
         ];
         // add any variables defined in static context as parameters
@@ -65,6 +71,8 @@ impl<'a> IrConverter<'a> {
             params.push(ir::Param {
                 name: ir_name,
                 type_: None,
+                default: None,
+                original_name: None,
             });
         }
         let outer_function_expr = ir::Expr::FunctionDefinition(ir::FunctionDefinition {
@@ -565,6 +573,8 @@ impl<'a> IrConverter<'a> {
         ir::Param {
             name: self.variables.new_var_name(&param.name),
             type_: param.type_.clone(),
+            default: None,
+            original_name: None,
         }
     }
 

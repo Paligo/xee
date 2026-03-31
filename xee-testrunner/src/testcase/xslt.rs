@@ -78,7 +78,10 @@ impl Runnable<XsltLanguage> for XsltTestCase {
         };
         let static_context_builder = StaticContextBuilder::default();
         let static_context = static_context_builder.build();
-        let program = xee_xslt_compiler::parse(static_context, &xslt);
+        
+        // Get the directory of the stylesheet for resolving imports/includes
+        let stylesheet_dir = path.parent().map(|p| p.to_path_buf());
+        let program = xee_xslt_compiler::parse_with_base_dir(static_context, &xslt, stylesheet_dir);
         let program = match program {
             Ok(program) => program,
             Err(error) => {

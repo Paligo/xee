@@ -29,6 +29,9 @@ impl RuleBuilder {
 }
 
 pub type ModeIds = HashMap<ir::ApplyTemplatesModeValue, ModeId>;
+pub type TemplateIds = HashMap<String, function::InlineFunctionId>;
+pub type TemplateParams = HashMap<String, Vec<ir::Param>>;
+
 
 pub struct DeclarationCompiler<'a> {
     program: &'a mut interpreter::Program,
@@ -36,6 +39,8 @@ pub struct DeclarationCompiler<'a> {
     rule_declaration_order: i64,
     rule_builders: HashMap<ir::ModeValue, Vec<RuleBuilder>>,
     mode_ids: ModeIds,
+    template_ids: TemplateIds,
+    template_params: TemplateParams,
 }
 
 impl<'a> DeclarationCompiler<'a> {
@@ -46,12 +51,14 @@ impl<'a> DeclarationCompiler<'a> {
             rule_declaration_order: 0,
             rule_builders: HashMap::new(),
             mode_ids: HashMap::new(),
+            template_ids: HashMap::new(),
+            template_params: HashMap::new(),
         }
     }
 
     fn function_compiler(&mut self) -> FunctionCompiler<'_> {
         let function_builder = FunctionBuilder::new(self.program);
-        FunctionCompiler::new(function_builder, &mut self.scopes, &self.mode_ids)
+        FunctionCompiler::new(function_builder, &mut self.scopes, &self.mode_ids, &self.template_ids, &self.template_params)
     }
 
     pub fn compile_declarations(
@@ -61,6 +68,10 @@ impl<'a> DeclarationCompiler<'a> {
         // first keep track of what modes exist, to create a ModeId for them. We do
         // this early so any mode reference within apply-templates will resolve.
         self.compile_modes(declarations);
+
+        // compile all named templates (function bindings) early so they can be referenced
+        // by name from call-template instructions
+        self.compile_templates(declarations)?;
 
         for rule in &declarations.rules {
             self.compile_rule(rule)?;
@@ -91,6 +102,24 @@ impl<'a> DeclarationCompiler<'a> {
                 self.mode_ids.insert(apply_templates_mode_value, mode_id);
             }
         }
+    }
+
+    fn compile_templates(&mut self, declarations: &ir::Declarations) -> error::SpannedResult<()> {
+        for function_binding in &declarations.functions {
+            self.compile_named_template(function_binding)?;
+        }
+        Ok(())
+    }
+
+    fn compile_named_template(&mut self, function_binding: &ir::FunctionBinding) -> error::SpannedResult<()> {
+        let mut function_compiler = self.function_compiler();
+        let function_id = function_compiler.compile_function_id(&function_binding.main, (0..0).into())?;
+        // Extract the string from the template name and use it as the key
+        let template_name_key = format!("{:?}", function_binding.name);
+        self.template_ids.insert(template_name_key.clone(), function_id);
+        // Store the template parameters for later use in call-template compilation
+        self.template_params.insert(template_name_key, function_binding.main.params.clone());
+        Ok(())
     }
 
     fn compile_rule(&mut self, rule: &ir::Rule) -> error::SpannedResult<()> {

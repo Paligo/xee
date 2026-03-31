@@ -56,6 +56,7 @@ pub enum Expr {
     XmlProcessingInstruction(XmlProcessingInstruction),
     XmlAppend(XmlAppend),
     ApplyTemplates(ApplyTemplates),
+    CallTemplate(CallTemplate),
     CopyShallow(CopyShallow),
     CopyDeep(CopyDeep),
 }
@@ -135,6 +136,8 @@ impl FunctionDefinition {
 pub struct Param {
     pub name: Name,
     pub type_: Option<SequenceType>,
+    pub default: Option<Box<Expr>>,
+    pub original_name: Option<String>,  // For template parameters - tracks the original xsl:param name for matching with xsl:with-param
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -341,6 +344,20 @@ pub enum ApplyTemplatesModeValue {
     Unnamed,
     Current,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallTemplate {
+    pub name: Name,
+    pub params: Vec<WithParam>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WithParam {
+    pub name: Name,
+    pub select: Option<AtomS>,
+    pub sequence_constructor: Option<Box<ExprS>>,
+}
+
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CopyShallow {

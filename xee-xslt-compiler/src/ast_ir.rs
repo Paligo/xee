@@ -1,6 +1,8 @@
 use ahash::HashSetExt;
 use xee_name::{Name, Namespaces, FN_NAMESPACE};
 
+use std::collections::HashSet;
+use std::path::PathBuf;
 use xee_interpreter::{context::StaticContext, error, interpreter, sequence::QNameOrString};
 use xee_ir::{compile_xslt, ir, Bindings, Variables};
 use xee_xpath_ast::{ast as xpath_ast, pattern::transform_pattern, span::Spanned};
@@ -27,6 +29,14 @@ pub fn parse(
     static_context: StaticContext,
     xslt: &str,
 ) -> error::SpannedResult<interpreter::Program> {
+    parse_with_base_dir(static_context, xslt, std::env::current_dir().ok())
+}
+
+pub fn parse_with_base_dir(
+    static_context: StaticContext,
+    xslt: &str,
+    base_dir: Option<std::path::PathBuf>,
+) -> error::SpannedResult<interpreter::Program> {
     let transform = parse_transform(xslt);
     // TODO: better error handling
     let mut transform = match transform {
@@ -44,11 +54,101 @@ pub fn parse(
             return Err(error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", e)).into());
         }
     };
+    
+    // Process xsl:import and xsl:include directives
+    let mut visited = HashSet::new();
+    transform.declarations = process_imports_and_includes(transform.declarations, base_dir, &mut visited)?;
+    
     // insert default rules early on in precedence order
     let mut declarations = text_only_copy_declarations().unwrap();
     declarations.extend(transform.declarations);
     transform.declarations = declarations;
+    
     compile(transform, static_context)
+}
+
+fn process_imports_and_includes(
+    declarations: ast::Declarations,
+    base_dir: Option<std::path::PathBuf>,
+    visited: &mut HashSet<PathBuf>,
+) -> error::SpannedResult<ast::Declarations> {
+    let mut local_declarations = Vec::new();
+    let mut imports = Vec::new(); // Collect imports in order
+    
+    for decl in declarations {
+        match &decl {
+            ast::Declaration::Import(import) => {
+                // Load and parse the imported stylesheet
+                let (imported_decls, resolved_path) = load_stylesheet(&import.href.to_string(), base_dir.as_ref())?;
+                if visited.contains(&resolved_path) {
+                    return Err(error::Error::Unsupported(format!(
+                        "Circular import detected: '{}'",
+                        resolved_path.display()
+                    )).into());
+                }
+                visited.insert(resolved_path);
+                // Recursively process imports in the imported stylesheet
+                let processed = process_imports_and_includes(imported_decls, base_dir.clone(), visited)?;
+                imports.push(processed);
+            }
+            ast::Declaration::Include(include) => {
+                // Load and parse the included stylesheet
+                let (included_decls, resolved_path) = load_stylesheet(&include.href.to_string(), base_dir.as_ref())?;
+                if visited.contains(&resolved_path) {
+                    return Err(error::Error::Unsupported(format!(
+                        "Circular include detected: '{}'",
+                        resolved_path.display()
+                    )).into());
+                }
+                visited.insert(resolved_path);
+                // Recursively process imports in the included stylesheet
+                let processed = process_imports_and_includes(included_decls, base_dir.clone(), visited)?;
+                local_declarations.extend(processed);
+            }
+            _ => {
+                local_declarations.push(decl);
+            }
+        }
+    }
+    
+    // Build result: imports first (lower precedence), then local declarations (higher precedence)
+    // This ensures later imports override earlier imports, and local declarations override all imports
+    let mut result = Vec::new();
+    for import_decls in imports {
+        result.extend(import_decls);
+    }
+    result.extend(local_declarations);
+    Ok(result)
+}
+
+fn load_stylesheet(
+    href: &str,
+    base_dir: Option<&std::path::PathBuf>,
+) -> error::SpannedResult<(ast::Declarations, PathBuf)> {
+    // Resolve the file path
+    let path = if let Some(base_dir) = base_dir {
+        base_dir.join(href)
+    } else {
+        std::path::PathBuf::from(href)
+    };
+
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+    
+    // Try to read the file
+    let content = std::fs::read_to_string(&path)
+        .map_err(|e| error::Error::Unsupported(format!(
+            "Failed to load stylesheet '{}': {}",
+            path.display(), e
+        )))?;
+    
+    // Parse the stylesheet
+    let transform = parse_transform(&content)
+        .map_err(|e| error::Error::Unsupported(format!(
+            "Failed to parse imported stylesheet '{}': {:?}",
+            path.display(), e
+        )))?;
+    
+    Ok((transform.declarations, canonical))
 }
 
 impl<'a> IrConverter<'a> {
@@ -133,14 +233,18 @@ impl<'a> IrConverter<'a> {
     ) -> error::SpannedResult<()> {
         use ast::Declaration::*;
         match declaration {
-            Template(template) => self.template(declarations, template),
+            Template(template) => {
+                self.template(declarations, template)
+            },
             Mode(mode) => self.mode(declarations, mode),
             Output(output) => self.output(declarations, output),
-            _ => Err(error::Error::Unsupported(format!(
-                "Declaration not supported: {:?}",
-                declaration
-            ))
-            .into()),
+            // Import/Include already handled during pre-processing in parse_with_base_dir
+            Import(_) | Include(_) => Ok(()),
+            // These declarations are parsed but not yet compiled - skip gracefully
+            // to allow stylesheets containing them to still process templates
+            Function(_) | Variable(_) | Param(_) | Key(_) | StripSpace(_) |
+            PreserveSpace(_) | DecimalFormat(_) | CharacterMap(_) | NamespaceAlias(_) |
+            ImportSchema(_) | UsePackage(_) | GlobalContextItem(_) | Accumulator(_) => Ok(()),
         }
     }
 
@@ -149,7 +253,12 @@ impl<'a> IrConverter<'a> {
         declarations: &mut ir::Declarations,
         template: &ast::Template,
     ) -> error::SpannedResult<()> {
+        // Determine type of template first before creating function definition
         if let Some(pattern) = &template.match_ {
+            // Pattern-based template (match attribute) - no parameters
+            let function_definition =
+                self.sequence_constructor_function(&template.sequence_constructor)?;
+            
             let priority = if let Some(priority) = &template.priority {
                 *priority
             } else {
@@ -164,8 +273,6 @@ impl<'a> IrConverter<'a> {
                     default_priorities.first().unwrap().1
                 }
             };
-            let function_definition =
-                self.sequence_constructor_function(&template.sequence_constructor)?;
 
             let modes = template
                 .mode
@@ -180,9 +287,74 @@ impl<'a> IrConverter<'a> {
                 function_definition,
             });
             Ok(())
+        } else if let Some(name) = &template.name {
+            // Named template - compile with parameters in function signature
+            let function_definition = self.template_with_params_function(template)?;
+            declarations.functions.push(ir::FunctionBinding {
+                name: ir::Name::new(name.local_name().to_string()),
+                main: function_definition,
+            });
+            Ok(())
         } else {
-            Err(error::Error::Unsupported("Named templates not supported".to_string()).into())
+            Err(error::Error::Unsupported("Template must have either match or name attribute".to_string()).into())
         }
+    }
+
+    fn template_with_params_function(
+        &mut self,
+        template: &ast::Template,
+    ) -> error::SpannedResult<ir::FunctionDefinition> {
+        let _context_names = self.variables.push_context();
+        
+        // Register template parameters as variables for use in the body
+        // This creates their runtime variable names (v0, v1, etc.)
+        let mut param_names = Vec::new();
+        for param in &template.params {
+            let var_name = self.variables.new_var_name(&param.name);
+            param_names.push((param.name.local_name().to_string(), var_name));
+        }
+        
+        let bindings = self.sequence_constructor(&template.sequence_constructor)?;
+        self.variables.pop_context();
+        
+        // Build parameter list - extract default expressions from xsl:param
+        // The IR parameter names are the RUNTIME variable names for accessing within the function
+        let mut params = Vec::new();
+        for (original_name, runtime_name) in param_names {
+            // Find the corresponding ast::Param for default extraction
+            let ast_param = template.params.iter().find(|p| p.name.local_name() == original_name);
+            
+            let default = if let Some(ast_param) = ast_param {
+                if !ast_param.sequence_constructor.is_empty() {
+                    // If there's a sequence_constructor (child nodes), use that as default
+                    let expr_s = self.sequence_constructor(&ast_param.sequence_constructor)?.expr();
+                    Some(Box::new(expr_s.value))
+                } else if let Some(select_expr) = &ast_param.select {
+                    // If there's a select attribute, use that as default
+                    let expr_s = self.expression(select_expr)?.expr();
+                    Some(Box::new(expr_s.value))
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            
+            // Store parameter with runtime variable name for access in body
+            // Also store the original name for matching with xsl:with-param
+            params.push(ir::Param {
+                name: runtime_name,
+                type_: template.params.iter().find(|p| p.name.local_name() == original_name).and_then(|p| p.as_.clone()),
+                default,
+                original_name: Some(original_name),
+            });
+        }
+        
+        Ok(ir::FunctionDefinition {
+            params,
+            return_type: None,
+            body: Box::new(bindings.expr()),
+        })
     }
 
     fn mode(
@@ -326,14 +498,20 @@ impl<'a> IrConverter<'a> {
             ir::Param {
                 name: context_names.item,
                 type_: None,
+                default: None,
+                original_name: None,
             },
             ir::Param {
                 name: context_names.position,
                 type_: None,
+                default: None,
+                original_name: None,
             },
             ir::Param {
                 name: context_names.last,
                 type_: None,
+                default: None,
+                original_name: None,
             },
         ];
         Ok(ir::FunctionDefinition {
@@ -410,6 +588,7 @@ impl<'a> IrConverter<'a> {
         use ast::SequenceConstructorInstruction::*;
         match instruction {
             ApplyTemplates(apply_templates) => self.apply_templates(apply_templates),
+            CallTemplate(call_template) => self.call_template(call_template),
             ValueOf(value_of) => self.value_of(value_of),
             If(if_) => self.if_(if_),
             Choose(choose) => self.choose(choose),
@@ -558,6 +737,42 @@ impl<'a> IrConverter<'a> {
                 select: select_atom,
             }),
         ))
+    }
+
+    fn call_template(
+        &mut self,
+        call_template: &ast::CallTemplate,
+    ) -> error::SpannedResult<Bindings> {
+        // Compile the with-params for the template invocation
+        let mut params = Vec::new();
+        let mut param_bindings = Bindings::empty();
+        
+        for with_param in &call_template.with_params {
+            let (select_atom, select_bindings) = if let Some(select) = &with_param.select {
+                let (atom, bindings) = self.expression(select)?.atom_bindings();
+                (Some(atom), bindings)
+            } else {
+                // Use sequence_constructor if select is not present
+                let sc_bindings = self.sequence_constructor(&with_param.sequence_constructor)?;
+                let (atom, bindings) = sc_bindings.atom_bindings();
+                (Some(atom), bindings)
+            };
+            
+            param_bindings = param_bindings.concat(select_bindings);
+            
+            params.push(ir::WithParam {
+                name: ir::Name::new(with_param.name.local_name().to_string()),
+                select: select_atom,
+                sequence_constructor: None, // Already flattened into select_atom above
+            });
+        }
+
+        let call_template_expr = ir::Expr::CallTemplate(ir::CallTemplate {
+            name: ir::Name::new(call_template.name.local_name().to_string()),
+            params,
+        });
+
+        Ok(param_bindings.bind_expr_no_span(&mut self.variables, call_template_expr))
     }
 
     fn select_or_sequence_constructor(
@@ -1109,14 +1324,20 @@ impl<'a> IrConverter<'a> {
             ir::Param {
                 name: context_names.item,
                 type_: None,
+                default: None,
+                original_name: None,
             },
             ir::Param {
                 name: context_names.position,
                 type_: None,
+                default: None,
+                original_name: None,
             },
             ir::Param {
                 name: context_names.last,
                 type_: None,
+                default: None,
+                original_name: None,
             },
         ];
 

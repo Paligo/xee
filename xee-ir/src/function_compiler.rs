@@ -6,8 +6,9 @@ use xee_interpreter::interpreter::instruction::Instruction;
 use xee_interpreter::span::SourceSpan;
 use xee_interpreter::{error, function, sequence};
 
-use crate::declaration_compiler::ModeIds;
+use crate::declaration_compiler::{ModeIds, TemplateIds, TemplateParams};
 use crate::ir;
+use xee_xpath_ast::span::Spanned;
 
 use super::builder::{BackwardJumpRef, ForwardJumpRef, FunctionBuilder, JumpCondition};
 use super::scope;
@@ -17,6 +18,8 @@ pub(crate) type Scopes = scope::Scopes<ir::Name>;
 pub struct FunctionCompiler<'a> {
     pub(crate) scopes: &'a mut Scopes,
     pub(crate) mode_ids: &'a ModeIds,
+    pub(crate) template_ids: &'a TemplateIds,
+    pub(crate) template_params: &'a TemplateParams,
     pub(crate) builder: FunctionBuilder<'a>,
 }
 
@@ -25,11 +28,15 @@ impl<'a> FunctionCompiler<'a> {
         builder: FunctionBuilder<'a>,
         scopes: &'a mut Scopes,
         mode_ids: &'a ModeIds,
+        template_ids: &'a TemplateIds,
+        template_params: &'a TemplateParams,
     ) -> Self {
         Self {
             builder,
             scopes,
             mode_ids,
+            template_ids,
+            template_params,
         }
     }
 
@@ -89,6 +96,9 @@ impl<'a> FunctionCompiler<'a> {
             ir::Expr::XmlAppend(xml_append) => self.compile_xml_append(xml_append, span),
             ir::Expr::ApplyTemplates(apply_templates) => {
                 self.compile_apply_templates(apply_templates, span)
+            }
+            ir::Expr::CallTemplate(call_template) => {
+                self.compile_call_template(call_template, span)
             }
             ir::Expr::CopyShallow(copy_shallow) => self.compile_copy_shallow(copy_shallow, span),
             ir::Expr::CopyDeep(copy_deep) => self.compile_copy_deep(copy_deep, span),
@@ -342,6 +352,8 @@ impl<'a> FunctionCompiler<'a> {
             builder: nested_builder,
             scopes: self.scopes,
             mode_ids: self.mode_ids,
+            template_ids: self.template_ids,
+            template_params: self.template_params,
         };
 
         for param in &function_definition.params {
@@ -1023,6 +1035,73 @@ impl<'a> FunctionCompiler<'a> {
                 .emit_constant(sequence::Sequence::default(), span);
         }
         Ok(())
+    }
+
+    fn compile_call_template(
+        &mut self,
+        call_template: &ir::CallTemplate,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        // Look up the named template by name
+        let template_name_key = format!("{:?}", &call_template.name);
+        
+        if let Some(&template_function_id) = self.template_ids.get(&template_name_key) {
+            // Emit a Closure instruction to push the template function onto the stack
+            self.builder
+                .emit(Instruction::Closure(template_function_id.as_u16()), span);
+            
+            // Look up the template's expected parameters
+            let template_params = self.template_params.get(&template_name_key).cloned().unwrap_or_default();
+            
+            // Build a map of with_param ORIGINAL names to their select atoms for quick lookup
+            let mut with_param_map: std::collections::HashMap<String, Option<ir::AtomS>> = std::collections::HashMap::new();
+            for with_param in &call_template.params {
+                let param_key = format!("{:?}", &with_param.name);
+                with_param_map.insert(param_key, with_param.select.clone());
+            }
+            
+            // For each expected parameter, emit code to push its value on the stack
+            for param in &template_params {
+                // Use the ORIGINAL parameter name (if available) for matching with with-params
+                let param_match_key = if let Some(original_name) = &param.original_name {
+                    format!("Name(\"{}\")", original_name)
+                } else {
+                    format!("{:?}", &param.name)
+                };
+                
+                if let Some(select_atom) = with_param_map.get(&param_match_key) {
+                    // Parameter was provided via with-param
+                    if let Some(atom) = select_atom {
+                        self.compile_atom(atom)?;
+                    }
+                } else if let Some(default_expr) = &param.default {
+                    // Parameter not provided, use default expression
+                    // Wrap the expression in a Spanned with an empty span
+                    let spanned_expr = Spanned::new(default_expr.as_ref().clone(), (0..0).into());
+                    self.compile_expr(&spanned_expr)?;
+                    // The result is now on top of stack, which is what we want
+                } else {
+                    // No with-param and no default - this should have been caught at schema validation
+                    // For now, push empty sequence
+                    let empty_seq = Spanned::new(
+                        ir::Atom::Const(ir::Const::EmptySequence),
+                        (0..0).into(),
+                    );
+                    self.compile_atom(&empty_seq)?;
+                }
+            }
+            
+            // Emit a Call instruction with the correct number of parameters
+            let arity = template_params.len() as u8;
+            self.builder.emit(Instruction::Call(arity), span);
+            Ok(())
+        } else {
+            Err(error::Error::Unsupported(format!(
+                "Named template not found: {:?}",
+                &call_template.name
+            ))
+            .into())
+        }
     }
 
     fn compile_copy_shallow(

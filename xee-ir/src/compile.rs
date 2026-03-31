@@ -2,7 +2,7 @@ use ahash::HashMapExt;
 use xee_interpreter::{context::StaticContext, error::SpannedResult, interpreter::Program};
 
 use crate::{
-    declaration_compiler::{DeclarationCompiler, ModeIds},
+    declaration_compiler::{DeclarationCompiler, ModeIds, TemplateIds, TemplateParams},
     ir, FunctionBuilder, FunctionCompiler, Scopes,
 };
 
@@ -11,7 +11,9 @@ pub fn compile_xpath(expr: ir::ExprS, static_context: StaticContext) -> SpannedR
     let mut scopes = Scopes::new();
     let builder = FunctionBuilder::new(&mut program);
     let empty_mode_ids = ModeIds::new();
-    let mut compiler = FunctionCompiler::new(builder, &mut scopes, &empty_mode_ids);
+    let empty_template_ids = TemplateIds::new();
+    let empty_template_params = TemplateParams::new();
+    let mut compiler = FunctionCompiler::new(builder, &mut scopes, &empty_mode_ids, &empty_template_ids, &empty_template_params);
     compiler.compile_expr(&expr)?;
     Ok(program)
 }
