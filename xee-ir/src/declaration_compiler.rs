@@ -204,6 +204,26 @@ impl<'a> DeclarationCompiler<'a> {
             function_compiler.compile_function_id(function_definition, (0..0).into())
         })?;
 
+        drop(function_compiler);
+
+        let param_names = rule
+            .function_definition
+            .params
+            .iter()
+            .skip(3)
+            .map(|param| {
+                param
+                    .original_name
+                    .clone()
+                    .unwrap_or_else(|| param.name.as_str().to_string())
+            })
+            .collect::<Vec<_>>();
+        if !param_names.is_empty() {
+            self.program
+                .declarations
+                .add_rule_template(function_id, param_names);
+        }
+
         self.add_rule(&rule.modes, rule.priority, &pattern, function_id);
         Ok(())
     }

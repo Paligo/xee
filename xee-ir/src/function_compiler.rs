@@ -4,7 +4,7 @@ use xee_interpreter::error::Error;
 use xee_interpreter::function::FunctionRule;
 use xee_interpreter::interpreter::instruction::{Instruction, RaisedError};
 use xee_interpreter::span::SourceSpan;
-use xee_interpreter::{error, function, sequence};
+use xee_interpreter::{atomic, error, function, sequence};
 
 use crate::declaration_compiler::{ModeIds, TemplateIds, TemplateParams};
 use crate::ir;
@@ -1047,8 +1047,6 @@ impl<'a> FunctionCompiler<'a> {
         apply_templates: &ir::ApplyTemplates,
         span: SourceSpan,
     ) -> error::SpannedResult<()> {
-        self.compile_atom(&apply_templates.select)?;
-
         let mode_id = if matches!(
             apply_templates.mode,
             ir::ApplyTemplatesModeValue::Named(_) | ir::ApplyTemplatesModeValue::Unnamed
@@ -1058,6 +1056,21 @@ impl<'a> FunctionCompiler<'a> {
             todo!("#current mode not handled yet")
         };
         if let Some(mode_id) = mode_id {
+            self.compile_atom(&apply_templates.select)?;
+            for with_param in apply_templates.params.iter().rev() {
+                let key: sequence::Sequence = atomic::Atomic::from(with_param.name.as_str()).into();
+                self.builder.emit_constant(key, span);
+                if let Some(atom) = &with_param.select {
+                    self.compile_atom(atom)?;
+                } else if let Some(expr) = &with_param.sequence_constructor {
+                    self.compile_expr(expr)?;
+                } else {
+                    self.builder.emit_constant(sequence::Sequence::default(), span);
+                }
+            }
+            let len: IBig = apply_templates.params.len().into();
+            self.builder.emit_constant(sequence::Sequence::from(len), span);
+            self.builder.emit(Instruction::CurlyMap, span);
             self.builder
                 .emit(Instruction::ApplyTemplates(mode_id.get() as u16), span);
         } else {

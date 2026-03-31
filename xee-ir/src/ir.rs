@@ -337,6 +337,7 @@ pub struct XmlAppend {
 pub struct ApplyTemplates {
     pub mode: ApplyTemplatesModeValue,
     pub select: AtomS,
+    pub params: Vec<WithParam>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

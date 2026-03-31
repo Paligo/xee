@@ -321,9 +321,7 @@ impl<'a> IrConverter<'a> {
         }
         // Determine type of template first before creating function definition
         if let Some(pattern) = &template.match_ {
-            // Pattern-based template (match attribute) - no parameters
-            let function_definition =
-                self.sequence_constructor_function(&template.sequence_constructor)?;
+            let function_definition = self.matched_template_function(template)?;
             
             let priority = if let Some(priority) = &template.priority {
                 *priority
@@ -371,33 +369,90 @@ impl<'a> IrConverter<'a> {
         template: &ast::Template,
     ) -> error::SpannedResult<ir::FunctionDefinition> {
         let _context_names = self.variables.push_context();
-        
-        // Register template parameters as variables for use in the body
-        // This creates their runtime variable names (v0, v1, etc.)
+        let param_names = self.register_template_param_names(template);
+
+        let bindings = self.sequence_constructor(&template.sequence_constructor)?;
+        let params = self.template_params(template, param_names)?;
+        self.variables.pop_context();
+
+        Ok(ir::FunctionDefinition {
+            params,
+            return_type: None,
+            body: Box::new(bindings.expr()),
+        })
+    }
+
+    fn matched_template_function(
+        &mut self,
+        template: &ast::Template,
+    ) -> error::SpannedResult<ir::FunctionDefinition> {
+        let context_names = self.variables.push_context();
+        let param_names = self.register_template_param_names(template);
+        let bindings = self.sequence_constructor(&template.sequence_constructor)?;
+
+        let mut params = vec![
+            ir::Param {
+                name: context_names.item,
+                type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+            },
+            ir::Param {
+                name: context_names.position,
+                type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+            },
+            ir::Param {
+                name: context_names.last,
+                type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+            },
+        ];
+        params.extend(self.template_params(template, param_names)?);
+        self.variables.pop_context();
+
+        Ok(ir::FunctionDefinition {
+            params,
+            return_type: None,
+            body: Box::new(bindings.expr()),
+        })
+    }
+
+    fn register_template_param_names(
+        &mut self,
+        template: &ast::Template,
+    ) -> Vec<(String, ir::Name)> {
         let mut param_names = Vec::new();
         for param in &template.params {
             let var_name = self.variables.new_var_name(&param.name);
             param_names.push((param.name.local_name().to_string(), var_name));
         }
-        
-        let bindings = self.sequence_constructor(&template.sequence_constructor)?;
-        self.variables.pop_context();
-        
-        // Build parameter list - extract default expressions from xsl:param
-        // The IR parameter names are the RUNTIME variable names for accessing within the function
+        param_names
+    }
+
+    fn template_params(
+        &mut self,
+        template: &ast::Template,
+        param_names: Vec<(String, ir::Name)>,
+    ) -> error::SpannedResult<Vec<ir::Param>> {
         let mut params = Vec::new();
         for (original_name, runtime_name) in param_names {
-            // Find the corresponding ast::Param for default extraction
-            let ast_param = template.params.iter().find(|p| p.name.local_name() == original_name);
+            let ast_param = template
+                .params
+                .iter()
+                .find(|param| param.name.local_name() == original_name);
             let required = ast_param.map(|param| param.required).unwrap_or(false);
-            
+
             let default = if let Some(ast_param) = ast_param {
                 if !ast_param.sequence_constructor.is_empty() {
-                    // If there's a sequence_constructor (child nodes), use that as default
                     let expr_s = self.sequence_constructor(&ast_param.sequence_constructor)?.expr();
                     Some(Box::new(expr_s.value))
                 } else if let Some(select_expr) = &ast_param.select {
-                    // If there's a select attribute, use that as default
                     let expr_s = self.expression(select_expr)?.expr();
                     Some(Box::new(expr_s.value))
                 } else {
@@ -406,23 +461,20 @@ impl<'a> IrConverter<'a> {
             } else {
                 None
             };
-            
-            // Store parameter with runtime variable name for access in body
-            // Also store the original name for matching with xsl:with-param
+
             params.push(ir::Param {
                 name: runtime_name,
-                type_: template.params.iter().find(|p| p.name.local_name() == original_name).and_then(|p| p.as_.clone()),
+                type_: template
+                    .params
+                    .iter()
+                    .find(|param| param.name.local_name() == original_name)
+                    .and_then(|param| param.as_.clone()),
                 default,
                 required,
                 original_name: Some(original_name),
             });
         }
-        
-        Ok(ir::FunctionDefinition {
-            params,
-            return_type: None,
-            body: Box::new(bindings.expr()),
-        })
+        Ok(params)
     }
 
     fn mode(
@@ -793,6 +845,32 @@ impl<'a> IrConverter<'a> {
         apply_templates: &ast::ApplyTemplates,
     ) -> error::SpannedResult<Bindings> {
         let (select_atom, bindings) = self.expression(&apply_templates.select)?.atom_bindings();
+        let mut params = Vec::new();
+        let mut param_bindings = Bindings::empty();
+
+        for content in &apply_templates.content {
+            let ast::ApplyTemplatesContent::WithParam(with_param) = content else {
+                continue;
+            };
+
+            let (select_atom, select_bindings) = if let Some(select) = &with_param.select {
+                let (atom, bindings) = self.expression(select)?.atom_bindings();
+                (Some(atom), bindings)
+            } else {
+                let sc_bindings = self.sequence_constructor(&with_param.sequence_constructor)?;
+                let (atom, bindings) = sc_bindings.atom_bindings();
+                (Some(atom), bindings)
+            };
+
+            param_bindings = param_bindings.concat(select_bindings);
+
+            params.push(ir::WithParam {
+                name: ir::Name::new(with_param.name.local_name().to_string()),
+                select: select_atom,
+                sequence_constructor: None,
+            });
+        }
+
         let mode = match &apply_templates.mode {
             ast::ApplyTemplatesModeValue::EqName(name) => {
                 ir::ApplyTemplatesModeValue::Named(name.clone())
@@ -801,11 +879,14 @@ impl<'a> IrConverter<'a> {
             ast::ApplyTemplatesModeValue::Current => ir::ApplyTemplatesModeValue::Current,
         };
 
+        let bindings = bindings.concat(param_bindings);
+
         Ok(bindings.bind_expr_no_span(
             &mut self.variables,
             ir::Expr::ApplyTemplates(ir::ApplyTemplates {
                 mode,
                 select: select_atom,
+                params,
             }),
         ))
     }

@@ -668,10 +668,11 @@ impl<'a> Interpreter<'a> {
                     self.state.push(new_sequence);
                 }
                 EncodedInstruction::ApplyTemplates => {
+                    let params = self.state.pop()?.one()?.to_map()?;
                     let value = self.state.pop()?;
                     let mode_id = self.read_u16();
                     let mode = pattern::ModeId::new(mode_id as usize);
-                    let value = self.apply_templates_sequence(mode, value)?;
+                    let value = self.apply_templates_sequence(mode, value, &params)?;
                     self.state.push(value);
                 }
                 EncodedInstruction::RaiseError => {
@@ -1307,12 +1308,13 @@ impl<'a> Interpreter<'a> {
         &mut self,
         mode: pattern::ModeId,
         sequence: sequence::Sequence,
+        params: &function::Map,
     ) -> error::Result<sequence::Sequence> {
         let mut r: Vec<sequence::Item> = Vec::new();
         let size: IBig = sequence.len().into();
 
         for (i, item) in sequence.iter().enumerate() {
-            let sequence = self.apply_templates_item(mode, item, i, size.clone())?;
+            let sequence = self.apply_templates_item(mode, item, i, size.clone(), params)?;
             if let Some(sequence) = sequence {
                 for item in sequence.iter() {
                     r.push(item.clone());
@@ -1328,18 +1330,30 @@ impl<'a> Interpreter<'a> {
         item: sequence::Item,
         position: usize,
         size: IBig,
+        params: &function::Map,
     ) -> error::Result<Option<sequence::Sequence>> {
         let function_id = self.lookup_pattern(mode, &item);
 
         if let Some(function_id) = function_id {
             let position: IBig = (position + 1).into();
-            let arguments: Vec<sequence::Sequence> = vec![
-                item.into(),
-                atomic::Atomic::from(position).into(),
-                atomic::Atomic::from(size.clone()).into(),
+            let mut arguments = vec![
+                Some(item.into()),
+                Some(atomic::Atomic::from(position).into()),
+                Some(atomic::Atomic::from(size.clone()).into()),
             ];
+            if let Some(param_names) = self
+                .runnable
+                .program()
+                .declarations
+                .rule_template_param_names(function_id)
+            {
+                for param_name in param_names {
+                    let key = atomic::Atomic::from(param_name.as_str());
+                    arguments.push(params.get(&key).cloned());
+                }
+            }
             let function = function::InlineFunctionData::new(function_id, Vec::new()).into();
-            self.call_function_with_arguments(&function, &arguments)
+            self.call_function_with_optional_arguments(&function, &arguments)
                 .map(Some)
         } else {
             Ok(None)

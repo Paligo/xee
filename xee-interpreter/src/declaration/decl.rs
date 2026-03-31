@@ -1,3 +1,5 @@
+use ahash::{HashMap, HashMapExt};
+
 use crate::{function, pattern::ModeLookup};
 use xot::xmlname::OwnedName;
 
@@ -20,6 +22,7 @@ pub struct Declarations {
     pub mode_lookup: ModeLookup<function::InlineFunctionId>,
     pub global_variables: Vec<GlobalVariableDeclaration>,
     pub named_templates: Vec<NamedTemplateDeclaration>,
+    rule_template_params: HashMap<function::InlineFunctionId, Vec<String>>,
 }
 
 impl Declarations {
@@ -28,6 +31,7 @@ impl Declarations {
             mode_lookup: ModeLookup::new(),
             global_variables: Vec::new(),
             named_templates: Vec::new(),
+            rule_template_params: HashMap::new(),
         }
     }
 
@@ -51,5 +55,22 @@ impl Declarations {
         self.named_templates
             .iter()
             .find(|named_template| named_template.name == function::Name::new(name.to_string()))
+    }
+
+    pub fn add_rule_template(
+        &mut self,
+        function_id: function::InlineFunctionId,
+        param_names: Vec<String>,
+    ) {
+        self.rule_template_params.insert(function_id, param_names);
+    }
+
+    pub fn rule_template_param_names(
+        &self,
+        function_id: function::InlineFunctionId,
+    ) -> Option<&[String]> {
+        self.rule_template_params
+            .get(&function_id)
+            .map(Vec::as_slice)
     }
 }
