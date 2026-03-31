@@ -20,6 +20,7 @@ pub struct FunctionCompiler<'a> {
     pub(crate) mode_ids: &'a ModeIds,
     pub(crate) template_ids: &'a TemplateIds,
     pub(crate) template_params: &'a TemplateParams,
+    pub(crate) global_variable_ids: &'a ahash::HashMap<ir::Name, u16>,
     pub(crate) builder: FunctionBuilder<'a>,
 }
 
@@ -30,6 +31,7 @@ impl<'a> FunctionCompiler<'a> {
         mode_ids: &'a ModeIds,
         template_ids: &'a TemplateIds,
         template_params: &'a TemplateParams,
+        global_variable_ids: &'a ahash::HashMap<ir::Name, u16>,
     ) -> Self {
         Self {
             builder,
@@ -37,6 +39,7 @@ impl<'a> FunctionCompiler<'a> {
             mode_ids,
             template_ids,
             template_params,
+            global_variable_ids,
         }
     }
 
@@ -157,12 +160,12 @@ impl<'a> FunctionCompiler<'a> {
                     .emit(Instruction::ClosureVar(index as u16), span);
                 Ok(())
             } else {
-                // TODO: this should be unreachable but
-                // the XSLT test suite for some reason triggers
-                // this condition, so for now we've hacked our way
-                // around it
-                Err(Error::Unsupported(String::from("Internal bug: variable not found?")).into())
-                // unreachable!("variable not found: {:?}", name);
+                if let Some(index) = self.global_variable_ids.get(name) {
+                    self.builder.emit(Instruction::GlobalVar(*index), span);
+                    Ok(())
+                } else {
+                    Err(Error::Unsupported(String::from("Internal bug: variable not found?")).into())
+                }
             }
         }
     }
@@ -354,10 +357,28 @@ impl<'a> FunctionCompiler<'a> {
             mode_ids: self.mode_ids,
             template_ids: self.template_ids,
             template_params: self.template_params,
+            global_variable_ids: self.global_variable_ids,
         };
 
         for param in &function_definition.params {
             compiler.scopes.push_name(&param.name);
+        }
+        for (index, param) in function_definition.params.iter().enumerate() {
+            if let Some(default) = &param.default {
+                if index > u16::MAX as usize {
+                    return Err(Error::XPDY0130.with_span(span));
+                }
+                compiler
+                    .builder
+                    .emit(Instruction::VarIsAbsent(index as u16), span);
+                let skip_default = compiler
+                    .builder
+                    .emit_jump_forward(JumpCondition::False, span);
+                let default_expr = Spanned::new((**default).clone(), (0..0).into());
+                compiler.compile_expr(&default_expr)?;
+                compiler.compile_variable_set(&param.name, span)?;
+                compiler.builder.patch_jump(skip_default);
+            }
         }
         compiler.compile_expr(&function_definition.body)?;
         for _ in &function_definition.params {
@@ -1045,19 +1066,17 @@ impl<'a> FunctionCompiler<'a> {
         // Look up the named template by name
         let template_name_key = format!("{:?}", &call_template.name);
         
-        if let Some(&template_function_id) = self.template_ids.get(&template_name_key) {
-            // Emit a Closure instruction to push the template function onto the stack
-            self.builder
-                .emit(Instruction::Closure(template_function_id.as_u16()), span);
+        if let Some(&template_id) = self.template_ids.get(&template_name_key) {
+            self.builder.emit(Instruction::NamedTemplate(template_id), span);
             
             // Look up the template's expected parameters
             let template_params = self.template_params.get(&template_name_key).cloned().unwrap_or_default();
             
-            // Build a map of with_param ORIGINAL names to their select atoms for quick lookup
-            let mut with_param_map: std::collections::HashMap<String, Option<ir::AtomS>> = std::collections::HashMap::new();
+            // Build a map of with-param ORIGINAL names for quick lookup
+            let mut with_param_map: std::collections::HashMap<String, &ir::WithParam> = std::collections::HashMap::new();
             for with_param in &call_template.params {
                 let param_key = format!("{:?}", &with_param.name);
-                with_param_map.insert(param_key, with_param.select.clone());
+                with_param_map.insert(param_key, with_param);
             }
             
             // For each expected parameter, emit code to push its value on the stack
@@ -1069,25 +1088,17 @@ impl<'a> FunctionCompiler<'a> {
                     format!("{:?}", &param.name)
                 };
                 
-                if let Some(select_atom) = with_param_map.get(&param_match_key) {
+                if let Some(with_param) = with_param_map.get(&param_match_key) {
                     // Parameter was provided via with-param
-                    if let Some(atom) = select_atom {
+                    if let Some(atom) = &with_param.select {
                         self.compile_atom(atom)?;
+                    } else if let Some(expr) = &with_param.sequence_constructor {
+                        self.compile_expr(expr)?;
+                    } else {
+                        self.builder.emit(Instruction::Absent, span);
                     }
-                } else if let Some(default_expr) = &param.default {
-                    // Parameter not provided, use default expression
-                    // Wrap the expression in a Spanned with an empty span
-                    let spanned_expr = Spanned::new(default_expr.as_ref().clone(), (0..0).into());
-                    self.compile_expr(&spanned_expr)?;
-                    // The result is now on top of stack, which is what we want
                 } else {
-                    // No with-param and no default - this should have been caught at schema validation
-                    // For now, push empty sequence
-                    let empty_seq = Spanned::new(
-                        ir::Atom::Const(ir::Const::EmptySequence),
-                        (0..0).into(),
-                    );
-                    self.compile_atom(&empty_seq)?;
+                    self.builder.emit(Instruction::Absent, span);
                 }
             }
             

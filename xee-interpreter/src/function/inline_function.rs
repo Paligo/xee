@@ -13,7 +13,7 @@ pub struct CastType {
     pub empty_sequence_allowed: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Name(pub(crate) String);
 
 impl Name {

@@ -13,7 +13,15 @@ pub fn compile_xpath(expr: ir::ExprS, static_context: StaticContext) -> SpannedR
     let empty_mode_ids = ModeIds::new();
     let empty_template_ids = TemplateIds::new();
     let empty_template_params = TemplateParams::new();
-    let mut compiler = FunctionCompiler::new(builder, &mut scopes, &empty_mode_ids, &empty_template_ids, &empty_template_params);
+    let empty_global_variable_ids = ahash::HashMap::new();
+    let mut compiler = FunctionCompiler::new(
+        builder,
+        &mut scopes,
+        &empty_mode_ids,
+        &empty_template_ids,
+        &empty_template_params,
+        &empty_global_variable_ids,
+    );
     compiler.compile_expr(&expr)?;
     Ok(program)
 }

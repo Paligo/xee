@@ -3,7 +3,6 @@ use insta::assert_debug_snapshot;
 
 use xee_interpreter::interpreter::{instruction::decode_instructions, Program};
 use xee_ir::{ir, FunctionBuilder, FunctionCompiler, ModeIds, Scopes};
-use xee_ir::declaration_compiler::{TemplateIds, TemplateParams};
 use xee_xpath_ast::span::Spanned;
 
 fn spanned<T>(t: T) -> Spanned<T> {
@@ -64,14 +63,20 @@ fn test_generate_element() {
             ir::Param {
                 name: ir::Name::new("item".to_string()),
                 type_: None,
+                default: None,
+                original_name: None,
             },
             ir::Param {
                 name: ir::Name::new("position".to_string()),
                 type_: None,
+                default: None,
+                original_name: None,
             },
             ir::Param {
                 name: ir::Name::new("last".to_string()),
                 type_: None,
+                default: None,
+                original_name: None,
             },
         ],
         return_type: None,
@@ -86,9 +91,17 @@ fn test_generate_element() {
     let function_builder = FunctionBuilder::new(&mut program);
     let mut scopes = Scopes::new();
     let empty_mode_ids = ModeIds::new();
-    let empty_template_ids = TemplateIds::new();
-    let empty_template_params = TemplateParams::new();
-    let mut compiler = FunctionCompiler::new(function_builder, &mut scopes, &empty_mode_ids, &empty_template_ids, &empty_template_params);
+    let empty_template_ids = ahash::HashMap::new();
+    let empty_template_params = ahash::HashMap::new();
+    let empty_global_variable_ids = ahash::HashMap::new();
+    let mut compiler = FunctionCompiler::new(
+        function_builder,
+        &mut scopes,
+        &empty_mode_ids,
+        &empty_template_ids,
+        &empty_template_params,
+        &empty_global_variable_ids,
+    );
 
     compiler.compile_expr(&outer_expr).unwrap();
 

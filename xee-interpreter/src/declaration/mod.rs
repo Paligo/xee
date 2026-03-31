@@ -4,4 +4,4 @@
 mod decl;
 mod globalvar;
 
-pub use decl::Declarations;
+pub use decl::{Declarations, GlobalVariableDeclaration, NamedTemplateDeclaration};

@@ -216,13 +216,18 @@ impl<'a> IrConverter<'a> {
     }
 
     fn transform(&mut self, transform: &ast::Transform) -> error::SpannedResult<ir::Declarations> {
+        // Register global variable/param names early so $var references resolve.
+        let global_vars = self.collect_global_variables(&transform.declarations)?;
+
         let main_sequence_constructor = self.main_sequence_constructor();
         let main = self.sequence_constructor_function(&main_sequence_constructor)?;
         let mut declarations = ir::Declarations::new(main);
+        declarations.global_variables = global_vars;
 
         for declaration in &transform.declarations {
             self.declaration(&mut declarations, declaration)?;
         }
+
         Ok(declarations)
     }
 
@@ -246,6 +251,56 @@ impl<'a> IrConverter<'a> {
             PreserveSpace(_) | DecimalFormat(_) | CharacterMap(_) | NamespaceAlias(_) |
             ImportSchema(_) | UsePackage(_) | GlobalContextItem(_) | Accumulator(_) => Ok(()),
         }
+    }
+
+    fn collect_global_variables(
+        &mut self,
+        declarations: &[ast::Declaration],
+    ) -> error::SpannedResult<Vec<ir::GlobalVariable>> {
+        let mut globals = Vec::new();
+        for decl in declarations {
+            match decl {
+                ast::Declaration::Variable(var) => {
+                    let name = self.variables.new_var_name(&var.name);
+                    let expr = self.global_expr(var.select.as_ref(), &var.sequence_constructor)?;
+                    globals.push(ir::GlobalVariable {
+                        name,
+                        original_name: None,
+                        required: false,
+                        expr,
+                    });
+                }
+                ast::Declaration::Param(param) => {
+                    let name = self.variables.new_var_name(&param.name);
+                    let expr = self.global_expr(param.select.as_ref(), &param.sequence_constructor)?;
+                    globals.push(ir::GlobalVariable {
+                        name,
+                        original_name: Some(param.name.clone()),
+                        required: param.required,
+                        expr,
+                    });
+                }
+                _ => {}
+            }
+        }
+        Ok(globals)
+    }
+
+    fn global_expr(
+        &mut self,
+        select: Option<&ast::Expression>,
+        sequence_constructor: &ast::SequenceConstructor,
+    ) -> error::SpannedResult<ir::ExprS> {
+        self.variables.push_absent_context();
+        let expr = if let Some(select) = select {
+            self.expression(select)?.expr()
+        } else if !sequence_constructor.is_empty() {
+            self.sequence_constructor(sequence_constructor)?.expr()
+        } else {
+            self.empty_sequence()
+        };
+        self.variables.pop_context();
+        Ok(expr)
     }
 
     fn template(

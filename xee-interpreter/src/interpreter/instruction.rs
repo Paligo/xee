@@ -14,10 +14,14 @@ pub enum Instruction {
     Minus,
     //
     Concat,
+    Absent,
     Const(u16),
     Closure(u16),
+    NamedTemplate(u16),
     StaticClosure(u16),
     Var(u16),
+    GlobalVar(u16),
+    VarIsAbsent(u16),
     Set(u16),
     ClosureVar(u16),
     Comma,
@@ -93,10 +97,14 @@ pub(crate) enum EncodedInstruction {
     Plus,
     Minus,
     Concat,
+    Absent,
     Const,
     Closure,
+    NamedTemplate,
     StaticClosure,
     Var,
+    GlobalVar,
+    VarIsAbsent,
     Set,
     ClosureVar,
     Comma,
@@ -174,6 +182,7 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::Plus => (Instruction::Plus, 1),
         EncodedInstruction::Minus => (Instruction::Minus, 1),
         EncodedInstruction::Concat => (Instruction::Concat, 1),
+        EncodedInstruction::Absent => (Instruction::Absent, 1),
         EncodedInstruction::Const => {
             let constant = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::Const(constant), 3)
@@ -182,6 +191,10 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
             let function = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::Closure(function), 3)
         }
+        EncodedInstruction::NamedTemplate => {
+            let function = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::NamedTemplate(function), 3)
+        }
         EncodedInstruction::StaticClosure => {
             let function = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::StaticClosure(function), 3)
@@ -189,6 +202,14 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::Var => {
             let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::Var(variable), 3)
+        }
+        EncodedInstruction::GlobalVar => {
+            let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::GlobalVar(variable), 3)
+        }
+        EncodedInstruction::VarIsAbsent => {
+            let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::VarIsAbsent(variable), 3)
         }
         EncodedInstruction::Set => {
             let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
@@ -316,6 +337,7 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
         Instruction::Plus => bytes.push(EncodedInstruction::Plus.to_u8().unwrap()),
         Instruction::Minus => bytes.push(EncodedInstruction::Minus.to_u8().unwrap()),
         Instruction::Concat => bytes.push(EncodedInstruction::Concat.to_u8().unwrap()),
+        Instruction::Absent => bytes.push(EncodedInstruction::Absent.to_u8().unwrap()),
         Instruction::Const(constant) => {
             bytes.push(EncodedInstruction::Const.to_u8().unwrap());
             bytes.extend_from_slice(&constant.to_le_bytes());
@@ -324,12 +346,24 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
             bytes.push(EncodedInstruction::Closure.to_u8().unwrap());
             bytes.extend_from_slice(&function_id.to_le_bytes());
         }
+        Instruction::NamedTemplate(function_id) => {
+            bytes.push(EncodedInstruction::NamedTemplate.to_u8().unwrap());
+            bytes.extend_from_slice(&function_id.to_le_bytes());
+        }
         Instruction::StaticClosure(function_id) => {
             bytes.push(EncodedInstruction::StaticClosure.to_u8().unwrap());
             bytes.extend_from_slice(&function_id.to_le_bytes());
         }
         Instruction::Var(variable) => {
             bytes.push(EncodedInstruction::Var.to_u8().unwrap());
+            bytes.extend_from_slice(&variable.to_le_bytes());
+        }
+        Instruction::GlobalVar(variable) => {
+            bytes.push(EncodedInstruction::GlobalVar.to_u8().unwrap());
+            bytes.extend_from_slice(&variable.to_le_bytes());
+        }
+        Instruction::VarIsAbsent(variable) => {
+            bytes.push(EncodedInstruction::VarIsAbsent.to_u8().unwrap());
             bytes.extend_from_slice(&variable.to_le_bytes());
         }
         Instruction::Set(variable) => {
@@ -464,6 +498,7 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::Plus
         | Instruction::Minus
         | Instruction::Concat
+        | Instruction::Absent
         | Instruction::Comma
         | Instruction::CurlyArray
         | Instruction::SquareArray
@@ -516,8 +551,11 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         Instruction::Call(_) => 2,
         Instruction::Const(_)
         | Instruction::Closure(_)
+        | Instruction::NamedTemplate(_)
         | Instruction::StaticClosure(_)
         | Instruction::Var(_)
+        | Instruction::GlobalVar(_)
+        | Instruction::VarIsAbsent(_)
         | Instruction::Set(_)
         | Instruction::ClosureVar(_)
         | Instruction::Jump(_)

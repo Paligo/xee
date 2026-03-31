@@ -29,6 +29,14 @@ use super::state::State;
 pub struct Interpreter<'a> {
     runnable: &'a Runnable<'a>,
     pub(crate) state: State<'a>,
+    global_variables: Vec<GlobalValueState>,
+}
+
+#[derive(Debug, Clone)]
+enum GlobalValueState {
+    Uninitialized,
+    Resolving,
+    Resolved(sequence::Sequence),
 }
 
 pub struct ContextInfo {
@@ -52,6 +60,10 @@ impl<'a> Interpreter<'a> {
         Interpreter {
             runnable,
             state: State::new(xot),
+            global_variables: vec![
+                GlobalValueState::Uninitialized;
+                runnable.program().declarations.global_variables.len()
+            ],
         }
     }
 
@@ -135,6 +147,9 @@ impl<'a> Interpreter<'a> {
                     let item: sequence::Item = result.into();
                     self.state.push(item);
                 }
+                EncodedInstruction::Absent => {
+                    self.state.push_value(stack::Value::Absent);
+                }
                 EncodedInstruction::Const => {
                     let index = self.read_u16();
                     self.state
@@ -155,6 +170,19 @@ impl<'a> Interpreter<'a> {
                     let item: sequence::Item = function.into();
                     self.state.push(item);
                 }
+                EncodedInstruction::NamedTemplate => {
+                    let template_id = self.read_u16();
+                    let named_template = self
+                        .runnable
+                        .program()
+                        .declarations
+                        .named_template(template_id as usize);
+                    let function: function::Function =
+                        function::InlineFunctionData::new(named_template.function_id, Vec::new())
+                            .into();
+                    let item: sequence::Item = function.into();
+                    self.state.push(item);
+                }
                 EncodedInstruction::StaticClosure => {
                     let static_function_id = self.read_u16();
                     let static_function_id =
@@ -167,6 +195,15 @@ impl<'a> Interpreter<'a> {
                 EncodedInstruction::Var => {
                     let index = self.read_u16();
                     self.state.push_var(index as usize);
+                }
+                EncodedInstruction::GlobalVar => {
+                    let index = self.read_u16();
+                    let value = self.resolve_global_variable(index as usize)?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::VarIsAbsent => {
+                    let index = self.read_u16();
+                    self.state.push(self.state.var_is_absent(index as usize));
                 }
                 EncodedInstruction::Set => {
                     let index = self.read_u16();
@@ -700,6 +737,30 @@ impl<'a> Interpreter<'a> {
             .inline_function(self.state.frame().function())
     }
 
+    fn resolve_global_variable(&mut self, index: usize) -> error::Result<sequence::Sequence> {
+        match self.global_variables[index].clone() {
+            GlobalValueState::Resolved(value) => Ok(value),
+            GlobalValueState::Resolving => Err(error::Error::XTDE0640),
+            GlobalValueState::Uninitialized => {
+                let global = self.runnable.program().declarations.global_variable(index).clone();
+                if let Some(original_name) = &global.original_name {
+                    if let Some(value) = self.runnable.dynamic_context().variables().get(original_name) {
+                        let value = value.clone();
+                        self.global_variables[index] = GlobalValueState::Resolved(value.clone());
+                        return Ok(value);
+                    }
+                }
+
+                self.global_variables[index] = GlobalValueState::Resolving;
+                let function: function::Function =
+                    function::InlineFunctionData::new(global.function_id, Vec::new()).into();
+                let value = self.call_function_with_arguments(&function, &[])?;
+                self.global_variables[index] = GlobalValueState::Resolved(value.clone());
+                Ok(value)
+            }
+        }
+    }
+
     pub(crate) fn function_name(&self, function: &function::Function) -> Option<Name> {
         self.runnable.function_info(function).name()
     }
@@ -782,15 +843,48 @@ impl<'a> Interpreter<'a> {
             return Err(error::Error::XPTY0004);
         }
 
-        let arguments = self.coerce_arguments(parameter_types, arity)?;
+        let arguments = self.coerce_inline_arguments(parameter_types, arity)?;
 
         // now we have a list of arguments that we want to push back onto the stack
         // (they are already reversed)
         for arg in arguments {
-            self.state.push(arg);
+            self.state.push_value(arg);
         }
 
         self.state.push_frame(function_id, arity as usize)
+    }
+
+    fn coerce_inline_arguments(
+        &mut self,
+        parameter_types: &[Option<ast::SequenceType>],
+        arity: u8,
+    ) -> error::Result<Vec<stack::Value>> {
+        let stack_values = self.state.arguments(arity as usize);
+        let mut arguments = Vec::with_capacity(arity as usize);
+        let static_context = self.runnable.static_context();
+        let xot = self.state.xot();
+        for (parameter_type, stack_value) in parameter_types.iter().zip(stack_values) {
+            if stack_value.is_absent() {
+                arguments.push(stack::Value::Absent);
+                continue;
+            }
+            let sequence: sequence::Sequence = stack_value.try_into()?;
+            let value = if let Some(type_) = parameter_type {
+                sequence
+                    .sequence_type_matching_function_conversion(
+                        type_,
+                        static_context,
+                        xot,
+                        &|function| self.runnable.function_info(function).signature(),
+                    )?
+                    .into()
+            } else {
+                sequence.into()
+            };
+            arguments.push(value);
+        }
+        self.state.truncate_arguments(arity as usize);
+        Ok(arguments)
     }
 
     fn coerce_arguments(

@@ -388,10 +388,19 @@ pub enum ModeValue {
 pub struct Mode {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GlobalVariable {
+    pub name: Name,
+    pub original_name: Option<xmlname::OwnedName>,
+    pub required: bool,
+    pub expr: ExprS,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Declarations {
     pub rules: Vec<Rule>,
     pub modes: HashMap<Option<xmlname::OwnedName>, Mode>,
     pub functions: Vec<FunctionBinding>,
+    pub global_variables: Vec<GlobalVariable>,
     pub main: FunctionDefinition,
     pub serialization_params: SerializationParameters,
 }
@@ -402,6 +411,7 @@ impl Declarations {
             rules: Vec::new(),
             modes: HashMap::new(),
             functions: Vec::new(),
+            global_variables: Vec::new(),
             main,
             serialization_params: SerializationParameters::new(),
         }

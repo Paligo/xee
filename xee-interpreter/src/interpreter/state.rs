@@ -133,6 +133,10 @@ impl<'a> State<'a> {
             .push(self.stack[self.frame().base + index].clone());
     }
 
+    pub(crate) fn var_is_absent(&self, index: usize) -> bool {
+        self.stack[self.frame().base + index].is_absent()
+    }
+
     pub(crate) fn push_closure_var(&mut self, index: usize) -> error::Result<()> {
         let function = self.function()?;
         let closure_vars = function.closure_vars();

@@ -29,7 +29,7 @@ impl RuleBuilder {
 }
 
 pub type ModeIds = HashMap<ir::ApplyTemplatesModeValue, ModeId>;
-pub type TemplateIds = HashMap<String, function::InlineFunctionId>;
+pub type TemplateIds = HashMap<String, u16>;
 pub type TemplateParams = HashMap<String, Vec<ir::Param>>;
 
 
@@ -41,6 +41,7 @@ pub struct DeclarationCompiler<'a> {
     mode_ids: ModeIds,
     template_ids: TemplateIds,
     template_params: TemplateParams,
+    global_variable_ids: HashMap<ir::Name, u16>,
 }
 
 impl<'a> DeclarationCompiler<'a> {
@@ -53,12 +54,20 @@ impl<'a> DeclarationCompiler<'a> {
             mode_ids: HashMap::new(),
             template_ids: HashMap::new(),
             template_params: HashMap::new(),
+            global_variable_ids: HashMap::new(),
         }
     }
 
     fn function_compiler(&mut self) -> FunctionCompiler<'_> {
         let function_builder = FunctionBuilder::new(self.program);
-        FunctionCompiler::new(function_builder, &mut self.scopes, &self.mode_ids, &self.template_ids, &self.template_params)
+        FunctionCompiler::new(
+            function_builder,
+            &mut self.scopes,
+            &self.mode_ids,
+            &self.template_ids,
+            &self.template_params,
+            &self.global_variable_ids,
+        )
     }
 
     pub fn compile_declarations(
@@ -68,10 +77,13 @@ impl<'a> DeclarationCompiler<'a> {
         // first keep track of what modes exist, to create a ModeId for them. We do
         // this early so any mode reference within apply-templates will resolve.
         self.compile_modes(declarations);
+        self.register_global_variables(declarations)?;
+        self.register_templates(declarations)?;
 
         // compile all named templates (function bindings) early so they can be referenced
         // by name from call-template instructions
         self.compile_templates(declarations)?;
+        self.compile_global_variables(declarations)?;
 
         for rule in &declarations.rules {
             self.compile_rule(rule)?;
@@ -80,6 +92,20 @@ impl<'a> DeclarationCompiler<'a> {
         self.add_rules();
         let mut function_compiler = self.function_compiler();
         function_compiler.compile_function_definition(&declarations.main, (0..0).into())
+    }
+
+    fn register_global_variables(
+        &mut self,
+        declarations: &ir::Declarations,
+    ) -> error::SpannedResult<()> {
+        for (index, global_variable) in declarations.global_variables.iter().enumerate() {
+            if index > u16::MAX as usize {
+                return Err(error::Error::Unsupported("too many global variables".to_string()).into());
+            }
+            self.global_variable_ids
+                .insert(global_variable.name.clone(), index as u16);
+        }
+        Ok(())
     }
 
     fn compile_modes(&mut self, declarations: &ir::Declarations) {
@@ -111,14 +137,61 @@ impl<'a> DeclarationCompiler<'a> {
         Ok(())
     }
 
+    fn register_templates(&mut self, declarations: &ir::Declarations) -> error::SpannedResult<()> {
+        for (index, function_binding) in declarations.functions.iter().enumerate() {
+            if index > u16::MAX as usize {
+                return Err(error::Error::Unsupported("too many named templates".to_string()).into());
+            }
+            let template_name_key = format!("{:?}", function_binding.name);
+            self.template_ids.insert(template_name_key.clone(), index as u16);
+            self.template_params
+                .insert(template_name_key, function_binding.main.params.clone());
+        }
+        Ok(())
+    }
+
+    fn compile_global_variables(
+        &mut self,
+        declarations: &ir::Declarations,
+    ) -> error::SpannedResult<()> {
+        for global_variable in &declarations.global_variables {
+            self.compile_global_variable(global_variable)?;
+        }
+        Ok(())
+    }
+
+    fn compile_global_variable(
+        &mut self,
+        global_variable: &ir::GlobalVariable,
+    ) -> error::SpannedResult<()> {
+        let mut function_compiler = self.function_compiler();
+        let function_definition = ir::FunctionDefinition {
+            params: Vec::new(),
+            return_type: None,
+            body: Box::new(global_variable.expr.clone()),
+        };
+        let function_id = function_compiler
+            .compile_function_id(&function_definition, global_variable.expr.span.into())?;
+        self.program
+            .declarations
+            .add_global_variable(xee_interpreter::declaration::GlobalVariableDeclaration {
+                name: global_variable.name.clone(),
+                function_id,
+                original_name: global_variable.original_name.clone(),
+                required: global_variable.required,
+            });
+        Ok(())
+    }
+
     fn compile_named_template(&mut self, function_binding: &ir::FunctionBinding) -> error::SpannedResult<()> {
         let mut function_compiler = self.function_compiler();
         let function_id = function_compiler.compile_function_id(&function_binding.main, (0..0).into())?;
-        // Extract the string from the template name and use it as the key
-        let template_name_key = format!("{:?}", function_binding.name);
-        self.template_ids.insert(template_name_key.clone(), function_id);
-        // Store the template parameters for later use in call-template compilation
-        self.template_params.insert(template_name_key, function_binding.main.params.clone());
+        self.program
+            .declarations
+            .add_named_template(xee_interpreter::declaration::NamedTemplateDeclaration {
+                name: function_binding.name.clone(),
+                function_id,
+            });
         Ok(())
     }
 
