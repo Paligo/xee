@@ -17,12 +17,18 @@ pub struct NamedTemplateDeclaration {
     pub function_id: function::InlineFunctionId,
 }
 
+#[derive(Debug, Clone)]
+pub struct TemplateParamDeclaration {
+    pub name: String,
+    pub tunnel: bool,
+}
+
 #[derive(Debug)]
 pub struct Declarations {
     pub mode_lookup: ModeLookup<function::InlineFunctionId>,
     pub global_variables: Vec<GlobalVariableDeclaration>,
     pub named_templates: Vec<NamedTemplateDeclaration>,
-    rule_template_params: HashMap<function::InlineFunctionId, Vec<String>>,
+    template_params: HashMap<function::InlineFunctionId, Vec<TemplateParamDeclaration>>,
 }
 
 impl Declarations {
@@ -31,7 +37,7 @@ impl Declarations {
             mode_lookup: ModeLookup::new(),
             global_variables: Vec::new(),
             named_templates: Vec::new(),
-            rule_template_params: HashMap::new(),
+            template_params: HashMap::new(),
         }
     }
 
@@ -57,20 +63,18 @@ impl Declarations {
             .find(|named_template| named_template.name == function::Name::new(name.to_string()))
     }
 
-    pub fn add_rule_template(
+    pub fn add_template_params(
         &mut self,
         function_id: function::InlineFunctionId,
-        param_names: Vec<String>,
+        params: Vec<TemplateParamDeclaration>,
     ) {
-        self.rule_template_params.insert(function_id, param_names);
+        self.template_params.insert(function_id, params);
     }
 
-    pub fn rule_template_param_names(
+    pub fn template_params(
         &self,
         function_id: function::InlineFunctionId,
-    ) -> Option<&[String]> {
-        self.rule_template_params
-            .get(&function_id)
-            .map(Vec::as_slice)
+    ) -> Option<&[TemplateParamDeclaration]> {
+        self.template_params.get(&function_id).map(Vec::as_slice)
     }
 }

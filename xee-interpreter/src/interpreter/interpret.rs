@@ -22,7 +22,9 @@ use crate::stack;
 use crate::xml;
 use crate::{error, pattern};
 
-use super::instruction::{read_i16, read_instruction, read_u16, read_u8, EncodedInstruction, RaisedError};
+use super::instruction::{
+    read_i16, read_instruction, read_u16, read_u8, EncodedInstruction, RaisedError,
+};
 use super::runnable::Runnable;
 use super::state::State;
 
@@ -30,6 +32,7 @@ pub struct Interpreter<'a> {
     runnable: &'a Runnable<'a>,
     pub(crate) state: State<'a>,
     global_variables: Vec<GlobalValueState>,
+    tunnel_params: Vec<function::Map>,
 }
 
 #[derive(Debug, Clone)]
@@ -64,6 +67,7 @@ impl<'a> Interpreter<'a> {
                 GlobalValueState::Uninitialized;
                 runnable.program().declarations.global_variables.len()
             ],
+            tunnel_params: vec![function::Map::new(Vec::new()).unwrap()],
         }
     }
 
@@ -667,12 +671,29 @@ impl<'a> Interpreter<'a> {
                     }
                     self.state.push(new_sequence);
                 }
+                EncodedInstruction::CallTemplate => {
+                    let tunnel_params = self.state.pop()?.one()?.to_map()?;
+                    let params = self.state.pop()?.one()?.to_map()?;
+                    let size = self.pop_optional_sequence();
+                    let position = self.pop_optional_sequence();
+                    let item = self.pop_optional_sequence();
+                    let function = self.state.pop()?.one()?.to_function()?;
+                    let value = self.call_template_with_params(
+                        &function,
+                        [item, position, size],
+                        &params,
+                        &tunnel_params,
+                    )?;
+                    self.state.push(value);
+                }
                 EncodedInstruction::ApplyTemplates => {
+                    let tunnel_params = self.state.pop()?.one()?.to_map()?;
                     let params = self.state.pop()?.one()?.to_map()?;
                     let value = self.state.pop()?;
                     let mode_id = self.read_u16();
                     let mode = pattern::ModeId::new(mode_id as usize);
-                    let value = self.apply_templates_sequence(mode, value, &params)?;
+                    let value =
+                        self.apply_templates_sequence(mode, value, &params, &tunnel_params)?;
                     self.state.push(value);
                 }
                 EncodedInstruction::RaiseError => {
@@ -749,9 +770,19 @@ impl<'a> Interpreter<'a> {
             GlobalValueState::Resolved(value) => Ok(value),
             GlobalValueState::Resolving => Err(error::Error::XTDE0640),
             GlobalValueState::Uninitialized => {
-                let global = self.runnable.program().declarations.global_variable(index).clone();
+                let global = self
+                    .runnable
+                    .program()
+                    .declarations
+                    .global_variable(index)
+                    .clone();
                 if let Some(original_name) = &global.original_name {
-                    if let Some(value) = self.runnable.dynamic_context().variables().get(original_name) {
+                    if let Some(value) = self
+                        .runnable
+                        .dynamic_context()
+                        .variables()
+                        .get(original_name)
+                    {
                         let value = value.clone();
                         self.global_variables[index] = GlobalValueState::Resolved(value.clone());
                         return Ok(value);
@@ -789,11 +820,7 @@ impl<'a> Interpreter<'a> {
         function: &function::Function,
         arguments: &[sequence::Sequence],
     ) -> error::Result<sequence::Sequence> {
-        let arguments = arguments
-            .iter()
-            .cloned()
-            .map(Some)
-            .collect::<Vec<_>>();
+        let arguments = arguments.iter().cloned().map(Some).collect::<Vec<_>>();
         self.call_function_with_optional_arguments(function, &arguments)
     }
 
@@ -1309,12 +1336,14 @@ impl<'a> Interpreter<'a> {
         mode: pattern::ModeId,
         sequence: sequence::Sequence,
         params: &function::Map,
+        tunnel_params: &function::Map,
     ) -> error::Result<sequence::Sequence> {
         let mut r: Vec<sequence::Item> = Vec::new();
         let size: IBig = sequence.len().into();
 
         for (i, item) in sequence.iter().enumerate() {
-            let sequence = self.apply_templates_item(mode, item, i, size.clone(), params)?;
+            let sequence =
+                self.apply_templates_item(mode, item, i, size.clone(), params, tunnel_params)?;
             if let Some(sequence) = sequence {
                 for item in sequence.iter() {
                     r.push(item.clone());
@@ -1331,32 +1360,78 @@ impl<'a> Interpreter<'a> {
         position: usize,
         size: IBig,
         params: &function::Map,
+        tunnel_params: &function::Map,
     ) -> error::Result<Option<sequence::Sequence>> {
         let function_id = self.lookup_pattern(mode, &item);
 
         if let Some(function_id) = function_id {
             let position: IBig = (position + 1).into();
-            let mut arguments = vec![
-                Some(item.into()),
-                Some(atomic::Atomic::from(position).into()),
-                Some(atomic::Atomic::from(size.clone()).into()),
-            ];
-            if let Some(param_names) = self
-                .runnable
-                .program()
-                .declarations
-                .rule_template_param_names(function_id)
-            {
-                for param_name in param_names {
-                    let key = atomic::Atomic::from(param_name.as_str());
-                    arguments.push(params.get(&key).cloned());
-                }
-            }
             let function = function::InlineFunctionData::new(function_id, Vec::new()).into();
-            self.call_function_with_optional_arguments(&function, &arguments)
-                .map(Some)
+            self.call_template_with_params(
+                &function,
+                [
+                    Some(item.into()),
+                    Some(atomic::Atomic::from(position).into()),
+                    Some(atomic::Atomic::from(size.clone()).into()),
+                ],
+                params,
+                tunnel_params,
+            )
+            .map(Some)
         } else {
             Ok(None)
+        }
+    }
+
+    fn call_template_with_params(
+        &mut self,
+        function: &function::Function,
+        context_arguments: [Option<sequence::Sequence>; 3],
+        params: &function::Map,
+        tunnel_params: &function::Map,
+    ) -> error::Result<sequence::Sequence> {
+        let function_id = match function {
+            function::Function::Inline(data) => data.id,
+            _ => return Err(error::Error::XPTY0004),
+        };
+
+        let mut effective_tunnel_params = self.current_tunnel_params().clone();
+        for (key, value) in tunnel_params.entries() {
+            effective_tunnel_params = effective_tunnel_params.put(key.clone(), value)?;
+        }
+
+        let mut arguments = context_arguments.into_iter().collect::<Vec<_>>();
+        if let Some(template_params) = self
+            .runnable
+            .program()
+            .declarations
+            .template_params(function_id)
+        {
+            for param in template_params {
+                let key = atomic::Atomic::from(param.name.as_str());
+                let value = if param.tunnel {
+                    effective_tunnel_params.get(&key).cloned()
+                } else {
+                    params.get(&key).cloned()
+                };
+                arguments.push(value);
+            }
+        }
+
+        self.tunnel_params.push(effective_tunnel_params);
+        let result = self.call_function_with_optional_arguments(function, &arguments);
+        self.tunnel_params.pop();
+        result
+    }
+
+    fn current_tunnel_params(&self) -> &function::Map {
+        self.tunnel_params.last().unwrap()
+    }
+
+    fn pop_optional_sequence(&mut self) -> Option<sequence::Sequence> {
+        match self.state.pop_value() {
+            stack::Value::Absent => None,
+            stack::Value::Sequence(sequence) => Some(sequence),
         }
     }
 

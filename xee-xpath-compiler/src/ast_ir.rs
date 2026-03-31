@@ -53,6 +53,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.position,
@@ -60,6 +61,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.last,
@@ -67,6 +69,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
         ];
         // add any variables defined in static context as parameters
@@ -77,6 +80,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             });
         }
         let outer_function_expr = ir::Expr::FunctionDefinition(ir::FunctionDefinition {
@@ -588,6 +592,7 @@ impl<'a> IrConverter<'a> {
             default: None,
             required: false,
             original_name: None,
+            tunnel: false,
         }
     }
 

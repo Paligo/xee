@@ -93,9 +93,7 @@ impl<'a> Runnable<'a> {
             .declarations
             .named_template_by_name(name)
             .ok_or(SpannedError {
-                error: error::Error::Unsupported(format!(
-                    "Initial template not found: {name}"
-                )),
+                error: error::Error::Unsupported(format!("Initial template not found: {name}")),
                 span: Some(self.program.span().into()),
             })?;
         let function: Function =

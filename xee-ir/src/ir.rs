@@ -138,7 +138,8 @@ pub struct Param {
     pub type_: Option<SequenceType>,
     pub default: Option<Box<Expr>>,
     pub required: bool,
-    pub original_name: Option<String>,  // For template parameters - tracks the original xsl:param name for matching with xsl:with-param
+    pub original_name: Option<String>, // For template parameters - tracks the original xsl:param name for matching with xsl:with-param
+    pub tunnel: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -359,8 +360,8 @@ pub struct WithParam {
     pub name: Name,
     pub select: Option<AtomS>,
     pub sequence_constructor: Option<Box<ExprS>>,
+    pub tunnel: bool,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CopyShallow {

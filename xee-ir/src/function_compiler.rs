@@ -1061,20 +1061,20 @@ impl<'a> FunctionCompiler<'a> {
         };
         if let Some(mode_id) = mode_id {
             self.compile_atom(&apply_templates.select)?;
-            for with_param in apply_templates.params.iter().rev() {
-                let key: sequence::Sequence = atomic::Atomic::from(with_param.name.as_str()).into();
-                self.builder.emit_constant(key, span);
-                if let Some(atom) = &with_param.select {
-                    self.compile_atom(atom)?;
-                } else if let Some(expr) = &with_param.sequence_constructor {
-                    self.compile_expr(expr)?;
-                } else {
-                    self.builder.emit_constant(sequence::Sequence::default(), span);
-                }
-            }
-            let len: IBig = apply_templates.params.len().into();
-            self.builder.emit_constant(sequence::Sequence::from(len), span);
-            self.builder.emit(Instruction::CurlyMap, span);
+            self.compile_with_param_map(
+                apply_templates
+                    .params
+                    .iter()
+                    .filter(|with_param| !with_param.tunnel),
+                span,
+            )?;
+            self.compile_with_param_map(
+                apply_templates
+                    .params
+                    .iter()
+                    .filter(|with_param| with_param.tunnel),
+                span,
+            )?;
             self.builder
                 .emit(Instruction::ApplyTemplates(mode_id.get() as u16), span);
         } else {
@@ -1093,9 +1093,10 @@ impl<'a> FunctionCompiler<'a> {
     ) -> error::SpannedResult<()> {
         // Look up the named template by name
         let template_name_key = call_template.name.as_str().to_string();
-        
+
         if let Some(&template_id) = self.template_ids.get(&template_name_key) {
-            self.builder.emit(Instruction::NamedTemplate(template_id), span);
+            self.builder
+                .emit(Instruction::NamedTemplate(template_id), span);
 
             if let Some(context_names) = &call_template.context {
                 self.compile_variable(&context_names.item, span)?;
@@ -1106,19 +1107,28 @@ impl<'a> FunctionCompiler<'a> {
                 self.builder.emit(Instruction::Absent, span);
                 self.builder.emit(Instruction::Absent, span);
             }
-            
+
             // Look up the template's expected parameters
-            let template_params = self.template_params.get(&template_name_key).cloned().unwrap_or_default();
-            
-            // Build a map of with-param names for quick lookup.
-            let mut with_param_map: std::collections::HashMap<String, &ir::WithParam> = std::collections::HashMap::new();
+            let template_params = self
+                .template_params
+                .get(&template_name_key)
+                .cloned()
+                .unwrap_or_default();
+
+            // Build a map of non-tunnel with-param names for static validation.
+            let mut with_param_map: std::collections::HashMap<String, &ir::WithParam> =
+                std::collections::HashMap::new();
             for with_param in &call_template.params {
+                if with_param.tunnel {
+                    continue;
+                }
                 let param_key = with_param.name.as_str().to_string();
                 with_param_map.insert(param_key, with_param);
             }
 
             let valid_param_names: std::collections::HashSet<String> = template_params
                 .iter()
+                .filter(|param| !param.tunnel)
                 .map(|param| {
                     param
                         .original_name
@@ -1132,31 +1142,23 @@ impl<'a> FunctionCompiler<'a> {
             {
                 return Err(error::Error::XTSE0680.into());
             }
-            
-            // For each expected parameter, emit code to push its value on the stack
-            for param in &template_params {
-                let param_match_key = param
-                    .original_name
-                    .clone()
-                    .unwrap_or_else(|| param.name.as_str().to_string());
-                
-                if let Some(with_param) = with_param_map.get(&param_match_key) {
-                    // Parameter was provided via with-param
-                    if let Some(atom) = &with_param.select {
-                        self.compile_atom(atom)?;
-                    } else if let Some(expr) = &with_param.sequence_constructor {
-                        self.compile_expr(expr)?;
-                    } else {
-                        self.builder.emit(Instruction::Absent, span);
-                    }
-                } else {
-                    self.builder.emit(Instruction::Absent, span);
-                }
-            }
-            
-            // Emit a Call instruction with the correct number of parameters
-            let arity = (template_params.len() + 3) as u8;
-            self.builder.emit(Instruction::Call(arity), span);
+
+            self.compile_with_param_map(
+                call_template
+                    .params
+                    .iter()
+                    .filter(|with_param| !with_param.tunnel),
+                span,
+            )?;
+            self.compile_with_param_map(
+                call_template
+                    .params
+                    .iter()
+                    .filter(|with_param| with_param.tunnel),
+                span,
+            )?;
+
+            self.builder.emit(Instruction::CallTemplate, span);
             Ok(())
         } else {
             Err(error::Error::Unsupported(format!(
@@ -1184,6 +1186,31 @@ impl<'a> FunctionCompiler<'a> {
     ) -> error::SpannedResult<()> {
         self.compile_atom(&copy_deep.select)?;
         self.builder.emit(Instruction::CopyDeep, span);
+        Ok(())
+    }
+
+    fn compile_with_param_map<'b>(
+        &mut self,
+        with_params: impl DoubleEndedIterator<Item = &'b ir::WithParam>,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        let with_params = with_params.collect::<Vec<_>>();
+        for with_param in with_params.iter().rev() {
+            let key: sequence::Sequence = atomic::Atomic::from(with_param.name.as_str()).into();
+            self.builder.emit_constant(key, span);
+            if let Some(atom) = &with_param.select {
+                self.compile_atom(atom)?;
+            } else if let Some(expr) = &with_param.sequence_constructor {
+                self.compile_expr(expr)?;
+            } else {
+                self.builder
+                    .emit_constant(sequence::Sequence::default(), span);
+            }
+        }
+        let len: IBig = with_params.len().into();
+        self.builder
+            .emit_constant(sequence::Sequence::from(len), span);
+        self.builder.emit(Instruction::CurlyMap, span);
         Ok(())
     }
 

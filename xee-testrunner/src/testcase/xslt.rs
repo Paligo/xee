@@ -80,7 +80,7 @@ impl Runnable<XsltLanguage> for XsltTestCase {
         };
         let static_context_builder = StaticContextBuilder::default();
         let static_context = static_context_builder.build();
-        
+
         // Get the directory of the stylesheet for resolving imports/includes
         let stylesheet_dir = path.parent().map(|p| p.to_path_buf());
         let program = xee_xslt_compiler::parse_with_base_dir(static_context, &xslt, stylesheet_dir);
@@ -184,7 +184,8 @@ impl ContextLoadable<LoadContext> for XsltTestCase {
 
     fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let file_query = queries.option("@file/string()", convert_string)?;
-        let initial_template_query = queries.option("initial-template/@name/string()", convert_string)?;
+        let initial_template_query =
+            queries.option("initial-template/@name/string()", convert_string)?;
         let stylesheets_query = queries.many("stylesheet", move |documents, item| {
             let file = file_query.execute(documents, item)?;
             Ok(Stylesheet { path: file })

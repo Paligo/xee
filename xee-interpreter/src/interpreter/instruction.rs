@@ -101,6 +101,7 @@ pub enum Instruction {
     XmlAppend,
     CopyShallow,
     CopyDeep,
+    CallTemplate,
     ApplyTemplates(u16),
     RaiseError(RaisedError),
     PrintTop,
@@ -183,9 +184,10 @@ pub(crate) enum EncodedInstruction {
     XmlComment,
     XmlProcessingInstruction,
     XmlAppend,
-    ApplyTemplates,
     CopyShallow,
     CopyDeep,
+    CallTemplate,
+    ApplyTemplates,
     RaiseError,
     PrintTop,
     PrintStack,
@@ -328,6 +330,7 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::XmlAppend => (Instruction::XmlAppend, 1),
         EncodedInstruction::CopyShallow => (Instruction::CopyShallow, 1),
         EncodedInstruction::CopyDeep => (Instruction::CopyDeep, 1),
+        EncodedInstruction::CallTemplate => (Instruction::CallTemplate, 1),
         EncodedInstruction::ApplyTemplates => {
             let mode_id = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::ApplyTemplates(mode_id), 3)
@@ -497,6 +500,7 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
         Instruction::XmlAppend => bytes.push(EncodedInstruction::XmlAppend.to_u8().unwrap()),
         Instruction::CopyShallow => bytes.push(EncodedInstruction::CopyShallow.to_u8().unwrap()),
         Instruction::CopyDeep => bytes.push(EncodedInstruction::CopyDeep.to_u8().unwrap()),
+        Instruction::CallTemplate => bytes.push(EncodedInstruction::CallTemplate.to_u8().unwrap()),
         Instruction::ApplyTemplates(mode_id) => {
             bytes.push(EncodedInstruction::ApplyTemplates.to_u8().unwrap());
             bytes.extend_from_slice(&mode_id.to_le_bytes());
@@ -576,6 +580,7 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::XmlAppend
         | Instruction::CopyShallow
         | Instruction::CopyDeep
+        | Instruction::CallTemplate
         | Instruction::PrintTop
         | Instruction::PrintStack => 1,
         Instruction::Call(_) => 2,

@@ -32,7 +32,6 @@ pub type ModeIds = HashMap<ir::ApplyTemplatesModeValue, ModeId>;
 pub type TemplateIds = HashMap<String, u16>;
 pub type TemplateParams = HashMap<String, Vec<ir::Param>>;
 
-
 pub struct DeclarationCompiler<'a> {
     program: &'a mut interpreter::Program,
     scopes: Scopes,
@@ -100,7 +99,9 @@ impl<'a> DeclarationCompiler<'a> {
     ) -> error::SpannedResult<()> {
         for (index, global_variable) in declarations.global_variables.iter().enumerate() {
             if index > u16::MAX as usize {
-                return Err(error::Error::Unsupported("too many global variables".to_string()).into());
+                return Err(
+                    error::Error::Unsupported("too many global variables".to_string()).into(),
+                );
             }
             self.global_variable_ids
                 .insert(global_variable.name.clone(), index as u16);
@@ -140,12 +141,23 @@ impl<'a> DeclarationCompiler<'a> {
     fn register_templates(&mut self, declarations: &ir::Declarations) -> error::SpannedResult<()> {
         for (index, function_binding) in declarations.functions.iter().enumerate() {
             if index > u16::MAX as usize {
-                return Err(error::Error::Unsupported("too many named templates".to_string()).into());
+                return Err(
+                    error::Error::Unsupported("too many named templates".to_string()).into(),
+                );
             }
             let template_name_key = function_binding.name.as_str().to_string();
-            self.template_ids.insert(template_name_key.clone(), index as u16);
-            self.template_params
-                .insert(template_name_key, function_binding.main.params.iter().skip(3).cloned().collect());
+            self.template_ids
+                .insert(template_name_key.clone(), index as u16);
+            self.template_params.insert(
+                template_name_key,
+                function_binding
+                    .main
+                    .params
+                    .iter()
+                    .skip(3)
+                    .cloned()
+                    .collect(),
+            );
         }
         Ok(())
     }
@@ -172,26 +184,50 @@ impl<'a> DeclarationCompiler<'a> {
         };
         let function_id = function_compiler
             .compile_function_id(&function_definition, global_variable.expr.span.into())?;
-        self.program
-            .declarations
-            .add_global_variable(xee_interpreter::declaration::GlobalVariableDeclaration {
+        self.program.declarations.add_global_variable(
+            xee_interpreter::declaration::GlobalVariableDeclaration {
                 name: global_variable.name.clone(),
                 function_id,
                 original_name: global_variable.original_name.clone(),
                 required: global_variable.required,
-            });
+            },
+        );
         Ok(())
     }
 
-    fn compile_named_template(&mut self, function_binding: &ir::FunctionBinding) -> error::SpannedResult<()> {
+    fn compile_named_template(
+        &mut self,
+        function_binding: &ir::FunctionBinding,
+    ) -> error::SpannedResult<()> {
         let mut function_compiler = self.function_compiler();
-        let function_id = function_compiler.compile_function_id(&function_binding.main, (0..0).into())?;
-        self.program
-            .declarations
-            .add_named_template(xee_interpreter::declaration::NamedTemplateDeclaration {
+        let function_id =
+            function_compiler.compile_function_id(&function_binding.main, (0..0).into())?;
+        let template_params = function_binding
+            .main
+            .params
+            .iter()
+            .skip(3)
+            .map(
+                |param| xee_interpreter::declaration::TemplateParamDeclaration {
+                    name: param
+                        .original_name
+                        .clone()
+                        .unwrap_or_else(|| param.name.as_str().to_string()),
+                    tunnel: param.tunnel,
+                },
+            )
+            .collect::<Vec<_>>();
+        if !template_params.is_empty() {
+            self.program
+                .declarations
+                .add_template_params(function_id, template_params);
+        }
+        self.program.declarations.add_named_template(
+            xee_interpreter::declaration::NamedTemplateDeclaration {
                 name: function_binding.name.clone(),
                 function_id,
-            });
+            },
+        );
         Ok(())
     }
 
@@ -206,22 +242,25 @@ impl<'a> DeclarationCompiler<'a> {
 
         drop(function_compiler);
 
-        let param_names = rule
+        let template_params = rule
             .function_definition
             .params
             .iter()
             .skip(3)
-            .map(|param| {
-                param
-                    .original_name
-                    .clone()
-                    .unwrap_or_else(|| param.name.as_str().to_string())
-            })
+            .map(
+                |param| xee_interpreter::declaration::TemplateParamDeclaration {
+                    name: param
+                        .original_name
+                        .clone()
+                        .unwrap_or_else(|| param.name.as_str().to_string()),
+                    tunnel: param.tunnel,
+                },
+            )
             .collect::<Vec<_>>();
-        if !param_names.is_empty() {
+        if !template_params.is_empty() {
             self.program
                 .declarations
-                .add_rule_template(function_id, param_names);
+                .add_template_params(function_id, template_params);
         }
 
         self.add_rule(&rule.modes, rule.priority, &pattern, function_id);

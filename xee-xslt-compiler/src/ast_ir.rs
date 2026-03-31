@@ -54,16 +54,17 @@ pub fn parse_with_base_dir(
             return Err(error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", e)).into());
         }
     };
-    
+
     // Process xsl:import and xsl:include directives
     let mut visited = HashSet::new();
-    transform.declarations = process_imports_and_includes(transform.declarations, base_dir, &mut visited)?;
-    
+    transform.declarations =
+        process_imports_and_includes(transform.declarations, base_dir, &mut visited)?;
+
     // insert default rules early on in precedence order
     let mut declarations = text_only_copy_declarations().unwrap();
     declarations.extend(transform.declarations);
     transform.declarations = declarations;
-    
+
     compile(transform, static_context)
 }
 
@@ -74,35 +75,41 @@ fn process_imports_and_includes(
 ) -> error::SpannedResult<ast::Declarations> {
     let mut local_declarations = Vec::new();
     let mut imports = Vec::new(); // Collect imports in order
-    
+
     for decl in declarations {
         match &decl {
             ast::Declaration::Import(import) => {
                 // Load and parse the imported stylesheet
-                let (imported_decls, resolved_path) = load_stylesheet(&import.href.to_string(), base_dir.as_ref())?;
+                let (imported_decls, resolved_path) =
+                    load_stylesheet(&import.href.to_string(), base_dir.as_ref())?;
                 if visited.contains(&resolved_path) {
                     return Err(error::Error::Unsupported(format!(
                         "Circular import detected: '{}'",
                         resolved_path.display()
-                    )).into());
+                    ))
+                    .into());
                 }
                 visited.insert(resolved_path);
                 // Recursively process imports in the imported stylesheet
-                let processed = process_imports_and_includes(imported_decls, base_dir.clone(), visited)?;
+                let processed =
+                    process_imports_and_includes(imported_decls, base_dir.clone(), visited)?;
                 imports.push(processed);
             }
             ast::Declaration::Include(include) => {
                 // Load and parse the included stylesheet
-                let (included_decls, resolved_path) = load_stylesheet(&include.href.to_string(), base_dir.as_ref())?;
+                let (included_decls, resolved_path) =
+                    load_stylesheet(&include.href.to_string(), base_dir.as_ref())?;
                 if visited.contains(&resolved_path) {
                     return Err(error::Error::Unsupported(format!(
                         "Circular include detected: '{}'",
                         resolved_path.display()
-                    )).into());
+                    ))
+                    .into());
                 }
                 visited.insert(resolved_path);
                 // Recursively process imports in the included stylesheet
-                let processed = process_imports_and_includes(included_decls, base_dir.clone(), visited)?;
+                let processed =
+                    process_imports_and_includes(included_decls, base_dir.clone(), visited)?;
                 local_declarations.extend(processed);
             }
             _ => {
@@ -110,7 +117,7 @@ fn process_imports_and_includes(
             }
         }
     }
-    
+
     // Build result: imports first (lower precedence), then local declarations (higher precedence)
     // This ensures later imports override earlier imports, and local declarations override all imports
     let mut result = Vec::new();
@@ -133,21 +140,25 @@ fn load_stylesheet(
     };
 
     let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
-    
+
     // Try to read the file
-    let content = std::fs::read_to_string(&path)
-        .map_err(|e| error::Error::Unsupported(format!(
+    let content = std::fs::read_to_string(&path).map_err(|e| {
+        error::Error::Unsupported(format!(
             "Failed to load stylesheet '{}': {}",
-            path.display(), e
-        )))?;
-    
+            path.display(),
+            e
+        ))
+    })?;
+
     // Parse the stylesheet
-    let transform = parse_transform(&content)
-        .map_err(|e| error::Error::Unsupported(format!(
+    let transform = parse_transform(&content).map_err(|e| {
+        error::Error::Unsupported(format!(
             "Failed to parse imported stylesheet '{}': {:?}",
-            path.display(), e
-        )))?;
-    
+            path.display(),
+            e
+        ))
+    })?;
+
     Ok((transform.declarations, canonical))
 }
 
@@ -238,18 +249,16 @@ impl<'a> IrConverter<'a> {
     ) -> error::SpannedResult<()> {
         use ast::Declaration::*;
         match declaration {
-            Template(template) => {
-                self.template(declarations, template)
-            },
+            Template(template) => self.template(declarations, template),
             Mode(mode) => self.mode(declarations, mode),
             Output(output) => self.output(declarations, output),
             // Import/Include already handled during pre-processing in parse_with_base_dir
             Import(_) | Include(_) => Ok(()),
             // These declarations are parsed but not yet compiled - skip gracefully
             // to allow stylesheets containing them to still process templates
-            Function(_) | Variable(_) | Param(_) | Key(_) | StripSpace(_) |
-            PreserveSpace(_) | DecimalFormat(_) | CharacterMap(_) | NamespaceAlias(_) |
-            ImportSchema(_) | UsePackage(_) | GlobalContextItem(_) | Accumulator(_) => Ok(()),
+            Function(_) | Variable(_) | Param(_) | Key(_) | StripSpace(_) | PreserveSpace(_)
+            | DecimalFormat(_) | CharacterMap(_) | NamespaceAlias(_) | ImportSchema(_)
+            | UsePackage(_) | GlobalContextItem(_) | Accumulator(_) => Ok(()),
         }
     }
 
@@ -273,7 +282,8 @@ impl<'a> IrConverter<'a> {
                 ast::Declaration::Param(param) => {
                     self.validate_param(param)?;
                     let name = self.variables.new_var_name(&param.name);
-                    let expr = self.global_expr(param.select.as_ref(), &param.sequence_constructor)?;
+                    let expr =
+                        self.global_expr(param.select.as_ref(), &param.sequence_constructor)?;
                     globals.push(ir::GlobalVariable {
                         name,
                         original_name: Some(param.name.clone()),
@@ -322,7 +332,7 @@ impl<'a> IrConverter<'a> {
         // Determine type of template first before creating function definition
         if let Some(pattern) = &template.match_ {
             let function_definition = self.matched_template_function(template)?;
-            
+
             let priority = if let Some(priority) = &template.priority {
                 *priority
             } else {
@@ -360,7 +370,10 @@ impl<'a> IrConverter<'a> {
             });
             Ok(())
         } else {
-            Err(error::Error::Unsupported("Template must have either match or name attribute".to_string()).into())
+            Err(error::Error::Unsupported(
+                "Template must have either match or name attribute".to_string(),
+            )
+            .into())
         }
     }
 
@@ -380,6 +393,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.position,
@@ -387,6 +401,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.last,
@@ -394,6 +409,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
         ];
         params.extend(self.template_params(template, param_names)?);
@@ -423,6 +439,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.position,
@@ -430,6 +447,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.last,
@@ -437,6 +455,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
         ];
         params.extend(self.template_params(template, param_names)?);
@@ -477,7 +496,9 @@ impl<'a> IrConverter<'a> {
 
             let default = if let Some(ast_param) = ast_param {
                 if !ast_param.sequence_constructor.is_empty() {
-                    let expr_s = self.sequence_constructor(&ast_param.sequence_constructor)?.expr();
+                    let expr_s = self
+                        .sequence_constructor(&ast_param.sequence_constructor)?
+                        .expr();
                     Some(Box::new(expr_s.value))
                 } else if let Some(select_expr) = &ast_param.select {
                     let expr_s = self.expression(select_expr)?.expr();
@@ -499,6 +520,7 @@ impl<'a> IrConverter<'a> {
                 default,
                 required,
                 original_name: Some(original_name),
+                tunnel: ast_param.map(|param| param.tunnel).unwrap_or(false),
             });
         }
         Ok(params)
@@ -648,6 +670,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.position,
@@ -655,6 +678,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.last,
@@ -662,6 +686,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
         ];
         Ok(ir::FunctionDefinition {
@@ -692,7 +717,9 @@ impl<'a> IrConverter<'a> {
                 let expr = ir::Expr::Let(ir::Let {
                     name,
                     var_expr: Box::new(var_bindings.expr()),
-                    return_expr: Box::new(self.sequence_constructor_in_scope(items.as_slice())?.expr()),
+                    return_expr: Box::new(
+                        self.sequence_constructor_in_scope(items.as_slice())?.expr(),
+                    ),
                 });
                 return Ok(Bindings::new(
                     self.variables.new_binding(expr, (0..0).into()),
@@ -898,6 +925,7 @@ impl<'a> IrConverter<'a> {
                 name: ir::Name::new(with_param.name.local_name().to_string()),
                 select: select_atom,
                 sequence_constructor: None,
+                tunnel: with_param.tunnel,
             });
         }
 
@@ -928,7 +956,7 @@ impl<'a> IrConverter<'a> {
         // Compile the with-params for the template invocation
         let mut params = Vec::new();
         let mut param_bindings = Bindings::empty();
-        
+
         for with_param in &call_template.with_params {
             let (select_atom, select_bindings) = if let Some(select) = &with_param.select {
                 let (atom, bindings) = self.expression(select)?.atom_bindings();
@@ -939,13 +967,14 @@ impl<'a> IrConverter<'a> {
                 let (atom, bindings) = sc_bindings.atom_bindings();
                 (Some(atom), bindings)
             };
-            
+
             param_bindings = param_bindings.concat(select_bindings);
-            
+
             params.push(ir::WithParam {
                 name: ir::Name::new(with_param.name.local_name().to_string()),
                 select: select_atom,
                 sequence_constructor: None, // Already flattened into select_atom above
+                tunnel: with_param.tunnel,
             });
         }
 
@@ -1510,6 +1539,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.position,
@@ -1517,6 +1547,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.last,
@@ -1524,6 +1555,7 @@ impl<'a> IrConverter<'a> {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
         ];
 

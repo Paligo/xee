@@ -143,7 +143,9 @@ impl DeclarationName {
             DeclarationName::CharacterMap => ast::CharacterMap::parse_declaration(attributes),
             DeclarationName::DecimalFormat => ast::DecimalFormat::parse_declaration(attributes),
             DeclarationName::Function => ast::Function::parse_declaration(attributes),
-            DeclarationName::GlobalContextItem => ast::GlobalContextItem::parse_declaration(attributes),
+            DeclarationName::GlobalContextItem => {
+                ast::GlobalContextItem::parse_declaration(attributes)
+            }
             DeclarationName::Import => ast::Import::parse_declaration(attributes),
             DeclarationName::ImportSchema => ast::ImportSchema::parse_declaration(attributes),
             DeclarationName::Include => ast::Include::parse_declaration(attributes),

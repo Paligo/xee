@@ -66,6 +66,7 @@ fn test_generate_element() {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: ir::Name::new("position".to_string()),
@@ -73,6 +74,7 @@ fn test_generate_element() {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: ir::Name::new("last".to_string()),
@@ -80,6 +82,7 @@ fn test_generate_element() {
                 default: None,
                 required: false,
                 original_name: None,
+                tunnel: false,
             },
         ],
         return_type: None,
