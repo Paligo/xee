@@ -21,6 +21,7 @@ Ok(Instruction(ApplyTemplates(ApplyTemplates(
     ),
   ),
   mode: Unnamed,
+  builtin_template_params_passthrough: true,
   content: [
     Sort(Sort(
       select: None,
