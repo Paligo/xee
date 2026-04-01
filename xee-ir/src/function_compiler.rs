@@ -197,7 +197,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn compile_let(&mut self, let_: &ir::Let, span: SourceSpan) -> error::SpannedResult<()> {
-        if !expr_uses_name(&let_.return_expr, &let_.name) {
+        if !expr_uses_name(&let_.return_expr, &let_.name) && expr_is_effect_free(&let_.var_expr) {
             return self.compile_expr(&let_.return_expr);
         }
 
@@ -1308,6 +1308,10 @@ fn expr_uses_name(expr: &ir::ExprS, name: &ir::Name) -> bool {
     expr_value_uses_name(&expr.value, name)
 }
 
+fn expr_is_effect_free(expr: &ir::ExprS) -> bool {
+    expr_value_is_effect_free(&expr.value)
+}
+
 fn expr_value_uses_name(expr: &ir::Expr, name: &ir::Name) -> bool {
     match expr {
         ir::Expr::Atom(atom) => atom_uses_name(atom, name),
@@ -1423,6 +1427,78 @@ fn expr_value_uses_name(expr: &ir::Expr, name: &ir::Name) -> bool {
             .any(|param| with_param_uses_name(param, name)),
         ir::Expr::CopyShallow(copy_shallow) => atom_uses_name(&copy_shallow.select, name),
         ir::Expr::CopyDeep(copy_deep) => atom_uses_name(&copy_deep.select, name),
+    }
+}
+
+fn expr_value_is_effect_free(expr: &ir::Expr) -> bool {
+    match expr {
+        ir::Expr::Atom(_) => true,
+        ir::Expr::Let(let_) => {
+            expr_is_effect_free(&let_.var_expr) && expr_is_effect_free(&let_.return_expr)
+        }
+        ir::Expr::If(if_) => expr_is_effect_free(&if_.then) && expr_is_effect_free(&if_.else_),
+        ir::Expr::Binary(_) => true,
+        ir::Expr::Unary(_) => true,
+        ir::Expr::FunctionDefinition(function_definition) => {
+            function_definition
+                .params
+                .iter()
+                .all(|param| {
+                    param.default
+                        .as_ref()
+                        .is_none_or(|expr| expr_value_is_effect_free(expr))
+                })
+                && expr_is_effect_free(&function_definition.body)
+        }
+        ir::Expr::FunctionCall(_) => true,
+        ir::Expr::Lookup(_) => true,
+        ir::Expr::WildcardLookup(_) => true,
+        ir::Expr::Step(_) => true,
+        ir::Expr::Deduplicate(expr) => expr_is_effect_free(expr),
+        ir::Expr::Map(map) => expr_is_effect_free(&map.return_expr),
+        ir::Expr::Filter(filter) => expr_is_effect_free(&filter.return_expr),
+        ir::Expr::Iterate(iterate) => {
+            iterate
+                .params
+                .iter()
+                .all(|param| expr_is_effect_free(&param.value))
+                && expr_is_effect_free(&iterate.expr)
+                && iterate
+                    .on_complete
+                    .as_ref()
+                    .is_none_or(|expr| expr_is_effect_free(expr))
+        }
+        ir::Expr::IterateBreak(iterate_break) => expr_is_effect_free(&iterate_break.return_expr),
+        ir::Expr::IterateLetNext(iterate_let_next) => {
+            iterate_let_next
+                .params
+                .iter()
+                .all(|param| expr_is_effect_free(&param.value))
+                && expr_is_effect_free(&iterate_let_next.return_expr)
+        }
+        ir::Expr::PatternPredicate(pattern_predicate) => expr_is_effect_free(&pattern_predicate.expr),
+        ir::Expr::Quantified(quantified) => expr_is_effect_free(&quantified.satisifies_expr),
+        ir::Expr::Cast(_) => true,
+        ir::Expr::Castable(_) => true,
+        ir::Expr::InstanceOf(_) => true,
+        ir::Expr::Treat(_) => true,
+        ir::Expr::ConvertSequence(_) => true,
+        ir::Expr::MapConstructor(_) => true,
+        ir::Expr::ArrayConstructor(_) => true,
+        ir::Expr::XmlName(_) => true,
+        ir::Expr::XmlDocument(_) => false,
+        ir::Expr::XmlElement(_) => false,
+        ir::Expr::XmlAttribute(_) => false,
+        ir::Expr::XmlNamespace(_) => false,
+        ir::Expr::XmlText(_) => false,
+        ir::Expr::XmlComment(_) => false,
+        ir::Expr::XmlProcessingInstruction(_) => false,
+        ir::Expr::XmlAppend(_) => false,
+        ir::Expr::ApplyTemplates(_) => false,
+        ir::Expr::ContinueTemplate(_) => false,
+        ir::Expr::CallTemplate(_) => false,
+        ir::Expr::CopyShallow(_) => false,
+        ir::Expr::CopyDeep(_) => false,
     }
 }
 
