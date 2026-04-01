@@ -1308,11 +1308,10 @@ fn test_transform_document_order_dynamically_with_variable() {
     )
     .unwrap();
 
-    // TODO: I am not sure whether this is correct; I'd expect $foo//node() to
-    // also get the root nodes of the sequence, but it doesn't seem to do so
-    // but the main point of this test is to check that the nodes found
-    // do have document order (created dynamically) and they do
-    assert_eq!(xml(&xot, output), "<o><v/><v/></o>");
+    // The variable content builds a temporary document node whose only child is
+    // the literal <a> element created inside xsl:variable. Therefore
+    // $foo//node() yields that <a> plus its two <b> children in document order.
+    assert_eq!(xml(&xot, output), "<o><v/><v/><v/></o>");
 }
 
 #[test]
@@ -1560,11 +1559,12 @@ fn test_copy_function() {
                  </xsl:template>
               </xsl:transform>"#,
     );
-    // this is an error as we try to atomize a function
+    // The function item is rejected while constructing the variable's complex
+    // content, before string($foo) gets a chance to atomize it.
     assert!(matches!(
         output,
         error::SpannedResult::Err(error::SpannedError {
-            error: error::Error::FOTY0014,
+        error: error::Error::XTDE0450,
             span: _
         })
     ));
