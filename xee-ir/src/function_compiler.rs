@@ -1089,42 +1089,52 @@ impl<'a> FunctionCompiler<'a> {
         apply_templates: &ir::ApplyTemplates,
         span: SourceSpan,
     ) -> error::SpannedResult<()> {
-        let mode_id = if matches!(
-            apply_templates.mode,
-            ir::ApplyTemplatesModeValue::Named(_) | ir::ApplyTemplatesModeValue::Unnamed
-        ) {
-            self.mode_ids.get(&apply_templates.mode)
-        } else {
-            todo!("#current mode not handled yet")
-        };
-        if let Some(mode_id) = mode_id {
-            self.compile_atom(&apply_templates.select)?;
-            self.compile_with_param_map(
-                apply_templates
-                    .params
-                    .iter()
-                    .filter(|with_param| !with_param.tunnel),
-                span,
-            )?;
-            self.compile_with_param_map(
-                apply_templates
-                    .params
-                    .iter()
-                    .filter(|with_param| with_param.tunnel),
-                span,
-            )?;
-            self.builder.emit(
-                Instruction::ApplyTemplates(
-                    mode_id.get() as u16,
-                    apply_templates.builtin_template_params_passthrough,
-                ),
-                span,
-            );
-        } else {
-            // the mode was never used by any templates, so compile the empty
-            // sequence
-            self.builder
-                .emit_constant(sequence::Sequence::default(), span);
+        self.compile_atom(&apply_templates.select)?;
+        self.compile_with_param_map(
+            apply_templates
+                .params
+                .iter()
+                .filter(|with_param| !with_param.tunnel),
+            span,
+        )?;
+        self.compile_with_param_map(
+            apply_templates
+                .params
+                .iter()
+                .filter(|with_param| with_param.tunnel),
+            span,
+        )?;
+
+        match &apply_templates.mode {
+            ir::ApplyTemplatesModeValue::Current => {
+                let fallback_mode_id = self
+                    .mode_ids
+                    .get(&ir::ApplyTemplatesModeValue::Unnamed)
+                    .expect("Unnamed mode should have been registered");
+                self.builder.emit(
+                    Instruction::ApplyTemplatesCurrent(
+                        fallback_mode_id.get() as u16,
+                        apply_templates.builtin_template_params_passthrough,
+                    ),
+                    span,
+                );
+            }
+            ir::ApplyTemplatesModeValue::Named(_) | ir::ApplyTemplatesModeValue::Unnamed => {
+                if let Some(mode_id) = self.mode_ids.get(&apply_templates.mode) {
+                    self.builder.emit(
+                        Instruction::ApplyTemplates(
+                            mode_id.get() as u16,
+                            apply_templates.builtin_template_params_passthrough,
+                        ),
+                        span,
+                    );
+                } else {
+                    // the mode was never used by any templates, so compile the empty
+                    // sequence
+                    self.builder
+                        .emit_constant(sequence::Sequence::default(), span);
+                }
+            }
         }
         Ok(())
     }

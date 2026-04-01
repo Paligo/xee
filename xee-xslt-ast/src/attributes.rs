@@ -132,8 +132,12 @@ impl<'a> Attributes<'a> {
         Ok(())
     }
 
+    fn trim_token(s: &str) -> &str {
+        s.trim()
+    }
+
     fn _boolean(s: &str, span: Span) -> Result<bool, AttributeError> {
-        let s = s.trim();
+        let s = Self::trim_token(s);
         match s {
             "yes" | "true" | "1" => Ok(true),
             "no" | "false" | "0" => Ok(false),
@@ -295,6 +299,7 @@ impl<'a> Attributes<'a> {
     }
 
     fn _eqname(&self, s: &str, span: Span) -> Result<xpath_ast::Name, AttributeError> {
+        let s = Self::trim_token(s);
         if let Ok(name) = parse_name(s, &self.content.parser_context().namespaces).map(|n| n.value)
         {
             Ok(name)
@@ -367,6 +372,7 @@ impl<'a> Attributes<'a> {
         s: &str,
         span: Span,
     ) -> Result<ast::ApplyTemplatesModeValue, AttributeError> {
+        let s = Self::trim_token(s);
         Ok(match s {
             "#default" => match &self.content.context.default_mode {
                 ast::DefaultMode::Unnamed => return Ok(ast::ApplyTemplatesModeValue::Unnamed),
@@ -454,6 +460,7 @@ impl<'a> Attributes<'a> {
     }
 
     fn _default_mode(&self, s: &str, span: Span) -> Result<ast::DefaultMode, AttributeError> {
+        let s = Self::trim_token(s);
         if s == "#unnamed" {
             Ok(ast::DefaultMode::Unnamed)
         } else {
@@ -612,6 +619,7 @@ impl<'a> Attributes<'a> {
     }
 
     fn _decimal(s: &str, span: Span) -> Result<Decimal, AttributeError> {
+        let s = Self::trim_token(s);
         Decimal::from_str(s).map_err(|_| AttributeError::Invalid {
             value: s.to_string(),
             span,
@@ -852,6 +860,7 @@ impl<'a> Attributes<'a> {
     }
 
     fn _on_no_match(s: &str, span: Span) -> Result<ast::OnNoMatch, AttributeError> {
+        let s = Self::trim_token(s);
         use ast::OnNoMatch::*;
 
         match s {
@@ -875,6 +884,7 @@ impl<'a> Attributes<'a> {
     }
 
     fn _on_multiple_match(s: &str, span: Span) -> Result<ast::OnMultipleMatch, AttributeError> {
+        let s = Self::trim_token(s);
         use ast::OnMultipleMatch::*;
 
         match s {
@@ -894,10 +904,12 @@ impl<'a> Attributes<'a> {
     }
 
     fn _typed(s: &str, span: Span) -> Result<ast::Typed, AttributeError> {
+        let s = Self::trim_token(s);
         use ast::Typed::*;
 
         match s {
-            "boolean" => Ok(Boolean),
+            "yes" => Ok(Yes),
+            "no" => Ok(No),
             "strict" => Ok(Strict),
             "lax" => Ok(Lax),
             "unspecified" => Ok(Unspecified),

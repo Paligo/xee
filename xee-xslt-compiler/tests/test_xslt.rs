@@ -587,6 +587,120 @@ fn test_default_mode_attribute_on_apply_templates_selects_nested_mode() {
 }
 
 #[test]
+fn test_apply_templates_current_uses_current_mode_inside_template_rule() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><a><b/></a></doc>",
+        r##"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:template match="/">
+    <out>
+      <xsl:apply-templates select="doc/a" mode="m"/>
+    </out>
+  </xsl:template>
+
+  <xsl:template match="a" mode="m">
+    <xsl:apply-templates select="b" mode="#current"/>
+  </xsl:template>
+
+  <xsl:template match="b" mode="m">
+    <m/>
+  </xsl:template>
+
+  <xsl:template match="b">
+    <u/>
+  </xsl:template>
+</xsl:stylesheet>"##,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out><m/></out>");
+}
+
+#[test]
+fn test_apply_templates_current_falls_back_to_unnamed_mode_outside_template_rule() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><a><b>text</b></a></doc>",
+        r##"
+<xsl:stylesheet xmlns:f="http://example.com/test"
+                xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                version="3.0">
+  <xsl:template match="/">
+    <out>
+      <xsl:apply-templates select="doc/a" mode="m"/>
+    </out>
+  </xsl:template>
+
+  <xsl:template match="a" mode="m">
+    <xsl:sequence select="f:apply(.)"/>
+  </xsl:template>
+
+  <xsl:template match="b" mode="m">
+    <m/>
+  </xsl:template>
+
+  <xsl:template match="b">
+    <u/>
+  </xsl:template>
+
+  <xsl:function name="f:apply">
+    <xsl:param name="node" as="element(a)"/>
+    <xsl:apply-templates select="$node/b" mode="#current"/>
+  </xsl:function>
+</xsl:stylesheet>"##,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out><u/></out>");
+}
+
+#[test]
+fn test_mode_attributes_accept_whitespace_padded_values() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><a/></doc>",
+        r##"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                version=" 3.0 ">
+  <xsl:mode name=" Q{}s " on-no-match=" shallow-skip " warning-on-no-match=" no "/>
+
+  <xsl:template match="/">
+    <out>
+      <xsl:apply-templates select="doc" mode=" Q{}s "/>
+    </out>
+  </xsl:template>
+
+  <xsl:template match="doc" mode=" s ">
+    <xsl:apply-templates select="a" mode=" #current "/>
+  </xsl:template>
+
+  <xsl:template match="a" mode="Q{}s">
+    <ok/>
+  </xsl:template>
+</xsl:stylesheet>"##,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out><ok/></out>");
+}
+
+#[test]
+fn test_mode_typed_no_is_accepted() {
+    parse(
+        StaticContext::default(),
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:mode name="s" on-no-match="shallow-copy" typed=" no "/>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+}
+
+#[test]
 fn test_sequence_document_loads_relative_to_stylesheet_base_uri() {
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)

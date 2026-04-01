@@ -1060,7 +1060,8 @@ pub enum OnMultipleMatch {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Typed {
-    Boolean,
+    Yes,
+    No,
     Strict,
     Lax,
     Unspecified,

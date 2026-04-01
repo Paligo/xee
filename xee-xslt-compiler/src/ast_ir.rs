@@ -1235,7 +1235,13 @@ impl<'a> IrConverter<'a> {
                 ir::ApplyTemplatesModeValue::Named(name.clone())
             }
             ast::ApplyTemplatesModeValue::Unnamed => ir::ApplyTemplatesModeValue::Unnamed,
-            ast::ApplyTemplatesModeValue::Current => ir::ApplyTemplatesModeValue::Current,
+            ast::ApplyTemplatesModeValue::Current => {
+                if self.variables.current_context_names().is_none() {
+                    ir::ApplyTemplatesModeValue::Unnamed
+                } else {
+                    ir::ApplyTemplatesModeValue::Current
+                }
+            }
         };
 
         let bindings = bindings.concat(sort_bindings).concat(param_bindings);

@@ -108,6 +108,7 @@ pub enum Instruction {
     CallTemplate,
     ContinueTemplate,
     ApplyTemplates(u16, bool),
+    ApplyTemplatesCurrent(u16, bool),
     RaiseError(RaisedError),
     PrintTop,
     PrintStack,
@@ -195,6 +196,7 @@ pub(crate) enum EncodedInstruction {
     CallTemplate,
     ContinueTemplate,
     ApplyTemplates,
+    ApplyTemplatesCurrent,
     RaiseError,
     PrintTop,
     PrintStack,
@@ -352,6 +354,17 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
             let builtin_template_params_passthrough = bytes[3] != 0;
             (
                 Instruction::ApplyTemplates(mode_id, builtin_template_params_passthrough),
+                4,
+            )
+        }
+        EncodedInstruction::ApplyTemplatesCurrent => {
+            let fallback_mode_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            let builtin_template_params_passthrough = bytes[3] != 0;
+            (
+                Instruction::ApplyTemplatesCurrent(
+                    fallback_mode_id,
+                    builtin_template_params_passthrough,
+                ),
                 4,
             )
         }
@@ -534,6 +547,11 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
             bytes.extend_from_slice(&mode_id.to_le_bytes());
             bytes.push(u8::from(builtin_template_params_passthrough));
         }
+        Instruction::ApplyTemplatesCurrent(fallback_mode_id, builtin_template_params_passthrough) => {
+            bytes.push(EncodedInstruction::ApplyTemplatesCurrent.to_u8().unwrap());
+            bytes.extend_from_slice(&fallback_mode_id.to_le_bytes());
+            bytes.push(u8::from(builtin_template_params_passthrough));
+        }
         Instruction::RaiseError(error) => {
             bytes.push(EncodedInstruction::RaiseError.to_u8().unwrap());
             bytes.extend_from_slice(&error.to_u16().to_le_bytes());
@@ -632,8 +650,8 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::Treat(_)
         | Instruction::ReturnConvert(_)
         | Instruction::JumpIfFalse(_)
-        | Instruction::ApplyTemplates(_, _)
         | Instruction::RaiseError(_) => 3,
+        Instruction::ApplyTemplates(_, _) | Instruction::ApplyTemplatesCurrent(_, _) => 4,
         Instruction::ConvertSequence(_, _) => 5,
     }
 }

@@ -724,6 +724,24 @@ impl<'a> Interpreter<'a> {
                     )?;
                     self.state.push(value);
                 }
+                EncodedInstruction::ApplyTemplatesCurrent => {
+                    let tunnel_params = self.state.pop()?.one()?.to_map()?;
+                    let params = self.state.pop()?.one()?.to_map()?;
+                    let value = self.state.pop()?;
+                    let fallback_mode_id = self.read_u16();
+                    let builtin_template_params_passthrough = self.read_u8() != 0;
+                    let mode = self.current_mode_or_fallback(pattern::ModeId::new(
+                        fallback_mode_id as usize,
+                    ));
+                    let value = self.apply_templates_sequence(
+                        mode,
+                        value,
+                        &params,
+                        &tunnel_params,
+                        builtin_template_params_passthrough,
+                    )?;
+                    self.state.push(value);
+                }
                 EncodedInstruction::ContinueTemplate => {
                     let tunnel_params = self.state.pop()?.one()?.to_map()?;
                     let params = self.state.pop()?.one()?.to_map()?;
@@ -1604,6 +1622,10 @@ impl<'a> Interpreter<'a> {
             .mode_lookup
             .lookup_after(mode, &current, |pattern| self.matches(pattern, item))
             .copied()
+    }
+
+    fn current_mode_or_fallback(&self, fallback: pattern::ModeId) -> pattern::ModeId {
+        self.mode_stack.last().copied().unwrap_or(fallback)
     }
 
     fn continue_template_with_params(
