@@ -80,6 +80,9 @@ impl<'a> FunctionCompiler<'a> {
             ir::Expr::Castable(castable) => self.compile_castable(castable, span),
             ir::Expr::InstanceOf(instance_of) => self.compile_instance_of(instance_of, span),
             ir::Expr::Treat(treat) => self.compile_treat(treat, span),
+            ir::Expr::ConvertSequence(convert_sequence) => {
+                self.compile_convert_sequence(convert_sequence, span)
+            }
             ir::Expr::MapConstructor(map_constructor) => {
                 self.compile_map_constructor(map_constructor, span)
             }
@@ -393,6 +396,18 @@ impl<'a> FunctionCompiler<'a> {
                     .builder
                     .emit(Instruction::RaiseError(RaisedError::XTDE0700), span);
                 compiler.builder.patch_jump(skip_error);
+            } else if param.original_name.is_some() {
+                compiler
+                    .builder
+                    .emit(Instruction::VarIsAbsent(index as u16), span);
+                let skip_default = compiler
+                    .builder
+                    .emit_jump_forward(JumpCondition::False, span);
+                compiler
+                    .builder
+                    .emit_constant(sequence::Sequence::default(), span);
+                compiler.compile_variable_set(&param.name, span)?;
+                compiler.builder.patch_jump(skip_default);
             }
         }
         compiler.compile_expr(&function_definition.body)?;
@@ -565,6 +580,22 @@ impl<'a> FunctionCompiler<'a> {
         let sequence_type_id = self.builder.add_sequence_type(treat.sequence_type.clone());
         self.builder
             .emit(Instruction::Treat(sequence_type_id as u16), span);
+        Ok(())
+    }
+
+    fn compile_convert_sequence(
+        &mut self,
+        convert_sequence: &ir::ConvertSequence,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        self.compile_atom(&convert_sequence.atom)?;
+        let sequence_type_id = self
+            .builder
+            .add_sequence_type(convert_sequence.sequence_type.clone());
+        self.builder.emit(
+            Instruction::ConvertSequence(sequence_type_id as u16, convert_sequence.error),
+            span,
+        );
         Ok(())
     }
 
@@ -1075,8 +1106,13 @@ impl<'a> FunctionCompiler<'a> {
                     .filter(|with_param| with_param.tunnel),
                 span,
             )?;
-            self.builder
-                .emit(Instruction::ApplyTemplates(mode_id.get() as u16), span);
+            self.builder.emit(
+                Instruction::ApplyTemplates(
+                    mode_id.get() as u16,
+                    apply_templates.builtin_template_params_passthrough,
+                ),
+                span,
+            );
         } else {
             // the mode was never used by any templates, so compile the empty
             // sequence

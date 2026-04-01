@@ -78,7 +78,28 @@ impl Runnable<XsltLanguage> for XsltTestCase {
                 ))
             }
         };
-        let static_context_builder = StaticContextBuilder::default();
+        let stylesheet_uri = {
+            let url = match url::Url::from_file_path(&path) {
+                Ok(url) => url,
+                Err(()) => {
+                    return TestOutcome::EnvironmentError(format!(
+                        "Cannot convert stylesheet path to file URI: {}",
+                        path.display()
+                    ))
+                }
+            };
+            match IriAbsoluteString::try_from(url.to_string()) {
+                Ok(uri) => uri,
+                Err(error) => {
+                    return TestOutcome::EnvironmentError(format!(
+                        "Cannot convert stylesheet URI to IRI: {}",
+                        error
+                    ))
+                }
+            }
+        };
+        let mut static_context_builder = StaticContextBuilder::default();
+        static_context_builder.static_base_uri(Some(stylesheet_uri.clone()));
         let static_context = static_context_builder.build();
 
         // Get the directory of the stylesheet for resolving imports/includes
@@ -127,6 +148,27 @@ impl Runnable<XsltLanguage> for XsltTestCase {
         match r {
             Ok(_) => (),
             Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
+        }
+
+        {
+            let documents_ref = run_context.documents.documents().clone();
+            let already_loaded = documents_ref
+                .borrow()
+                .get_node_by_uri(stylesheet_uri.as_ref())
+                .is_some();
+            if !already_loaded {
+                let handle = documents_ref.borrow_mut().add_string(
+                    run_context.documents.xot_mut(),
+                    Some(stylesheet_uri.as_ref()),
+                    &xslt,
+                );
+                if let Err(error) = handle {
+                    return TestOutcome::EnvironmentError(format!(
+                        "Cannot register stylesheet document: {}",
+                        error
+                    ));
+                }
+            }
         }
 
         // the context item is loaded

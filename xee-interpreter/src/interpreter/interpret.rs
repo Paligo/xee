@@ -435,6 +435,26 @@ impl<'a> Interpreter<'a> {
                     )?;
                     self.state.push(sequence);
                 }
+                EncodedInstruction::ConvertSequence => {
+                    let sequence_type_id = self.read_u16();
+                    let raised_error = RaisedError::from_u16(self.read_u16());
+                    let sequence = self.state.pop()?;
+                    let sequence_type =
+                        &(self.current_inline_function().sequence_types[sequence_type_id as usize]);
+
+                    let sequence = sequence
+                        .sequence_type_matching_function_conversion(
+                            sequence_type,
+                            self.runnable.static_context(),
+                            self.state.xot(),
+                            &|function| self.runnable.function_info(function).signature(),
+                        )
+                        .map_err(|_| match raised_error {
+                            RaisedError::XTDE0700 => error::Error::XTDE0700,
+                            RaisedError::XTTE0570 => error::Error::XTTE0570,
+                        })?;
+                    self.state.push(sequence);
+                }
                 EncodedInstruction::LetDone => {
                     let return_value = self.state.pop()?;
                     // pop the variable assignment
@@ -691,14 +711,21 @@ impl<'a> Interpreter<'a> {
                     let params = self.state.pop()?.one()?.to_map()?;
                     let value = self.state.pop()?;
                     let mode_id = self.read_u16();
+                    let builtin_template_params_passthrough = self.read_u8() != 0;
                     let mode = pattern::ModeId::new(mode_id as usize);
-                    let value =
-                        self.apply_templates_sequence(mode, value, &params, &tunnel_params)?;
+                    let value = self.apply_templates_sequence(
+                        mode,
+                        value,
+                        &params,
+                        &tunnel_params,
+                        builtin_template_params_passthrough,
+                    )?;
                     self.state.push(value);
                 }
                 EncodedInstruction::RaiseError => {
                     let error = match RaisedError::from_u16(self.read_u16()) {
                         RaisedError::XTDE0700 => error::Error::XTDE0700,
+                        RaisedError::XTTE0570 => error::Error::XTTE0570,
                     };
                     return Err(error);
                 }
@@ -795,7 +822,18 @@ impl<'a> Interpreter<'a> {
                 self.global_variables[index] = GlobalValueState::Resolving;
                 let function: function::Function =
                     function::InlineFunctionData::new(global.function_id, Vec::new()).into();
-                let value = self.call_function_with_arguments(&function, &[])?;
+                let context_arguments =
+                    if let Some(context_item) = self.runnable.dynamic_context().context_item() {
+                        [
+                            Some(context_item.clone().into()),
+                            Some(ibig::ibig!(1).into()),
+                            Some(ibig::ibig!(1).into()),
+                        ]
+                    } else {
+                        [None, None, None]
+                    };
+                let value =
+                    self.call_function_with_optional_arguments(&function, &context_arguments)?;
                 self.global_variables[index] = GlobalValueState::Resolved(value.clone());
                 Ok(value)
             }
@@ -1273,10 +1311,12 @@ impl<'a> Interpreter<'a> {
                     }
                     match self.state.xot.value(node) {
                         xot::Value::Document => {
-                            // TODO: Handle adding all the children instead
-                            return Err(error::Error::Unsupported(String::from(
-                                "Appending a whole document is not supported yet",
-                            )));
+                            let children = self.state.xot.children(node).collect::<Vec<_>>();
+                            for child in children {
+                                let child = self.state.xot.clone_node(child);
+                                self.state.xot.any_append(parent_node, child).unwrap();
+                            }
+                            continue;
                         }
                         xot::Value::Text(text) => {
                             // zero length text nodes are skipped
@@ -1337,13 +1377,21 @@ impl<'a> Interpreter<'a> {
         sequence: sequence::Sequence,
         params: &function::Map,
         tunnel_params: &function::Map,
+        builtin_template_params_passthrough: bool,
     ) -> error::Result<sequence::Sequence> {
         let mut r: Vec<sequence::Item> = Vec::new();
         let size: IBig = sequence.len().into();
 
         for (i, item) in sequence.iter().enumerate() {
-            let sequence =
-                self.apply_templates_item(mode, item, i, size.clone(), params, tunnel_params)?;
+            let sequence = self.apply_templates_item(
+                mode,
+                item,
+                i,
+                size.clone(),
+                params,
+                tunnel_params,
+                builtin_template_params_passthrough,
+            )?;
             if let Some(sequence) = sequence {
                 for item in sequence.iter() {
                     r.push(item.clone());
@@ -1361,6 +1409,7 @@ impl<'a> Interpreter<'a> {
         size: IBig,
         params: &function::Map,
         tunnel_params: &function::Map,
+        builtin_template_params_passthrough: bool,
     ) -> error::Result<Option<sequence::Sequence>> {
         let function_id = self.lookup_pattern(mode, &item);
 
@@ -1379,7 +1428,56 @@ impl<'a> Interpreter<'a> {
             )
             .map(Some)
         } else {
-            Ok(None)
+            self.apply_builtin_template_rule(
+                mode,
+                item,
+                params,
+                tunnel_params,
+                builtin_template_params_passthrough,
+            )
+        }
+    }
+
+    fn apply_builtin_template_rule(
+        &mut self,
+        mode: pattern::ModeId,
+        item: sequence::Item,
+        params: &function::Map,
+        tunnel_params: &function::Map,
+        builtin_template_params_passthrough: bool,
+    ) -> error::Result<Option<sequence::Sequence>> {
+        match item {
+            sequence::Item::Node(node) => match self.state.xot.value(node) {
+                xot::Value::Document | xot::Value::Element(_) => {
+                    let children = self
+                        .state
+                        .xot
+                        .children(node)
+                        .map(sequence::Item::Node)
+                        .collect::<Vec<_>>();
+                    let empty_params = function::Map::new(Vec::new()).unwrap();
+                    let params = if builtin_template_params_passthrough {
+                        params
+                    } else {
+                        &empty_params
+                    };
+                    self.apply_templates_sequence(
+                        mode,
+                        children.into(),
+                        params,
+                        tunnel_params,
+                        builtin_template_params_passthrough,
+                    )
+                    .map(Some)
+                }
+                xot::Value::Text(text) => Ok(Some(sequence::Item::from(text.get().to_string())
+                    .into())),
+                xot::Value::Attribute(attribute) => {
+                    Ok(Some(sequence::Item::from(attribute.value().to_string()).into()))
+                }
+                _ => Ok(None),
+            },
+            sequence::Item::Atomic(_) | sequence::Item::Function(_) => Ok(None),
         }
     }
 
@@ -1401,19 +1499,27 @@ impl<'a> Interpreter<'a> {
         }
 
         let mut arguments = context_arguments.into_iter().collect::<Vec<_>>();
+        let parameter_types = self
+            .runnable
+            .function_info(function)
+            .signature()
+            .parameter_types()
+            .to_vec();
         if let Some(template_params) = self
             .runnable
             .program()
             .declarations
             .template_params(function_id)
         {
-            for param in template_params {
+            for (index, param) in template_params.iter().enumerate() {
                 let key = atomic::Atomic::from(param.name.as_str());
                 let value = if param.tunnel {
                     effective_tunnel_params.get(&key).cloned()
                 } else {
                     params.get(&key).cloned()
                 };
+                let parameter_type = parameter_types.get(index + 3).cloned().unwrap_or(None);
+                let value = self.coerce_template_argument(value, parameter_type.as_ref())?;
                 arguments.push(value);
             }
         }
@@ -1433,6 +1539,29 @@ impl<'a> Interpreter<'a> {
             stack::Value::Absent => None,
             stack::Value::Sequence(sequence) => Some(sequence),
         }
+    }
+
+    fn coerce_template_argument(
+        &mut self,
+        value: Option<sequence::Sequence>,
+        parameter_type: Option<&ast::SequenceType>,
+    ) -> error::Result<Option<sequence::Sequence>> {
+        let Some(value) = value else {
+            return Ok(None);
+        };
+        let Some(parameter_type) = parameter_type else {
+            return Ok(Some(value));
+        };
+
+        value
+            .sequence_type_matching_function_conversion(
+                parameter_type,
+                self.runnable.static_context(),
+                self.state.xot(),
+                &|function| self.runnable.function_info(function).signature(),
+            )
+            .map(Some)
+            .map_err(|_| error::Error::XTTE0590)
     }
 
     pub(crate) fn lookup_pattern(

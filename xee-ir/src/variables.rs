@@ -60,6 +60,14 @@ impl Variables {
         new_name
     }
 
+    pub fn remove_var_name_in_current_scope(&mut self, name: &ast::Name) -> Option<ir::Name> {
+        self.variables.last_mut().unwrap().remove(name)
+    }
+
+    pub fn insert_var_name_in_current_scope(&mut self, name: ast::Name, ir_name: ir::Name) {
+        self.variables.last_mut().unwrap().insert(name, ir_name);
+    }
+
     pub fn lookup_var_name(&self, name: &ast::Name) -> Option<ir::Name> {
         self.variables
             .iter()

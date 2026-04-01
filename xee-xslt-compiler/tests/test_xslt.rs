@@ -1,7 +1,8 @@
 use std::fmt::Write;
 
-use xee_interpreter::{error, sequence::Sequence};
-use xee_xslt_compiler::evaluate;
+use xee_interpreter::{context::StaticContext, error, sequence::Sequence};
+use xee_name::{Namespaces, FN_NAMESPACE};
+use xee_xslt_compiler::{evaluate, parse};
 use xot::Xot;
 
 fn xml(xot: &Xot, sequence: Sequence) -> String {
@@ -170,6 +171,229 @@ fn test_transform_local_variable_shadow() {
     .unwrap();
 
     assert_eq!(xml(&xot, output), "<o>BAR</o>");
+}
+
+#[test]
+fn test_duplicate_local_template_params_are_rejected() {
+    let namespaces = Namespaces::new(
+        Namespaces::default_namespaces(),
+        "".to_string(),
+        FN_NAMESPACE.to_string(),
+    );
+    let static_context = StaticContext::from_namespaces(namespaces);
+    let output = parse(
+        static_context,
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <xsl:apply-templates select="doc">
+      <xsl:with-param name="mod" select="3"/>
+    </xsl:apply-templates>
+  </xsl:template>
+
+  <xsl:template match="doc">
+    <xsl:param name="mod" select="1"/>
+    <xsl:param name="mod" select="2"/>
+    <out result="{$mod}"/>
+  </xsl:template>
+</xsl:transform>"#,
+    );
+
+    assert!(matches!(
+        output,
+        error::SpannedResult::Err(error::SpannedError {
+            error: error::Error::XTSE0580,
+            span: _
+        })
+    ));
+}
+
+#[test]
+fn test_pattern_predicate_position_ignores_whitespace_text_nodes() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        r#"<servlet-mapping>
+   <servlet-name>MyServlet</servlet-name>
+   <url-pattern>/servlet/MyServlet/*</url-pattern>
+</servlet-mapping>"#,
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0" expand-text="yes">
+  <xsl:template match="/">
+    <xsl:apply-templates select="servlet-mapping/url-pattern"/>
+  </xsl:template>
+  <xsl:template match="url-pattern[position()=last()]">
+    <out>{.}</out>
+  </xsl:template>
+  <xsl:template match="url-pattern"><wrong/></xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>/servlet/MyServlet/*</out>");
+}
+
+#[test]
+fn test_message_is_ignored_in_result_sequence() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <o>
+      <xsl:message>debug</xsl:message>
+      <a/>
+    </o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<o><a/></o>");
+}
+
+  #[test]
+  fn test_local_variable_as_type_is_enforced() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+      &mut xot,
+      "<doc/>",
+      r#"
+  <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xsl:template match="/">
+    <xsl:variable name="v" as="xs:integer" select="true()"/>
+    <out value="{$v}"/>
+    </xsl:template>
+  </xsl:transform>"#,
+    );
+
+    assert!(matches!(
+      output,
+      error::SpannedResult::Err(error::SpannedError {
+        error: error::Error::XTTE0570,
+        span: _
+      })
+    ));
+  }
+
+#[test]
+fn test_global_variable_sequence_constructor_creates_temporary_tree() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    exclude-result-prefixes="xs">
+  <xsl:variable name="data">
+    <a xmlns:p="http://p.com/ns"/>
+  </xsl:variable>
+
+  <xsl:param name="prefix" select="'p'"/>
+
+  <xsl:template match="/">
+    <out>
+      <xsl:variable name="uri" select="namespace-uri-for-prefix($prefix, $data/*)" as="xs:string"/>
+      <xsl:value-of select="$uri"/>
+    </out>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>http://p.com/ns</out>");
+}
+
+#[test]
+fn test_global_variable_is_out_of_scope_within_its_own_declaration() {
+  let namespaces = Namespaces::new(
+    Namespaces::default_namespaces(),
+    "".to_string(),
+    FN_NAMESPACE.to_string(),
+  );
+  let static_context = StaticContext::from_namespaces(namespaces);
+  let output = parse(
+    static_context,
+    r#"
+<xsl:stylesheet version="3.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xsl:template match="/">
+  <out att="{$gcd(4,2)}"/>
+  </xsl:template>
+
+  <xsl:variable name="gcd" as="function(*)"
+    select="function($x as xs:integer, $y as xs:integer) {
+    if ($y eq 0)
+    then abs($x)
+    else $gcd($y,$x mod $y)
+    }"/>
+</xsl:stylesheet>"#,
+  );
+
+  assert!(matches!(
+    output,
+    error::SpannedResult::Err(error::SpannedError {
+      error: error::Error::XPST0008,
+      span: _
+    })
+  ));
+}
+
+#[test]
+fn test_top_level_non_xsl_elements_do_not_break_parse() {
+  let namespaces = Namespaces::new(
+    Namespaces::default_namespaces(),
+    "".to_string(),
+    FN_NAMESPACE.to_string(),
+  );
+  let static_context = StaticContext::from_namespaces(namespaces);
+  let output = parse(
+    static_context,
+    r#"
+<xsl:stylesheet version="2.0"
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+  xmlns:test="my:test">
+  <?spec xslt#with-param?>
+  <test:test/>
+  <xsl:template match="/">
+  <out/>
+  </xsl:template>
+</xsl:stylesheet>"#,
+  );
+
+  assert!(output.is_ok());
+}
+
+#[test]
+fn test_builtin_template_rule_passes_params_in_xslt_2_mode() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><group><para/></group></doc>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+  <xsl:template match="doc">
+    <out>
+      <xsl:apply-templates>
+        <xsl:with-param name="x" select="42"/>
+      </xsl:apply-templates>
+    </out>
+  </xsl:template>
+
+  <xsl:template match="para">
+    <xsl:param name="x" select="0"/>
+    <x><xsl:value-of select="$x"/></x>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out><x>42</x></out>");
 }
 
 #[test]

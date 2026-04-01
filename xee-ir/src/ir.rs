@@ -9,6 +9,7 @@ use rust_decimal::Decimal;
 
 pub use xee_interpreter::function::Name;
 use xee_interpreter::function::{CastType, Signature, StaticFunctionId};
+use xee_interpreter::interpreter::instruction::RaisedError;
 use xee_interpreter::sequence::SerializationParameters;
 use xee_interpreter::xml;
 use xee_schema_type::Xs;
@@ -44,6 +45,7 @@ pub enum Expr {
     Castable(Castable),
     InstanceOf(InstanceOf),
     Treat(Treat),
+    ConvertSequence(ConvertSequence),
     MapConstructor(MapConstructor),
     ArrayConstructor(ArrayConstructor),
     XmlName(XmlName),
@@ -274,6 +276,13 @@ pub struct Treat {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConvertSequence {
+    pub atom: AtomS,
+    pub sequence_type: SequenceType,
+    pub error: RaisedError,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapConstructor {
     pub members: Vec<(AtomS, AtomS)>,
 }
@@ -338,6 +347,7 @@ pub struct XmlAppend {
 pub struct ApplyTemplates {
     pub mode: ApplyTemplatesModeValue,
     pub select: AtomS,
+    pub builtin_template_params_passthrough: bool,
     pub params: Vec<WithParam>,
 }
 
@@ -396,6 +406,7 @@ pub struct GlobalVariable {
     pub name: Name,
     pub original_name: Option<xmlname::OwnedName>,
     pub required: bool,
+    pub params: Vec<Param>,
     pub expr: ExprS,
 }
 

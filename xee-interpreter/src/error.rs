@@ -552,6 +552,11 @@ pub enum Error {
     /// It is a dynamic error if a stylesheet parameter is declared with
     /// required="yes" and no value is supplied.
     XTDE0050,
+    /// Duplicate local parameter name.
+    ///
+    /// It is a static error if two xsl:param declarations within the same
+    /// template specify the same name.
+    XTSE0580,
     XTSE0630,
     /// xsl:with-param does not match any declared template parameter.
     ///
@@ -577,6 +582,16 @@ pub enum Error {
     ///
     /// It is a dynamic error if a required template parameter is not supplied.
     XTDE0700,
+    /// Variable value does not match declared type.
+    ///
+    /// It is a type error if the value of a variable does not match the
+    /// required type specified in its as attribute.
+    XTTE0570,
+    /// Supplied template parameter value has the wrong type.
+    ///
+    /// It is a type error if the supplied value of a template parameter cannot
+    /// be converted to the required type of the parameter.
+    XTTE0590,
     /// Shallow copy
     ///
     /// Shallow copy of sequence of more than one item is not allowed.

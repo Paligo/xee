@@ -13,7 +13,18 @@ pub(crate) enum NodeMatch {
 }
 
 pub(crate) trait PredicateMatcher {
-    fn match_predicate(&mut self, inline_function_id: InlineFunctionId, item: &Item) -> bool;
+    fn match_predicate_with_context(
+        &mut self,
+        inline_function_id: InlineFunctionId,
+        item: &Item,
+        position: usize,
+        size: usize,
+    ) -> bool;
+
+    fn match_predicate(&mut self, inline_function_id: InlineFunctionId, item: &Item) -> bool {
+        self.match_predicate_with_context(inline_function_id, item, 1, 1)
+    }
+
     fn xot(&self) -> &Xot;
 
     fn matches(&mut self, pattern: &pattern::Pattern<InlineFunctionId>, item: &Item) -> bool {
@@ -204,26 +215,78 @@ pub(crate) trait PredicateMatcher {
         step: &pattern::AxisStep<InlineFunctionId>,
         node: xot::Node,
     ) -> (bool, pattern::ForwardAxis) {
-        // if the forward axis is attribute based, we won't match with an element,
-        // and vice versa
-        if self.xot().is_attribute_node(node) {
-            if step.forward != pattern::ForwardAxis::Attribute {
-                return (false, step.forward);
-            }
-        } else if step.forward == pattern::ForwardAxis::Attribute {
-            return (false, step.forward);
-        }
-        if !Self::matches_node_test(&step.node_test, node, self.xot()) {
+        if !self.matches_axis_node_test(step, node) {
             return (false, step.forward);
         }
         // if we have a match, check whether the predicates apply
         let item = Item::Node(node);
+        let (position, size) = self.axis_predicate_context(step, node);
         for predicate in &step.predicates {
-            if !self.match_predicate(*predicate, &item) {
+            if !self.match_predicate_with_context(*predicate, &item, position, size) {
                 return (false, step.forward);
             }
         }
         (true, step.forward)
+    }
+
+    fn matches_axis_node_test(
+        &self,
+        step: &pattern::AxisStep<InlineFunctionId>,
+        node: xot::Node,
+    ) -> bool {
+        // Name tests use the principal node kind of the axis: attributes for
+        // attribute::, otherwise elements.
+        if matches!(step.node_test, pattern::NodeTest::NameTest(_)) {
+            if step.forward == pattern::ForwardAxis::Attribute {
+                if !self.xot().is_attribute_node(node) {
+                    return false;
+                }
+            } else if !self.xot().is_element(node) {
+                return false;
+            }
+        } else if self.xot().is_attribute_node(node) {
+            if step.forward != pattern::ForwardAxis::Attribute {
+                return false;
+            }
+        } else if step.forward == pattern::ForwardAxis::Attribute {
+            return false;
+        }
+        Self::matches_node_test(&step.node_test, node, self.xot())
+    }
+
+    fn axis_predicate_context(
+        &self,
+        step: &pattern::AxisStep<InlineFunctionId>,
+        node: xot::Node,
+    ) -> (usize, usize) {
+        let Some(parent) = self.xot().parent(node) else {
+            return (1, 1);
+        };
+
+        let matching_nodes = match step.forward {
+            pattern::ForwardAxis::Child => self
+                .xot()
+                .children(parent)
+                .filter(|candidate| self.matches_axis_node_test(step, *candidate))
+                .collect::<Vec<_>>(),
+            pattern::ForwardAxis::Attribute => self
+                .xot()
+                .attributes(parent)
+                .keys()
+                .filter_map(|name| self.xot().attributes(parent).get_node(name))
+                .filter(|candidate| self.matches_axis_node_test(step, *candidate))
+                .collect::<Vec<_>>(),
+            _ => return (1, 1),
+        };
+
+        let position = matching_nodes
+            .iter()
+            .position(|candidate| *candidate == node)
+            .map(|index| index + 1)
+            .unwrap_or(1);
+        let size = matching_nodes.len().max(1);
+
+        (position, size)
     }
 
     fn matches_postfix_expr(
@@ -333,7 +396,13 @@ mod tests {
     }
 
     impl PredicateMatcher for BasicPredicateMatcher<'_> {
-        fn match_predicate(&mut self, _inline_function_id: InlineFunctionId, _item: &Item) -> bool {
+        fn match_predicate_with_context(
+            &mut self,
+            _inline_function_id: InlineFunctionId,
+            _item: &Item,
+            _position: usize,
+            _size: usize,
+        ) -> bool {
             self.predicate_matches
         }
 
@@ -669,6 +738,55 @@ mod tests {
         let pattern = parse_pattern("/root");
         assert!(!pm.matches(&pattern, &item));
         assert!(pm.matches(&pattern, &document_element_item));
+    }
+
+    #[test]
+    fn test_matches_name_test_star_not_document() {
+        let mut xot = Xot::new();
+        let root = xot.parse(r#"<root/>"#).unwrap();
+        let item: Item = root.into();
+
+        let mut pm = BasicPredicateMatcher::new(&xot);
+        let pattern = parse_pattern("*");
+        assert!(!pm.matches(&pattern, &item));
+    }
+
+    #[test]
+    fn test_axis_predicate_context_ignores_non_matching_children() {
+        let mut xot = Xot::new();
+        let root = xot
+            .parse(
+                r#"<servlet-mapping>
+   <servlet-name>MyServlet</servlet-name>
+   <url-pattern>/servlet/MyServlet/*</url-pattern>
+</servlet-mapping>"#,
+            )
+            .unwrap();
+        let document_element = xot.document_element(root).unwrap();
+        let url_pattern = xot
+            .children(document_element)
+            .find(|node| {
+                xot.is_element(*node)
+                    && xot
+                        .node_name(*node)
+                        .map(|name| xot.local_name_str(name) == "url-pattern")
+                        .unwrap_or(false)
+            })
+            .unwrap();
+        let pattern = parse_pattern("url-pattern[position()=last()]");
+
+        let mut pm = BasicPredicateMatcher::matching(&xot);
+        assert!(pm.matches(&pattern, &Item::from(url_pattern)));
+        assert_eq!(pm.axis_predicate_context(
+            match &pattern {
+                pattern::Pattern::Expr(pattern::ExprPattern::Path(path_expr)) => match path_expr.steps.first().unwrap() {
+                    pattern::StepExpr::AxisStep(axis_step) => axis_step,
+                    _ => panic!("expected axis step"),
+                },
+                _ => panic!("expected path pattern"),
+            },
+            url_pattern,
+        ), (1, 1));
     }
 
     #[test]

@@ -3,18 +3,21 @@ use num::{FromPrimitive, ToPrimitive};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RaisedError {
     XTDE0700,
+    XTTE0570,
 }
 
 impl RaisedError {
     pub(crate) fn to_u16(self) -> u16 {
         match self {
             RaisedError::XTDE0700 => 0,
+            RaisedError::XTTE0570 => 1,
         }
     }
 
     pub(crate) fn from_u16(value: u16) -> Self {
         match value {
             0 => RaisedError::XTDE0700,
+            1 => RaisedError::XTTE0570,
             _ => panic!("unknown raised error id: {value}"),
         }
     }
@@ -76,6 +79,7 @@ pub enum Instruction {
     Deduplicate,
     Return,
     ReturnConvert(u16),
+    ConvertSequence(u16, RaisedError),
     Dup,
     Pop,
     LetDone,
@@ -102,7 +106,7 @@ pub enum Instruction {
     CopyShallow,
     CopyDeep,
     CallTemplate,
-    ApplyTemplates(u16),
+    ApplyTemplates(u16, bool),
     RaiseError(RaisedError),
     PrintTop,
     PrintStack,
@@ -161,6 +165,7 @@ pub(crate) enum EncodedInstruction {
     Deduplicate,
     Return,
     ReturnConvert,
+    ConvertSequence,
     Dup,
     Pop,
     LetDone,
@@ -309,6 +314,17 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
             let sequence_type_id = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::ReturnConvert(sequence_type_id), 3)
         }
+        EncodedInstruction::ConvertSequence => {
+            let sequence_type_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            let error_id = u16::from_le_bytes([bytes[3], bytes[4]]);
+            (
+                Instruction::ConvertSequence(
+                    sequence_type_id,
+                    RaisedError::from_u16(error_id),
+                ),
+                5,
+            )
+        }
         EncodedInstruction::Dup => (Instruction::Dup, 1),
         EncodedInstruction::Pop => (Instruction::Pop, 1),
         EncodedInstruction::LetDone => (Instruction::LetDone, 1),
@@ -333,7 +349,11 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::CallTemplate => (Instruction::CallTemplate, 1),
         EncodedInstruction::ApplyTemplates => {
             let mode_id = u16::from_le_bytes([bytes[1], bytes[2]]);
-            (Instruction::ApplyTemplates(mode_id), 3)
+            let builtin_template_params_passthrough = bytes[3] != 0;
+            (
+                Instruction::ApplyTemplates(mode_id, builtin_template_params_passthrough),
+                4,
+            )
         }
         EncodedInstruction::RaiseError => {
             let error_id = u16::from_le_bytes([bytes[1], bytes[2]]);
@@ -457,6 +477,11 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
             bytes.push(EncodedInstruction::ReturnConvert.to_u8().unwrap());
             bytes.extend_from_slice(&sequence_type_id.to_le_bytes());
         }
+        Instruction::ConvertSequence(sequence_type_id, error) => {
+            bytes.push(EncodedInstruction::ConvertSequence.to_u8().unwrap());
+            bytes.extend_from_slice(&sequence_type_id.to_le_bytes());
+            bytes.extend_from_slice(&error.to_u16().to_le_bytes());
+        }
         Instruction::Dup => bytes.push(EncodedInstruction::Dup.to_u8().unwrap()),
         Instruction::Pop => bytes.push(EncodedInstruction::Pop.to_u8().unwrap()),
         Instruction::LetDone => bytes.push(EncodedInstruction::LetDone.to_u8().unwrap()),
@@ -501,9 +526,10 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
         Instruction::CopyShallow => bytes.push(EncodedInstruction::CopyShallow.to_u8().unwrap()),
         Instruction::CopyDeep => bytes.push(EncodedInstruction::CopyDeep.to_u8().unwrap()),
         Instruction::CallTemplate => bytes.push(EncodedInstruction::CallTemplate.to_u8().unwrap()),
-        Instruction::ApplyTemplates(mode_id) => {
+        Instruction::ApplyTemplates(mode_id, builtin_template_params_passthrough) => {
             bytes.push(EncodedInstruction::ApplyTemplates.to_u8().unwrap());
             bytes.extend_from_slice(&mode_id.to_le_bytes());
+            bytes.push(u8::from(builtin_template_params_passthrough));
         }
         Instruction::RaiseError(error) => {
             bytes.push(EncodedInstruction::RaiseError.to_u8().unwrap());
@@ -602,8 +628,9 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::Treat(_)
         | Instruction::ReturnConvert(_)
         | Instruction::JumpIfFalse(_)
-        | Instruction::ApplyTemplates(_)
+        | Instruction::ApplyTemplates(_, _)
         | Instruction::RaiseError(_) => 3,
+        Instruction::ConvertSequence(_, _) => 5,
     }
 }
 

@@ -3,13 +3,18 @@ use xee_name::{Name, Namespaces, FN_NAMESPACE};
 
 use std::collections::HashSet;
 use std::path::PathBuf;
-use xee_interpreter::{context::StaticContext, error, interpreter, sequence::QNameOrString};
+use xee_interpreter::{
+    context::StaticContext,
+    error,
+    interpreter::{self, instruction::RaisedError},
+    sequence::QNameOrString,
+};
 use xee_ir::{compile_xslt, ir, Bindings, Variables};
 use xee_xpath_ast::{ast as xpath_ast, pattern::transform_pattern, span::Spanned};
 use xee_xslt_ast::{ast, error::ElementError, parse_transform};
 use xot::xmlname::NameStrInfo;
 
-use crate::{default_declarations::text_only_copy_declarations, priority::default_priority};
+use crate::priority::default_priority;
 
 struct IrConverter<'a> {
     variables: Variables,
@@ -59,11 +64,6 @@ pub fn parse_with_base_dir(
     let mut visited = HashSet::new();
     transform.declarations =
         process_imports_and_includes(transform.declarations, base_dir, &mut visited)?;
-
-    // insert default rules early on in precedence order
-    let mut declarations = text_only_copy_declarations().unwrap();
-    declarations.extend(transform.declarations);
-    transform.declarations = declarations;
 
     compile(transform, static_context)
 }
@@ -176,6 +176,7 @@ impl<'a> IrConverter<'a> {
                 // TODO: mode should be configurable from the outside somehow,
                 // the XSTL test suite I think requires this.
                 mode: ast::ApplyTemplatesModeValue::Unnamed,
+                builtin_template_params_passthrough: true,
                 select: ast::Expression {
                     xpath: xee_xpath_ast::ast::XPath::parse(
                         "/",
@@ -271,30 +272,65 @@ impl<'a> IrConverter<'a> {
             match decl {
                 ast::Declaration::Variable(var) => {
                     let name = self.variables.new_var_name(&var.name);
-                    let expr = self.global_expr(var.select.as_ref(), &var.sequence_constructor)?;
+                    let expr = self.with_hidden_global_name(&var.name, |this| {
+                        let context_names = this.variables.push_context();
+                        let params = Self::context_params(&context_names);
+                        let expr = this.global_variable_expr(
+                            var.select.as_ref(),
+                            &var.sequence_constructor,
+                            var.as_.as_ref(),
+                        )?;
+                        this.variables.pop_context();
+                        Ok((params, expr))
+                    })?;
                     globals.push(ir::GlobalVariable {
                         name,
                         original_name: None,
                         required: false,
-                        expr,
+                        params: expr.0,
+                        expr: expr.1,
                     });
                 }
                 ast::Declaration::Param(param) => {
                     self.validate_param(param)?;
                     let name = self.variables.new_var_name(&param.name);
-                    let expr =
-                        self.global_expr(param.select.as_ref(), &param.sequence_constructor)?;
+                    let expr = self.with_hidden_global_name(&param.name, |this| {
+                        let context_names = this.variables.push_context();
+                        let params = Self::context_params(&context_names);
+                        let expr = this
+                            .global_param_expr(param.select.as_ref(), &param.sequence_constructor)?;
+                        this.variables.pop_context();
+                        Ok((params, expr))
+                    })?;
                     globals.push(ir::GlobalVariable {
                         name,
                         original_name: Some(param.name.clone()),
                         required: param.required,
-                        expr,
+                        params: expr.0,
+                        expr: expr.1,
                     });
                 }
                 _ => {}
             }
         }
         Ok(globals)
+    }
+
+    fn with_hidden_global_name<T, F>(
+        &mut self,
+        name: &ast::Name,
+        f: F,
+    ) -> error::SpannedResult<T>
+    where
+        F: FnOnce(&mut Self) -> error::SpannedResult<T>,
+    {
+        let hidden_name = self.variables.remove_var_name_in_current_scope(name);
+        let result = f(self);
+        if let Some(hidden_name) = hidden_name {
+            self.variables
+                .insert_var_name_in_current_scope(name.clone(), hidden_name);
+        }
+        result
     }
 
     fn validate_param(&self, param: &ast::Param) -> error::SpannedResult<()> {
@@ -304,12 +340,29 @@ impl<'a> IrConverter<'a> {
         Ok(())
     }
 
-    fn global_expr(
+    fn global_variable_expr(
+        &mut self,
+        select: Option<&ast::Expression>,
+        sequence_constructor: &ast::SequenceConstructor,
+        sequence_type: Option<&xpath_ast::SequenceType>,
+    ) -> error::SpannedResult<ir::ExprS> {
+        let expr = if let Some(select) = select {
+            self.expression(select)?.expr()
+        } else if sequence_type.is_some() {
+            self.sequence_constructor(sequence_constructor)?.expr()
+        } else if !sequence_constructor.is_empty() {
+            self.temporary_tree(sequence_constructor)?.expr()
+        } else {
+            Spanned::new(ir::Expr::Atom(self.empty_string()), (0..0).into())
+        };
+        self.convert_expr(expr, sequence_type, RaisedError::XTTE0570)
+    }
+
+    fn global_param_expr(
         &mut self,
         select: Option<&ast::Expression>,
         sequence_constructor: &ast::SequenceConstructor,
     ) -> error::SpannedResult<ir::ExprS> {
-        self.variables.push_absent_context();
         let expr = if let Some(select) = select {
             self.expression(select)?.expr()
         } else if !sequence_constructor.is_empty() {
@@ -317,8 +370,81 @@ impl<'a> IrConverter<'a> {
         } else {
             self.empty_sequence()
         };
-        self.variables.pop_context();
         Ok(expr)
+    }
+
+    fn convert_expr(
+        &mut self,
+        expr: ir::ExprS,
+        sequence_type: Option<&xpath_ast::SequenceType>,
+        error: RaisedError,
+    ) -> error::SpannedResult<ir::ExprS> {
+        let Some(sequence_type) = sequence_type else {
+            return Ok(expr);
+        };
+
+        let binding = self.variables.new_binding(expr.value, expr.span);
+        let (atom, bindings) = Bindings::new(binding).atom_bindings();
+        Ok(bindings
+            .bind_expr_no_span(
+                &mut self.variables,
+                ir::Expr::ConvertSequence(ir::ConvertSequence {
+                    atom,
+                    sequence_type: sequence_type.clone(),
+                    error,
+                }),
+            )
+            .expr())
+    }
+
+    fn convert_bindings(
+        &mut self,
+        bindings: Bindings,
+        sequence_type: Option<&xpath_ast::SequenceType>,
+        error: RaisedError,
+    ) -> error::SpannedResult<Bindings> {
+        let Some(sequence_type) = sequence_type else {
+            return Ok(bindings);
+        };
+
+        let (atom, bindings) = bindings.atom_bindings();
+        Ok(bindings.bind_expr_no_span(
+            &mut self.variables,
+            ir::Expr::ConvertSequence(ir::ConvertSequence {
+                atom,
+                sequence_type: sequence_type.clone(),
+                error,
+            }),
+        ))
+    }
+
+    fn context_params(context_names: &ir::ContextNames) -> Vec<ir::Param> {
+        vec![
+            ir::Param {
+                name: context_names.item.clone(),
+                type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
+            },
+            ir::Param {
+                name: context_names.position.clone(),
+                type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
+            },
+            ir::Param {
+                name: context_names.last.clone(),
+                type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
+            },
+        ]
     }
 
     fn template(
@@ -383,35 +509,10 @@ impl<'a> IrConverter<'a> {
     ) -> error::SpannedResult<ir::FunctionDefinition> {
         let context_names = self.variables.push_context();
         self.variables.push_scope();
-        let param_names = self.register_template_param_names(template);
+        let param_names = self.register_template_param_names(template)?;
 
         let bindings = self.sequence_constructor(&template.sequence_constructor)?;
-        let mut params = vec![
-            ir::Param {
-                name: context_names.item,
-                type_: None,
-                default: None,
-                required: false,
-                original_name: None,
-                tunnel: false,
-            },
-            ir::Param {
-                name: context_names.position,
-                type_: None,
-                default: None,
-                required: false,
-                original_name: None,
-                tunnel: false,
-            },
-            ir::Param {
-                name: context_names.last,
-                type_: None,
-                default: None,
-                required: false,
-                original_name: None,
-                tunnel: false,
-            },
-        ];
+        let mut params = Self::context_params(&context_names);
         params.extend(self.template_params(template, param_names)?);
         self.variables.pop_scope();
         self.variables.pop_context();
@@ -429,35 +530,10 @@ impl<'a> IrConverter<'a> {
     ) -> error::SpannedResult<ir::FunctionDefinition> {
         let context_names = self.variables.push_context();
         self.variables.push_scope();
-        let param_names = self.register_template_param_names(template);
+        let param_names = self.register_template_param_names(template)?;
         let bindings = self.sequence_constructor(&template.sequence_constructor)?;
 
-        let mut params = vec![
-            ir::Param {
-                name: context_names.item,
-                type_: None,
-                default: None,
-                required: false,
-                original_name: None,
-                tunnel: false,
-            },
-            ir::Param {
-                name: context_names.position,
-                type_: None,
-                default: None,
-                required: false,
-                original_name: None,
-                tunnel: false,
-            },
-            ir::Param {
-                name: context_names.last,
-                type_: None,
-                default: None,
-                required: false,
-                original_name: None,
-                tunnel: false,
-            },
-        ];
+        let mut params = Self::context_params(&context_names);
         params.extend(self.template_params(template, param_names)?);
         self.variables.pop_scope();
         self.variables.pop_context();
@@ -472,13 +548,24 @@ impl<'a> IrConverter<'a> {
     fn register_template_param_names(
         &mut self,
         template: &ast::Template,
-    ) -> Vec<(String, ir::Name)> {
+    ) -> error::SpannedResult<Vec<(String, ir::Name)>> {
         let mut param_names = Vec::new();
+        let mut seen_names = HashSet::new();
         for param in &template.params {
+            let param_key = (
+                param.name.namespace().to_string(),
+                param.name.local_name().to_string(),
+            );
+            if !seen_names.insert(param_key) {
+                return Err(error::SpannedError {
+                    error: error::Error::XTSE0580,
+                    span: Some((param.span.start..param.span.end).into()),
+                });
+            }
             let var_name = self.variables.declare_var_name(&param.name);
             param_names.push((param.name.local_name().to_string(), var_name));
         }
-        param_names
+        Ok(param_names)
     }
 
     fn template_params(
@@ -778,6 +865,7 @@ impl<'a> IrConverter<'a> {
             Break(break_) => self.break_(break_),
             Copy(copy) => self.copy(copy),
             CopyOf(copy_of) => self.copy_of(copy_of),
+            Message(message) => self.message(message),
             Sequence(sequence) => self.sequence(sequence),
             Element(element) => self.element(element),
             Text(text) => self.text(text),
@@ -798,6 +886,22 @@ impl<'a> IrConverter<'a> {
             ))
             .into()),
         }
+    }
+
+    fn message(&mut self, message: &ast::Message) -> error::SpannedResult<Bindings> {
+        let empty_sequence = self.empty_sequence();
+        let message_bindings = if let Some(select) = &message.select {
+            self.expression(select)?
+        } else if !message.sequence_constructor.is_empty() {
+            self.sequence_constructor(&message.sequence_constructor)?
+        } else {
+            Bindings::new(
+                self.variables
+                    .new_binding_no_span(empty_sequence.value.clone()),
+            )
+        };
+
+        Ok(message_bindings.bind_expr(&mut self.variables, empty_sequence))
     }
 
     fn sequence_constructor_content(
@@ -842,6 +946,30 @@ impl<'a> IrConverter<'a> {
         let (element_atom, mut bindings) = bindings
             .bind_expr_no_span(&mut self.variables, name_expr)
             .atom_bindings();
+        for namespace in &element_node.namespaces {
+            let prefix_atom = Spanned::new(
+                ir::Atom::Const(ir::Const::String(namespace.prefix.clone())),
+                (0..0).into(),
+            );
+            let namespace_atom = Spanned::new(
+                ir::Atom::Const(ir::Const::String(namespace.uri.clone())),
+                (0..0).into(),
+            );
+            let namespace_expr = ir::Expr::XmlNamespace(ir::XmlNamespace {
+                prefix: prefix_atom,
+                namespace: namespace_atom,
+            });
+            let (namespace_atom, namespace_bindings) = Bindings::empty()
+                .bind_expr_no_span(&mut self.variables, namespace_expr)
+                .atom_bindings();
+            let append_expr = ir::Expr::XmlAppend(ir::XmlAppend {
+                parent: element_atom.clone(),
+                child: namespace_atom,
+            });
+            let append_bindings =
+                namespace_bindings.bind_expr_no_span(&mut self.variables, append_expr);
+            bindings = bindings.concat(append_bindings);
+        }
         for (name, value) in &element_node.attributes {
             let (value_atom, value_bindings) =
                 self.attribute_value_template(value)?.atom_bindings();
@@ -944,6 +1072,8 @@ impl<'a> IrConverter<'a> {
             ir::Expr::ApplyTemplates(ir::ApplyTemplates {
                 mode,
                 select: select_atom,
+                builtin_template_params_passthrough: apply_templates
+                    .builtin_template_params_passthrough,
                 params,
             }),
         ))
@@ -962,7 +1092,6 @@ impl<'a> IrConverter<'a> {
                 let (atom, bindings) = self.expression(select)?.atom_bindings();
                 (Some(atom), bindings)
             } else {
-                // Use sequence_constructor if select is not present
                 let sc_bindings = self.sequence_constructor(&with_param.sequence_constructor)?;
                 let (atom, bindings) = sc_bindings.atom_bindings();
                 (Some(atom), bindings)
@@ -1120,14 +1249,45 @@ impl<'a> IrConverter<'a> {
         {
             let var_bindings = if let Some(select) = &variable.select {
                 self.expression(select)?
-            } else {
+            } else if variable.as_.is_some() {
                 self.sequence_constructor(&variable.sequence_constructor)?
+            } else if !variable.sequence_constructor.is_empty() {
+                self.temporary_tree(&variable.sequence_constructor)?
+            } else {
+                let empty_string = ir::Expr::Atom(self.empty_string());
+                Bindings::empty().bind_expr_no_span(&mut self.variables, empty_string)
             };
+            let var_bindings =
+                self.convert_bindings(var_bindings, variable.as_.as_ref(), RaisedError::XTTE0570)?;
             let name = self.variables.declare_var_name(&variable.name);
             Ok(Some((name, var_bindings)))
         } else {
             Ok(None)
         }
+    }
+
+    fn temporary_tree(
+        &mut self,
+        sequence_constructor: &ast::SequenceConstructor,
+    ) -> error::SpannedResult<Bindings> {
+        let (document_atom, document_bindings) = Bindings::empty()
+            .bind_expr_no_span(&mut self.variables, ir::Expr::XmlDocument(ir::XmlRoot {}))
+            .atom_bindings();
+
+        if sequence_constructor.is_empty() {
+            return Ok(document_bindings);
+        }
+
+        let (child_atom, child_bindings) = self
+            .sequence_constructor(sequence_constructor)?
+            .atom_bindings();
+        let append_expr = ir::Expr::XmlAppend(ir::XmlAppend {
+            parent: document_atom,
+            child: child_atom,
+        });
+        Ok(document_bindings
+            .concat(child_bindings)
+            .bind_expr_no_span(&mut self.variables, append_expr))
     }
 
     fn empty_sequence(&mut self) -> ir::ExprS {

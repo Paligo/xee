@@ -1071,8 +1071,10 @@ fn run_xpath_with_result(
     let q = queries.sequence_with_context(expr, static_context)?;
 
     let variables = AHashMap::from([(name, sequence.clone())]);
+    let context_item = sequence.normalize(" ", documents.xot_mut())?;
 
     q.execute_build_context(documents, |build| {
+        build.context_item(context_item.into());
         build.variables(variables);
     })
 }
@@ -1080,6 +1082,8 @@ fn run_xpath_with_result(
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf, vec};
+
+    use iri_string::types::IriStr;
 
     use super::*;
 
@@ -1130,5 +1134,21 @@ mod tests {
                 )),
             ]))
         );
+    }
+
+    #[test]
+    fn test_run_xpath_with_result_uses_result_tree_as_context() {
+        let mut documents = Documents::new();
+        let uri: &IriStr = "http://example.com/result.xml".try_into().unwrap();
+        let handle = documents
+            .add_string(uri, "<result><a>true</a><b>0</b><c>false</c><d/></result>")
+            .unwrap();
+        let document_node = documents.document_node(handle).unwrap();
+        let sequence: Sequence = document_node.into();
+
+        let expr = "/result/a = 'true'".to_string();
+        let result = run_xpath_with_result(&expr, &sequence, &mut documents).unwrap();
+
+        assert!(result.effective_boolean_value().unwrap());
     }
 }

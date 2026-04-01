@@ -15,6 +15,11 @@ fn doc(context: &DynamicContext, uri: Option<&str>) -> error::Result<Option<xot:
     }
 }
 
+#[xpath_fn("fn:document($uri as xs:string?) as document-node()?")]
+fn document(context: &DynamicContext, uri: Option<&str>) -> error::Result<Option<xot::Node>> {
+    doc(context, uri)
+}
+
 #[xpath_fn("fn:doc-available($uri as xs:string?) as xs:boolean")]
 fn doc_available(context: &DynamicContext, uri: Option<&str>) -> bool {
     if let Some(uri) = uri {
@@ -125,6 +130,7 @@ fn available_environment_variables(context: &DynamicContext) -> Vec<String> {
 pub(crate) fn static_function_descriptions() -> Vec<StaticFunctionDescription> {
     vec![
         wrap_xpath_fn!(doc),
+        wrap_xpath_fn!(document),
         wrap_xpath_fn!(doc_available),
         wrap_xpath_fn!(collection),
         wrap_xpath_fn!(collection_by_uri),

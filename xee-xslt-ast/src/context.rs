@@ -188,6 +188,10 @@ impl Context {
         &self.variable_names
     }
 
+    pub(crate) fn builtin_template_params_passthrough(&self) -> bool {
+        true
+    }
+
     pub(crate) fn parser_context(&self, state: &State) -> XPathParserContext {
         let namespaces = self.namespaces(state);
         XPathParserContext::new(namespaces, self.variable_names.clone())

@@ -301,6 +301,7 @@ impl From<ApplyImports> for SequenceConstructorItem {
 pub struct ApplyTemplates {
     pub select: Expression,
     pub mode: ApplyTemplatesModeValue,
+    pub builtin_template_params_passthrough: bool,
 
     pub content: Vec<ApplyTemplatesContent>,
 
@@ -1915,8 +1916,16 @@ pub type SequenceConstructor = Vec<SequenceConstructorItem>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct LiteralNamespace {
+    pub prefix: Prefix,
+    pub uri: Uri,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ElementNode {
     pub name: Name,
+    pub namespaces: Vec<LiteralNamespace>,
     pub attributes: Vec<(Name, ValueTemplate<String>)>,
     pub sequence_constructor: SequenceConstructor,
     pub span: Span,

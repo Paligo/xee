@@ -123,6 +123,16 @@ impl InstructionParser for ast::Declaration {
 
 impl InstructionParser for ast::ElementNode {
     fn parse(content: &Content, attributes: &Attributes) -> Result<ast::ElementNode> {
+        let namespaces = content
+            .state
+            .xot
+            .namespace_declarations(content.node)
+            .into_iter()
+            .map(|(prefix, namespace)| ast::LiteralNamespace {
+                prefix: content.state.xot.prefix_str(prefix).to_string(),
+                uri: content.state.xot.namespace_str(namespace).to_string(),
+            })
+            .collect();
         let mut element_attributes = Vec::new();
         for key in content.state.xot.attributes(content.node).keys() {
             let name = content.state.xot.name_ref(key, content.node)?;
@@ -140,6 +150,7 @@ impl InstructionParser for ast::ElementNode {
             .name_ref(attributes.element.name(), content.node)?;
         Ok(ast::ElementNode {
             name: name.to_owned(),
+            namespaces,
             attributes: element_attributes,
             span: content.span()?,
             sequence_constructor: content.sequence_constructor()?,
@@ -307,6 +318,9 @@ impl InstructionParser for ast::ApplyTemplates {
                     },
                 ),
             mode,
+            builtin_template_params_passthrough: content
+                .context
+                .builtin_template_params_passthrough(),
             span: content.span()?,
             content: parse(content)?,
         })
