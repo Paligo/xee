@@ -1,49 +1,84 @@
+use std::fs;
+
 use iri_string::types::{IriReferenceStr, IriString};
 use xee_xpath_macros::xpath_fn;
 
 use crate::{
-    context::DynamicContext, error, function::StaticFunctionDescription, sequence::Sequence,
-    wrap_xpath_fn,
+    context::DynamicContext, error, function::StaticFunctionDescription, interpreter::Interpreter,
+    sequence::Sequence, wrap_xpath_fn,
 };
 
 #[xpath_fn("fn:doc($uri as xs:string?) as document-node()?")]
-fn doc(context: &DynamicContext, uri: Option<&str>) -> error::Result<Option<xot::Node>> {
+fn doc(
+    context: &DynamicContext,
+    interpreter: &mut Interpreter,
+    uri: Option<&str>,
+) -> error::Result<Option<xot::Node>> {
     if let Some(uri) = uri {
-        document_node(context, uri)
+        document_node(context, interpreter, uri)
     } else {
         Ok(None)
     }
 }
 
 #[xpath_fn("fn:document($uri as xs:string?) as document-node()?")]
-fn document(context: &DynamicContext, uri: Option<&str>) -> error::Result<Option<xot::Node>> {
-    doc(context, uri)
+fn document(
+    context: &DynamicContext,
+    interpreter: &mut Interpreter,
+    uri: Option<&str>,
+) -> error::Result<Option<xot::Node>> {
+    doc(context, interpreter, uri)
 }
 
 #[xpath_fn("fn:doc-available($uri as xs:string?) as xs:boolean")]
-fn doc_available(context: &DynamicContext, uri: Option<&str>) -> bool {
+fn doc_available(
+    context: &DynamicContext,
+    interpreter: &mut Interpreter,
+    uri: Option<&str>,
+) -> bool {
     if let Some(uri) = uri {
-        document_node(context, uri).is_ok()
+        document_node(context, interpreter, uri).is_ok()
     } else {
         false
     }
 }
 
-fn document_node(context: &DynamicContext, uri: &str) -> error::Result<Option<xot::Node>> {
+fn document_node(
+    context: &DynamicContext,
+    interpreter: &mut Interpreter,
+    uri: &str,
+) -> error::Result<Option<xot::Node>> {
     let iri_reference: &IriReferenceStr = uri.try_into().map_err(|_| error::Error::FODC0005)?;
     let uri = absolute_uri(context, iri_reference)?;
 
     // first check whether a document is there at all, if so, return it
     let documents = context.documents();
-    let documents = documents.borrow();
-    let document = documents.get_by_uri(&uri);
-
-    if let Some(document) = document {
-        Ok(Some(document.root()))
-    } else {
-        // The document doesn't exist, so return an error
-        Err(error::Error::FODC0002)
+    if let Some(document) = documents.borrow().get_by_uri(&uri) {
+        return Ok(Some(document.root()));
     }
+
+    load_document(context, interpreter, &uri)
+}
+
+fn load_document(
+    context: &DynamicContext,
+    interpreter: &mut Interpreter,
+    uri: &IriString,
+) -> error::Result<Option<xot::Node>> {
+    let url = url::Url::parse(uri.as_str()).map_err(|_| error::Error::FODC0005)?;
+    let path = url.to_file_path().map_err(|_| error::Error::FODC0002)?;
+    let xml = fs::read_to_string(&path).map_err(|_| error::Error::FODC0002)?;
+
+    let documents = context.documents();
+    let handle = documents
+        .borrow_mut()
+        .add_string(interpreter.xot_mut(), Some(uri.as_ref()), &xml)
+        .map_err(|_| error::Error::FODC0002)?;
+    let document = documents
+        .borrow()
+        .get_node_by_handle(handle)
+        .ok_or(error::Error::FODC0002)?;
+    Ok(Some(document))
 }
 
 #[xpath_fn("fn:collection() as item()*")]

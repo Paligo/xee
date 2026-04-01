@@ -685,7 +685,7 @@ mod tests {
 
         let mut pm = BasicPredicateMatcher::new(&xot);
         let pattern = parse_pattern("node()");
-    assert!(!pm.matches(&pattern, &document_item));
+        assert!(!pm.matches(&pattern, &document_item));
         assert!(pm.matches(&pattern, &element_item));
         assert!(!pm.matches(&pattern, &attribute_item));
         let pattern = parse_pattern("attribute::node()");
@@ -782,16 +782,20 @@ mod tests {
 
         let mut pm = BasicPredicateMatcher::matching(&xot);
         assert!(pm.matches(&pattern, &Item::from(url_pattern)));
-        assert_eq!(pm.axis_predicate_context(
-            match &pattern {
-                pattern::Pattern::Expr(pattern::ExprPattern::Path(path_expr)) => match path_expr.steps.first().unwrap() {
-                    pattern::StepExpr::AxisStep(axis_step) => axis_step,
-                    _ => panic!("expected axis step"),
+        assert_eq!(
+            pm.axis_predicate_context(
+                match &pattern {
+                    pattern::Pattern::Expr(pattern::ExprPattern::Path(path_expr)) =>
+                        match path_expr.steps.first().unwrap() {
+                            pattern::StepExpr::AxisStep(axis_step) => axis_step,
+                            _ => panic!("expected axis step"),
+                        },
+                    _ => panic!("expected path pattern"),
                 },
-                _ => panic!("expected path pattern"),
-            },
-            url_pattern,
-        ), (1, 1));
+                url_pattern,
+            ),
+            (1, 1)
+        );
     }
 
     #[test]

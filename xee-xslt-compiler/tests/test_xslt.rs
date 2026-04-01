@@ -1,8 +1,15 @@
 use std::fmt::Write;
+use std::fs;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use xee_interpreter::{context::StaticContext, error, sequence::Sequence};
+use xee_interpreter::{
+    context::{StaticContext, StaticContextBuilder},
+    error,
+    sequence::Sequence,
+    xml::Documents,
+};
 use xee_name::{Namespaces, FN_NAMESPACE};
-use xee_xslt_compiler::{evaluate, parse};
+use xee_xslt_compiler::{evaluate, parse, parse_with_base_dir};
 use xot::Xot;
 
 fn xml(xot: &Xot, sequence: Sequence) -> String {
@@ -13,6 +20,35 @@ fn xml(xot: &Xot, sequence: Sequence) -> String {
             .unwrap();
     }
     f
+}
+
+fn evaluate_with_stylesheet_base(
+    xot: &mut Xot,
+    xml: &str,
+    xslt: &str,
+    stylesheet_path: &std::path::Path,
+) -> error::SpannedResult<Sequence> {
+    let stylesheet_uri = format!("file://{}", stylesheet_path.display()).replace(' ', "%20");
+    let mut static_context_builder = StaticContextBuilder::default();
+    static_context_builder.static_base_uri(Some(stylesheet_uri.try_into().unwrap()));
+    let static_context = static_context_builder.build();
+    let program = parse_with_base_dir(
+        static_context,
+        xslt,
+        stylesheet_path.parent().map(|parent| parent.to_path_buf()),
+    )
+    .unwrap();
+
+    let root = xot.parse(xml).unwrap();
+    let mut documents = Documents::new();
+    let handle = documents.add_root(None, root).unwrap();
+    let root = documents.get_node_by_handle(handle).unwrap();
+    let mut dynamic_context_builder = program.dynamic_context_builder();
+    dynamic_context_builder.context_node(root);
+    dynamic_context_builder.documents(documents);
+    let context = dynamic_context_builder.build();
+    let runnable = program.runnable(&context);
+    runnable.many(xot)
 }
 
 #[test]
@@ -108,7 +144,10 @@ fn test_match_node_pattern_does_not_capture_initial_document_node() {
     )
     .unwrap();
 
-    assert_eq!(xml(&xot, output), "<out>\n  This is the child number 1.\n</out>");
+    assert_eq!(
+        xml(&xot, output),
+        "<out>\n  This is the child number 1.\n</out>"
+    );
 }
 
 #[test]
@@ -395,6 +434,197 @@ fn test_for_each_sort_uses_xslt_sort_order() {
 }
 
 #[test]
+fn test_for_each_numeric_sort_preserves_order_for_nan_keys() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><t>First</t><t>p2</t><t>1.0.9</t><t>00k</t><t>1.u</t><t>1-m</t><t>0.5s</t><t>Last</t></doc>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+  <xsl:template match="doc">
+    <out>
+      <xsl:for-each select="t">
+        <xsl:sort data-type="number"/>
+        <xsl:value-of select="."/>
+        <xsl:text>|</xsl:text>
+      </xsl:for-each>
+    </out>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(
+        xml(&xot, output),
+        "<out>First|p2|1.0.9|00k|1.u|1-m|0.5s|Last|</out>"
+    );
+}
+
+#[test]
+fn test_for_each_descending_numeric_sort_places_nan_last() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xs="http://www.w3.org/2001/XMLSchema"
+               xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+               version="2.0">
+  <xsl:template match="/">
+    <out>
+      <xsl:for-each select="(xs:float(12.5), xs:integer(1), xs:float('NaN'), xs:double('NaN'), xs:float(0.009), xs:double(-0.05), xs:string(-0.00))">
+        <xsl:sort select="." data-type="number" order="descending"/>
+        <xsl:value-of select="."/>
+        <xsl:text>|</xsl:text>
+      </xsl:for-each>
+    </out>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+
+    assert_eq!(
+        xml(&xot, output),
+        "<out>12.5|1|0.009|0|-0.05|NaN|NaN|</out>"
+    );
+}
+
+#[test]
+fn test_mode_all_template_matches_initial_unnamed_mode() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r##"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:template match="/" mode="#all">
+    <out>ok</out>
+  </xsl:template>
+</xsl:stylesheet>"##,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>ok</out>");
+}
+
+#[test]
+fn test_default_mode_attribute_overrides_nested_apply_templates_mode() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        r#"<doc><a test="attribute"/></doc>"#,
+        r##"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0" default-mode="a">
+  <xsl:template match="/" mode="#all">
+    <out xsl:default-mode="b">
+      <xsl:apply-templates select="doc/a" default-mode="a"/>
+    </out>
+  </xsl:template>
+
+  <xsl:template match="a" default-mode="a">
+    <xsl:text>element-mode-a:</xsl:text>
+    <xsl:apply-templates select="@test"/>
+  </xsl:template>
+
+  <xsl:template match="a" default-mode="b">
+    <xsl:text>element-mode-b:</xsl:text>
+    <xsl:apply-templates select="@test"/>
+  </xsl:template>
+
+  <xsl:template match="@*" mode="a">
+    <xsl:value-of select="."/>
+  </xsl:template>
+
+  <xsl:template match="@*" mode="b">
+    <xsl:text>attribute-mode-b</xsl:text>
+  </xsl:template>
+</xsl:stylesheet>"##,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>element-mode-a:attribute</out>");
+}
+
+#[test]
+fn test_default_mode_attribute_on_apply_templates_selects_nested_mode() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        r#"<doc><a test="attribute"/></doc>"#,
+        r##"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0" default-mode="a">
+  <xsl:template match="/" mode="#all">
+    <out xsl:default-mode="b">
+      <xsl:apply-templates select="doc/a" default-mode="a"/>
+    </out>
+  </xsl:template>
+
+  <xsl:template match="a" default-mode="a">
+    <xsl:text>element-mode-a:</xsl:text>
+    <xsl:apply-templates select="@test" default-mode="b"/>
+  </xsl:template>
+
+  <xsl:template match="a" default-mode="b">
+    <xsl:text>element-mode-b:</xsl:text>
+    <xsl:apply-templates select="@test"/>
+  </xsl:template>
+
+  <xsl:template match="@*" mode="a">
+    <xsl:value-of select="."/>
+  </xsl:template>
+
+  <xsl:template match="@*" mode="b">
+    <xsl:text>attribute-mode-b</xsl:text>
+  </xsl:template>
+</xsl:stylesheet>"##,
+    )
+    .unwrap();
+
+    assert_eq!(
+        xml(&xot, output),
+        "<out>element-mode-a:attribute-mode-b</out>"
+    );
+}
+
+#[test]
+fn test_sequence_document_loads_relative_to_stylesheet_base_uri() {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let temp_dir = std::env::temp_dir().join(format!(
+        "xee-sequence-1202-{}-{}",
+        std::process::id(),
+        unique
+    ));
+    fs::create_dir_all(&temp_dir).unwrap();
+    fs::write(temp_dir.join("sequence-1202a.xml"), "<doc/>").unwrap();
+
+    let mut xot = Xot::new();
+    let stylesheet_path = temp_dir.join("sequence-1202.xsl");
+    let output = evaluate_with_stylesheet_base(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+  <xsl:template match="doc">
+    <out>
+      <xsl:text>(((</xsl:text>
+      <xsl:sequence select="document('sequence-1202a.xml')"/>
+      <xsl:text>)))</xsl:text>
+    </out>
+  </xsl:template>
+</xsl:transform>"#,
+        &stylesheet_path,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>(((<doc/>)))</out>");
+
+    fs::remove_dir_all(&temp_dir).unwrap();
+}
+
+#[test]
 fn test_for_each_group_group_by_keeps_first_item_per_key() {
     let mut xot = Xot::new();
     let output = evaluate(
@@ -542,30 +772,30 @@ fn test_duplicate_local_template_params_are_rejected() {
     ));
 }
 
-  #[test]
-  fn test_missing_name_attribute_reports_xtse0010() {
+#[test]
+fn test_missing_name_attribute_reports_xtse0010() {
     let output = parse(
-      StaticContext::default(),
-      r#"
+        StaticContext::default(),
+        r#"
   <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
     <xsl:variable select="'ABC'"/>
   </xsl:transform>"#,
     );
 
     assert!(matches!(
-      output,
-      error::SpannedResult::Err(error::SpannedError {
-        error: error::Error::XTSE0010,
-        span: _
-      })
+        output,
+        error::SpannedResult::Err(error::SpannedError {
+            error: error::Error::XTSE0010,
+            span: _
+        })
     ));
-  }
+}
 
-  #[test]
-  fn test_disallowed_with_param_attribute_reports_xtse0090() {
+#[test]
+fn test_disallowed_with_param_attribute_reports_xtse0090() {
     let output = parse(
-      StaticContext::default(),
-      r#"
+        StaticContext::default(),
+        r#"
   <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
     <xsl:template match="/">
     <xsl:call-template name="temp1">
@@ -580,19 +810,19 @@ fn test_duplicate_local_template_params_are_rejected() {
     );
 
     assert!(matches!(
-      output,
-      error::SpannedResult::Err(error::SpannedError {
-        error: error::Error::XTSE0090,
-        span: _
-      })
+        output,
+        error::SpannedResult::Err(error::SpannedError {
+            error: error::Error::XTSE0090,
+            span: _
+        })
     ));
-  }
+}
 
-  #[test]
-  fn test_invalid_required_attribute_value_reports_xtse0020() {
+#[test]
+fn test_invalid_required_attribute_value_reports_xtse0020() {
     let output = parse(
-      StaticContext::default(),
-      r#"
+        StaticContext::default(),
+        r#"
   <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
     <xsl:template name="foo">
     <xsl:param name="par1" required="TRUE"/>
@@ -601,13 +831,13 @@ fn test_duplicate_local_template_params_are_rejected() {
     );
 
     assert!(matches!(
-      output,
-      error::SpannedResult::Err(error::SpannedError {
-        error: error::Error::XTSE0020,
-        span: _
-      })
+        output,
+        error::SpannedResult::Err(error::SpannedError {
+            error: error::Error::XTSE0020,
+            span: _
+        })
     ));
-  }
+}
 
 #[test]
 fn test_pattern_predicate_position_ignores_whitespace_text_nodes() {
@@ -655,13 +885,13 @@ fn test_message_is_ignored_in_result_sequence() {
     assert_eq!(xml(&xot, output), "<o><a/></o>");
 }
 
-  #[test]
-  fn test_local_variable_as_type_is_enforced() {
+#[test]
+fn test_local_variable_as_type_is_enforced() {
     let mut xot = Xot::new();
     let output = evaluate(
-      &mut xot,
-      "<doc/>",
-      r#"
+        &mut xot,
+        "<doc/>",
+        r#"
   <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3"
     xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xsl:template match="/">
@@ -672,13 +902,13 @@ fn test_message_is_ignored_in_result_sequence() {
     );
 
     assert!(matches!(
-      output,
-      error::SpannedResult::Err(error::SpannedError {
-        error: error::Error::XTTE0570,
-        span: _
-      })
+        output,
+        error::SpannedResult::Err(error::SpannedError {
+            error: error::Error::XTTE0570,
+            span: _
+        })
     ));
-  }
+}
 
 #[test]
 fn test_global_variable_sequence_constructor_creates_temporary_tree() {
@@ -711,15 +941,15 @@ fn test_global_variable_sequence_constructor_creates_temporary_tree() {
 
 #[test]
 fn test_global_variable_is_out_of_scope_within_its_own_declaration() {
-  let namespaces = Namespaces::new(
-    Namespaces::default_namespaces(),
-    "".to_string(),
-    FN_NAMESPACE.to_string(),
-  );
-  let static_context = StaticContext::from_namespaces(namespaces);
-  let output = parse(
-    static_context,
-    r#"
+    let namespaces = Namespaces::new(
+        Namespaces::default_namespaces(),
+        "".to_string(),
+        FN_NAMESPACE.to_string(),
+    );
+    let static_context = StaticContext::from_namespaces(namespaces);
+    let output = parse(
+        static_context,
+        r#"
 <xsl:stylesheet version="3.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:xs="http://www.w3.org/2001/XMLSchema">
@@ -734,28 +964,28 @@ fn test_global_variable_is_out_of_scope_within_its_own_declaration() {
     else $gcd($y,$x mod $y)
     }"/>
 </xsl:stylesheet>"#,
-  );
+    );
 
-  assert!(matches!(
-    output,
-    error::SpannedResult::Err(error::SpannedError {
-      error: error::Error::XPST0008,
-      span: _
-    })
-  ));
+    assert!(matches!(
+        output,
+        error::SpannedResult::Err(error::SpannedError {
+            error: error::Error::XPST0008,
+            span: _
+        })
+    ));
 }
 
 #[test]
 fn test_top_level_non_xsl_elements_do_not_break_parse() {
-  let namespaces = Namespaces::new(
-    Namespaces::default_namespaces(),
-    "".to_string(),
-    FN_NAMESPACE.to_string(),
-  );
-  let static_context = StaticContext::from_namespaces(namespaces);
-  let output = parse(
-    static_context,
-    r#"
+    let namespaces = Namespaces::new(
+        Namespaces::default_namespaces(),
+        "".to_string(),
+        FN_NAMESPACE.to_string(),
+    );
+    let static_context = StaticContext::from_namespaces(namespaces);
+    let output = parse(
+        static_context,
+        r#"
 <xsl:stylesheet version="2.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:test="my:test">
@@ -765,9 +995,9 @@ fn test_top_level_non_xsl_elements_do_not_break_parse() {
   <out/>
   </xsl:template>
 </xsl:stylesheet>"#,
-  );
+    );
 
-  assert!(output.is_ok());
+    assert!(output.is_ok());
 }
 
 #[test]

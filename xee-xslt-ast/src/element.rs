@@ -75,15 +75,10 @@ impl<'a> Content<'a> {
                 continue;
             };
 
-            if self
-                .state
-                .names
-                .declaration_name(element.name())
-                .is_some()
-            {
+            if self.state.names.declaration_name(element.name()).is_some() {
                 let content = self.with_node(node);
-                let declaration = content
-                    .parse_element(element, ast::Declaration::parse_declaration)?;
+                let declaration =
+                    content.parse_element(element, ast::Declaration::parse_declaration)?;
                 declarations.push(declaration);
                 continue;
             }

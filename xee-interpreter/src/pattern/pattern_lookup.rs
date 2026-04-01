@@ -30,7 +30,11 @@ impl PredicateMatcher for Interpreter<'_> {
         size: usize,
     ) -> bool {
         let function = function::InlineFunctionData::new(inline_function_id, Vec::new()).into();
-        let arguments = [item.clone().into(), (position as u64).into(), (size as u64).into()];
+        let arguments = [
+            item.clone().into(),
+            (position as u64).into(),
+            (size as u64).into(),
+        ];
 
         // the specification says to swallow any errors
         // TODO: log errors somehow here?

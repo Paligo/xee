@@ -85,7 +85,11 @@ fn map_parse_error(xslt: &str, error: ElementError) -> error::SpannedError {
         },
         ElementError::Unexpected { span } => {
             let text = xslt.get(span.start..span.end).unwrap_or_default();
-            error::Error::Unsupported(format!("Failed parsing XSLT, Unexpected {} {:?}", text, span)).into()
+            error::Error::Unsupported(format!(
+                "Failed parsing XSLT, Unexpected {} {:?}",
+                text, span
+            ))
+            .into()
         }
         other => error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", other)).into(),
     }
@@ -248,7 +252,10 @@ impl<'a> IrConverter<'a> {
         args: Vec<ir::AtomS>,
     ) -> ir::Expr {
         ir::Expr::FunctionCall(ir::FunctionCall {
-            atom: Spanned::new(self.static_function_atom(name, namespace, arity), (0..0).into()),
+            atom: Spanned::new(
+                self.static_function_atom(name, namespace, arity),
+                (0..0).into(),
+            ),
             args,
         })
     }
@@ -341,17 +348,13 @@ impl<'a> IrConverter<'a> {
                 }
                 ast::Declaration::Function(function) => {
                     let arity = u8::try_from(function.params.len()).map_err(|_| {
-                        error::Error::Unsupported(
-                            "Too many XSLT function parameters".to_string(),
-                        )
+                        error::Error::Unsupported("Too many XSLT function parameters".to_string())
                     })?;
                     let hidden_name = self
                         .xslt_functions
                         .get(&(function.name.clone(), arity))
                         .ok_or_else(|| {
-                            error::Error::Unsupported(
-                                "Unregistered XSLT function name".to_string(),
-                            )
+                            error::Error::Unsupported("Unregistered XSLT function name".to_string())
                         })?;
                     self.variables.new_var_name(hidden_name);
                 }
@@ -389,8 +392,10 @@ impl<'a> IrConverter<'a> {
                     let expr = self.with_hidden_global_name(&param.name, |this| {
                         let context_names = this.variables.push_context();
                         let params = Self::context_params(&context_names);
-                        let expr = this
-                            .global_param_expr(param.select.as_ref(), &param.sequence_constructor)?;
+                        let expr = this.global_param_expr(
+                            param.select.as_ref(),
+                            &param.sequence_constructor,
+                        )?;
                         this.variables.pop_context();
                         Ok((params, expr))
                     })?;
@@ -404,17 +409,13 @@ impl<'a> IrConverter<'a> {
                 }
                 ast::Declaration::Function(function) => {
                     let arity = u8::try_from(function.params.len()).map_err(|_| {
-                        error::Error::Unsupported(
-                            "Too many XSLT function parameters".to_string(),
-                        )
+                        error::Error::Unsupported("Too many XSLT function parameters".to_string())
                     })?;
                     let hidden_name = self
                         .xslt_functions
                         .get(&(function.name.clone(), arity))
                         .ok_or_else(|| {
-                            error::Error::Unsupported(
-                                "Unregistered XSLT function name".to_string(),
-                            )
+                            error::Error::Unsupported("Unregistered XSLT function name".to_string())
                         })?;
                     let name = self.variables.lookup_var_name(hidden_name).unwrap();
                     let context_names = self.variables.push_context();
@@ -439,11 +440,7 @@ impl<'a> IrConverter<'a> {
         Ok(globals)
     }
 
-    fn with_hidden_global_name<T, F>(
-        &mut self,
-        name: &ast::Name,
-        f: F,
-    ) -> error::SpannedResult<T>
+    fn with_hidden_global_name<T, F>(&mut self, name: &ast::Name, f: F) -> error::SpannedResult<T>
     where
         F: FnOnce(&mut Self) -> error::SpannedResult<T>,
     {
@@ -591,7 +588,9 @@ impl<'a> IrConverter<'a> {
                 declarations.rules.push(ir::Rule {
                     priority: *priority,
                     modes,
-                    pattern: transform_pattern(&pattern.pattern, |expr| self.pattern_predicate(expr))?,
+                    pattern: transform_pattern(&pattern.pattern, |expr| {
+                        self.pattern_predicate(expr)
+                    })?,
                     function_definition,
                 });
                 return Ok(());
@@ -602,7 +601,9 @@ impl<'a> IrConverter<'a> {
                 declarations.rules.push(ir::Rule {
                     priority,
                     modes: modes.clone(),
-                    pattern: transform_pattern(&split_pattern, |expr| self.pattern_predicate(expr))?,
+                    pattern: transform_pattern(&split_pattern, |expr| {
+                        self.pattern_predicate(expr)
+                    })?,
                     function_definition: function_definition.clone(),
                 });
             }
@@ -1209,7 +1210,8 @@ impl<'a> IrConverter<'a> {
                         let (atom, bindings) = self.expression(select)?.atom_bindings();
                         (Some(atom), bindings)
                     } else {
-                        let sc_bindings = self.sequence_constructor(&with_param.sequence_constructor)?;
+                        let sc_bindings =
+                            self.sequence_constructor(&with_param.sequence_constructor)?;
                         let (atom, bindings) = sc_bindings.atom_bindings();
                         (Some(atom), bindings)
                     };
@@ -1257,14 +1259,16 @@ impl<'a> IrConverter<'a> {
         self.continue_template(apply_imports.with_params.iter())
     }
 
-    fn next_match(
-        &mut self,
-        next_match: &ast::NextMatch,
-    ) -> error::SpannedResult<Bindings> {
-        self.continue_template(next_match.content.iter().filter_map(|content| match content {
-            ast::NextMatchContent::WithParam(with_param) => Some(with_param),
-            ast::NextMatchContent::Fallback(_) => None,
-        }))
+    fn next_match(&mut self, next_match: &ast::NextMatch) -> error::SpannedResult<Bindings> {
+        self.continue_template(
+            next_match
+                .content
+                .iter()
+                .filter_map(|content| match content {
+                    ast::NextMatchContent::WithParam(with_param) => Some(with_param),
+                    ast::NextMatchContent::Fallback(_) => None,
+                }),
+        )
     }
 
     fn continue_template<'b>(
@@ -1345,7 +1349,10 @@ impl<'a> IrConverter<'a> {
         Ok((current_atom, bindings))
     }
 
-    fn sort_key_function(&mut self, sort: &ast::Sort) -> error::SpannedResult<(ir::AtomS, Bindings)> {
+    fn sort_key_function(
+        &mut self,
+        sort: &ast::Sort,
+    ) -> error::SpannedResult<(ir::AtomS, Bindings)> {
         let param_name = self.variables.new_name();
         let context_names = self.variables.push_context();
         let return_bindings = self.sort_key_return_bindings(sort)?;
@@ -1404,7 +1411,10 @@ impl<'a> IrConverter<'a> {
         }
     }
 
-    fn sort_collation_atom(&mut self, sort: &ast::Sort) -> error::SpannedResult<(ir::AtomS, Bindings)> {
+    fn sort_collation_atom(
+        &mut self,
+        sort: &ast::Sort,
+    ) -> error::SpannedResult<(ir::AtomS, Bindings)> {
         if let Some(collation) = &sort.collation {
             Ok(self.attribute_value_template(collation)?.atom_bindings())
         } else {
@@ -1435,7 +1445,10 @@ impl<'a> IrConverter<'a> {
         let Some(order) = &sort.order else {
             return Ok(false);
         };
-        match self.literal_value_template(order, "xsl:sort order")?.as_deref() {
+        match self
+            .literal_value_template(order, "xsl:sort order")?
+            .as_deref()
+        {
             Some("ascending") => Ok(false),
             Some("descending") => Ok(true),
             Some(value) => Err(error::Error::Unsupported(format!(
@@ -1857,8 +1870,10 @@ impl<'a> IrConverter<'a> {
             body: Box::new(Spanned::new(body, (0..0).into())),
         };
 
-        let function_expr = Bindings::empty()
-            .bind_expr_no_span(&mut self.variables, ir::Expr::FunctionDefinition(function_definition));
+        let function_expr = Bindings::empty().bind_expr_no_span(
+            &mut self.variables,
+            ir::Expr::FunctionDefinition(function_definition),
+        );
         Ok(function_expr.atom_bindings())
     }
 
@@ -2223,7 +2238,9 @@ impl<'a> IrConverter<'a> {
             }
             xpath_ast::ExprSingle::Quantified(quantified_expr) => {
                 self.rewrite_user_function_references_expr_single(&mut quantified_expr.var_expr);
-                self.rewrite_user_function_references_expr_single(&mut quantified_expr.satisfies_expr);
+                self.rewrite_user_function_references_expr_single(
+                    &mut quantified_expr.satisfies_expr,
+                );
             }
         }
     }
@@ -2290,9 +2307,10 @@ impl<'a> IrConverter<'a> {
                 }
             }
             xpath_ast::PrimaryExpr::NamedFunctionRef(named_function_ref) => {
-                if let Some(hidden_name) = self
-                    .lookup_xslt_function_var_name(&named_function_ref.name.value, named_function_ref.arity)
-                {
+                if let Some(hidden_name) = self.lookup_xslt_function_var_name(
+                    &named_function_ref.name.value,
+                    named_function_ref.arity,
+                ) {
                     primary.value = xpath_ast::PrimaryExpr::VarRef(hidden_name);
                 }
                 Vec::new()

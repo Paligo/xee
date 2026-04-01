@@ -110,25 +110,37 @@ impl<'a> DeclarationCompiler<'a> {
     }
 
     fn compile_modes(&mut self, declarations: &ir::Declarations) {
+        self.register_mode(ir::ApplyTemplatesModeValue::Unnamed);
+
+        for mode_name in declarations.modes.keys() {
+            let mode = match mode_name {
+                Some(name) => ir::ApplyTemplatesModeValue::Named(name.clone()),
+                None => ir::ApplyTemplatesModeValue::Unnamed,
+            };
+            self.register_mode(mode);
+        }
+
         for rule in &declarations.rules {
             for mode_value in &rule.modes {
                 // we don't register All modes
                 if matches!(mode_value, ir::ModeValue::All) {
                     continue;
                 }
-                let apply_templates_mode_value = match mode_value {
+                self.register_mode(match mode_value {
                     ir::ModeValue::All => continue,
                     ir::ModeValue::Named(name) => ir::ApplyTemplatesModeValue::Named(name.clone()),
                     ir::ModeValue::Unnamed => ir::ApplyTemplatesModeValue::Unnamed,
-                };
-                // we want the mode id to be unique and not overwritten
-                if self.mode_ids.contains_key(&apply_templates_mode_value) {
-                    continue;
-                }
-                let mode_id = ModeId::new(self.mode_ids.len());
-                self.mode_ids.insert(apply_templates_mode_value, mode_id);
+                });
             }
         }
+    }
+
+    fn register_mode(&mut self, mode: ir::ApplyTemplatesModeValue) {
+        if self.mode_ids.contains_key(&mode) {
+            return;
+        }
+        let mode_id = ModeId::new(self.mode_ids.len());
+        self.mode_ids.insert(mode, mode_id);
     }
 
     fn compile_templates(&mut self, declarations: &ir::Declarations) -> error::SpannedResult<()> {
@@ -304,10 +316,18 @@ impl<'a> DeclarationCompiler<'a> {
         // all modes. We do this before the final registration so we benefit
         // from priority sorting later
         if let Some(all_rule_builders) = all_rule_builders {
-            for rule_builders in self.rule_builders.values_mut() {
-                for all_rule_builder in &all_rule_builders {
-                    rule_builders.push(all_rule_builder.clone());
-                }
+            let all_modes = self.mode_ids.keys().cloned().collect::<Vec<_>>();
+
+            for mode in all_modes {
+                let mode_value = match mode {
+                    ir::ApplyTemplatesModeValue::Named(name) => ir::ModeValue::Named(name),
+                    ir::ApplyTemplatesModeValue::Unnamed => ir::ModeValue::Unnamed,
+                    ir::ApplyTemplatesModeValue::Current => continue,
+                };
+                self.rule_builders
+                    .entry(mode_value)
+                    .or_default()
+                    .extend(all_rule_builders.iter().cloned());
             }
         }
 

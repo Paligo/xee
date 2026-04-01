@@ -37,7 +37,9 @@ fn simple_content(
     Ok(s)
 }
 
-#[xpath_fn("fn:group-by-first($seq as item()*, $key as function(item()) as xs:anyAtomicType*) as item()*")]
+#[xpath_fn(
+    "fn:group-by-first($seq as item()*, $key as function(item()) as xs:anyAtomicType*) as item()*"
+)]
 fn group_by_first(
     interpreter: &mut Interpreter,
     seq: &sequence::Sequence,
@@ -103,7 +105,10 @@ fn simple_content_text_nodes(
 }
 
 pub(crate) fn static_function_descriptions() -> Vec<StaticFunctionDescription> {
-    vec![wrap_xpath_fn!(simple_content), wrap_xpath_fn!(group_by_first)]
+    vec![
+        wrap_xpath_fn!(simple_content),
+        wrap_xpath_fn!(group_by_first),
+    ]
 }
 
 #[cfg(test)]

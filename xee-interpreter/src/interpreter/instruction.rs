@@ -320,10 +320,7 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
             let sequence_type_id = u16::from_le_bytes([bytes[1], bytes[2]]);
             let error_id = u16::from_le_bytes([bytes[3], bytes[4]]);
             (
-                Instruction::ConvertSequence(
-                    sequence_type_id,
-                    RaisedError::from_u16(error_id),
-                ),
+                Instruction::ConvertSequence(sequence_type_id, RaisedError::from_u16(error_id)),
                 5,
             )
         }

@@ -1387,7 +1387,9 @@ fn expr_value_uses_name(expr: &ir::Expr, name: &ir::Name) -> bool {
             .iter()
             .any(|(key, value)| atom_uses_name(key, name) || atom_uses_name(value, name)),
         ir::Expr::ArrayConstructor(array_constructor) => match array_constructor {
-            ir::ArrayConstructor::Square(atoms) => atoms.iter().any(|atom| atom_uses_name(atom, name)),
+            ir::ArrayConstructor::Square(atoms) => {
+                atoms.iter().any(|atom| atom_uses_name(atom, name))
+            }
             ir::ArrayConstructor::Curly(atom) => atom_uses_name(atom, name),
         },
         ir::Expr::XmlName(xml_name) => {
@@ -1440,15 +1442,12 @@ fn expr_value_is_effect_free(expr: &ir::Expr) -> bool {
         ir::Expr::Binary(_) => true,
         ir::Expr::Unary(_) => true,
         ir::Expr::FunctionDefinition(function_definition) => {
-            function_definition
-                .params
-                .iter()
-                .all(|param| {
-                    param.default
-                        .as_ref()
-                        .is_none_or(|expr| expr_value_is_effect_free(expr))
-                })
-                && expr_is_effect_free(&function_definition.body)
+            function_definition.params.iter().all(|param| {
+                param
+                    .default
+                    .as_ref()
+                    .is_none_or(|expr| expr_value_is_effect_free(expr))
+            }) && expr_is_effect_free(&function_definition.body)
         }
         ir::Expr::FunctionCall(_) => true,
         ir::Expr::Lookup(_) => true,
@@ -1476,7 +1475,9 @@ fn expr_value_is_effect_free(expr: &ir::Expr) -> bool {
                 .all(|param| expr_is_effect_free(&param.value))
                 && expr_is_effect_free(&iterate_let_next.return_expr)
         }
-        ir::Expr::PatternPredicate(pattern_predicate) => expr_is_effect_free(&pattern_predicate.expr),
+        ir::Expr::PatternPredicate(pattern_predicate) => {
+            expr_is_effect_free(&pattern_predicate.expr)
+        }
         ir::Expr::Quantified(quantified) => expr_is_effect_free(&quantified.satisifies_expr),
         ir::Expr::Cast(_) => true,
         ir::Expr::Castable(_) => true,
@@ -1510,11 +1511,12 @@ fn function_definition_uses_name(
     function_definition: &ir::FunctionDefinition,
     name: &ir::Name,
 ) -> bool {
-    function_definition
-        .params
-        .iter()
-        .any(|param| param.default.as_ref().is_some_and(|expr| expr_value_uses_name(expr, name)))
-        || expr_uses_name(&function_definition.body, name)
+    function_definition.params.iter().any(|param| {
+        param
+            .default
+            .as_ref()
+            .is_some_and(|expr| expr_value_uses_name(expr, name))
+    }) || expr_uses_name(&function_definition.body, name)
 }
 
 fn with_param_uses_name(with_param: &ir::WithParam, name: &ir::Name) -> bool {

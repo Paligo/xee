@@ -75,6 +75,15 @@ impl Sequence {
             let a_atom = a_atom?;
             if let Some(b_atom) = b_atom {
                 let b_atom = b_atom?;
+                if a_atom.is_nan() && b_atom.is_nan() {
+                    continue;
+                }
+                if a_atom.is_nan() {
+                    return Ok(Ordering::Less);
+                }
+                if b_atom.is_nan() {
+                    return Ok(Ordering::Greater);
+                }
                 let ordering = a_atom.fallible_compare(&b_atom, collation, implicit_offset)?;
                 if !ordering.is_eq() {
                     return Ok(ordering);
