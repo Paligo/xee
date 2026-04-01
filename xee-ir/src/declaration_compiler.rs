@@ -155,11 +155,15 @@ impl<'a> DeclarationCompiler<'a> {
     fn mode_declaration(mode: &ir::Mode) -> xee_interpreter::declaration::ModeDeclaration {
         xee_interpreter::declaration::ModeDeclaration {
             on_no_match: match mode.on_no_match {
-                ir::ModeOnNoMatch::DeepCopy => xee_interpreter::declaration::ModeOnNoMatch::DeepCopy,
+                ir::ModeOnNoMatch::DeepCopy => {
+                    xee_interpreter::declaration::ModeOnNoMatch::DeepCopy
+                }
                 ir::ModeOnNoMatch::ShallowCopy => {
                     xee_interpreter::declaration::ModeOnNoMatch::ShallowCopy
                 }
-                ir::ModeOnNoMatch::DeepSkip => xee_interpreter::declaration::ModeOnNoMatch::DeepSkip,
+                ir::ModeOnNoMatch::DeepSkip => {
+                    xee_interpreter::declaration::ModeOnNoMatch::DeepSkip
+                }
                 ir::ModeOnNoMatch::ShallowSkip => {
                     xee_interpreter::declaration::ModeOnNoMatch::ShallowSkip
                 }

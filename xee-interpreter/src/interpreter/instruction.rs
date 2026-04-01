@@ -547,7 +547,10 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
             bytes.extend_from_slice(&mode_id.to_le_bytes());
             bytes.push(u8::from(builtin_template_params_passthrough));
         }
-        Instruction::ApplyTemplatesCurrent(fallback_mode_id, builtin_template_params_passthrough) => {
+        Instruction::ApplyTemplatesCurrent(
+            fallback_mode_id,
+            builtin_template_params_passthrough,
+        ) => {
             bytes.push(EncodedInstruction::ApplyTemplatesCurrent.to_u8().unwrap());
             bytes.extend_from_slice(&fallback_mode_id.to_le_bytes());
             bytes.push(u8::from(builtin_template_params_passthrough));

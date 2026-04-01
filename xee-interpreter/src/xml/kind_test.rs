@@ -1,6 +1,6 @@
 use xee_schema_type::Xs;
-use xot::Xot;
 use xot::xmlname::NameStrInfo;
+use xot::Xot;
 
 use xee_xpath_ast::ast;
 
@@ -31,11 +31,7 @@ pub(crate) fn kind_test(kind_test: &ast::KindTest, xot: &Xot, node: xot::Node) -
     }
 }
 
-fn processing_instruction_name_test(
-    pi_test: &ast::PITest,
-    xot: &Xot,
-    node: xot::Node,
-) -> bool {
+fn processing_instruction_name_test(pi_test: &ast::PITest, xot: &Xot, node: xot::Node) -> bool {
     let processing_instruction = xot.processing_instruction(node).unwrap();
     let (target, _) = xot.name_ns_str(processing_instruction.target());
     let expected = match pi_test {
@@ -61,7 +57,9 @@ fn schema_element_test(test: &ast::SchemaElementTest, xot: &Xot, node: xot::Node
 }
 
 fn schema_attribute_test(test: &ast::SchemaAttributeTest, xot: &Xot, node: xot::Node) -> bool {
-    named_node_test(&test.name, xot, node, |node, xot| xot.is_attribute_node(node))
+    named_node_test(&test.name, xot, node, |node, xot| {
+        xot.is_attribute_node(node)
+    })
 }
 
 fn document_test(test: Option<&ast::DocumentTest>, xot: &Xot, node: xot::Node) -> bool {

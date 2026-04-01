@@ -719,7 +719,10 @@ fn test_mode_on_no_match_shallow_copy_preserves_attributes() {
     )
     .unwrap();
 
-    assert_eq!(xml(&xot, output), "<out><doc a=\"1\"><child>text</child></doc></out>");
+    assert_eq!(
+        xml(&xot, output),
+        "<out><doc a=\"1\"><child>text</child></doc></out>"
+    );
 }
 
 #[test]
@@ -791,7 +794,10 @@ fn test_document_instruction_satisfies_item_return_type() {
     )
     .unwrap();
 
-    assert_eq!(xml(&xot, output), "<out><my:item xmlns:my=\"http://uri.test\">1</my:item></out>");
+    assert_eq!(
+        xml(&xot, output),
+        "<out><my:item xmlns:my=\"http://uri.test\">1</my:item></out>"
+    );
 }
 
 #[test]

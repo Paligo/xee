@@ -1162,14 +1162,17 @@ impl InstructionParser for ast::NamespaceAlias {
 
     fn parse(content: &Content, attributes: &Attributes) -> Result<Self> {
         let names = &content.state.names;
-        let stylesheet_prefix = attributes
-            .required(names.stylesheet_prefix, attributes.prefix_or_default())?;
-        let result_prefix = attributes
-            .required(names.result_prefix, attributes.prefix_or_default())?;
+        let stylesheet_prefix =
+            attributes.required(names.stylesheet_prefix, attributes.prefix_or_default())?;
+        let result_prefix =
+            attributes.required(names.result_prefix, attributes.prefix_or_default())?;
         let namespaces = content.context.namespaces(content.state);
         Ok(ast::NamespaceAlias {
-            stylesheet_namespace: resolve_prefix_or_default_namespace(&stylesheet_prefix, &namespaces)
-                .unwrap_or_default(),
+            stylesheet_namespace: resolve_prefix_or_default_namespace(
+                &stylesheet_prefix,
+                &namespaces,
+            )
+            .unwrap_or_default(),
             result_namespace: resolve_prefix_or_default_namespace(&result_prefix, &namespaces)
                 .unwrap_or_default(),
             stylesheet_prefix,
