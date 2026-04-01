@@ -547,11 +547,21 @@ pub enum Error {
     /// precedence, unless it also contains another binding with the same name
     /// and higher import precedence.
     XTSE0010,
+    /// Invalid value for an XSLT-defined attribute.
+    ///
+    /// It is a static error if an attribute defined for an XSLT instruction
+    /// has a value that is not one of the permitted values.
+    XTSE0020,
     /// Required global parameter not supplied.
     ///
     /// It is a dynamic error if a stylesheet parameter is declared with
     /// required="yes" and no value is supplied.
     XTDE0050,
+    /// Attribute not permitted on an XSLT element.
+    ///
+    /// It is a static error if an XSLT element has an attribute that is not
+    /// permitted for that instruction.
+    XTSE0090,
     /// Duplicate local parameter name.
     ///
     /// It is a static error if two xsl:param declarations within the same

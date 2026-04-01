@@ -343,7 +343,10 @@ pub(crate) trait PredicateMatcher {
     }
 
     fn matches_kind_test(kind_test: &KindTest, node: xot::Node, xot: &Xot) -> bool {
-        xml::kind_test(kind_test, xot, node)
+        match kind_test {
+            KindTest::Any => !xot.is_document(node),
+            _ => xml::kind_test(kind_test, xot, node),
+        }
     }
 }
 
@@ -668,6 +671,7 @@ mod tests {
     fn test_matches_kind_test_any() {
         let mut xot = Xot::new();
         let root = xot.parse(r#"<root><foo bar="BAR" /></root>"#).unwrap();
+        let document_item: Item = root.into();
         let document_element = xot.document_element(root).unwrap();
         let node = xot.first_child(document_element).unwrap();
         let element_node = node;
@@ -681,6 +685,7 @@ mod tests {
 
         let mut pm = BasicPredicateMatcher::new(&xot);
         let pattern = parse_pattern("node()");
+    assert!(!pm.matches(&pattern, &document_item));
         assert!(pm.matches(&pattern, &element_item));
         assert!(!pm.matches(&pattern, &attribute_item));
         let pattern = parse_pattern("attribute::node()");

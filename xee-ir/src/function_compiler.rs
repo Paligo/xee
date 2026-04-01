@@ -103,6 +103,9 @@ impl<'a> FunctionCompiler<'a> {
             ir::Expr::ApplyTemplates(apply_templates) => {
                 self.compile_apply_templates(apply_templates, span)
             }
+            ir::Expr::ContinueTemplate(continue_template) => {
+                self.compile_continue_template(continue_template, span)
+            }
             ir::Expr::CallTemplate(call_template) => {
                 self.compile_call_template(call_template, span)
             }
@@ -194,6 +197,10 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn compile_let(&mut self, let_: &ir::Let, span: SourceSpan) -> error::SpannedResult<()> {
+        if !expr_uses_name(&let_.return_expr, &let_.name) {
+            return self.compile_expr(&let_.return_expr);
+        }
+
         self.compile_expr(&let_.var_expr)?;
         self.scopes.push_name(&let_.name);
         self.compile_expr(&let_.return_expr)?;
@@ -1206,6 +1213,30 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn compile_continue_template(
+        &mut self,
+        continue_template: &ir::ContinueTemplate,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        self.compile_with_param_map(
+            continue_template
+                .params
+                .iter()
+                .filter(|with_param| !with_param.tunnel),
+            span,
+        )?;
+        self.compile_with_param_map(
+            continue_template
+                .params
+                .iter()
+                .filter(|with_param| with_param.tunnel),
+            span,
+        )?;
+
+        self.builder.emit(Instruction::ContinueTemplate, span);
+        Ok(())
+    }
+
     fn compile_copy_shallow(
         &mut self,
         copy_shallow: &ir::CopyShallow,
@@ -1271,4 +1302,152 @@ impl<'a> FunctionCompiler<'a> {
         self.builder.patch_jump(is_not_numeric);
         Ok(())
     }
+}
+
+fn expr_uses_name(expr: &ir::ExprS, name: &ir::Name) -> bool {
+    expr_value_uses_name(&expr.value, name)
+}
+
+fn expr_value_uses_name(expr: &ir::Expr, name: &ir::Name) -> bool {
+    match expr {
+        ir::Expr::Atom(atom) => atom_uses_name(atom, name),
+        ir::Expr::Let(let_) => {
+            expr_uses_name(&let_.var_expr, name) || expr_uses_name(&let_.return_expr, name)
+        }
+        ir::Expr::If(if_) => {
+            atom_uses_name(&if_.condition, name)
+                || expr_uses_name(&if_.then, name)
+                || expr_uses_name(&if_.else_, name)
+        }
+        ir::Expr::Binary(binary) => {
+            atom_uses_name(&binary.left, name) || atom_uses_name(&binary.right, name)
+        }
+        ir::Expr::Unary(unary) => atom_uses_name(&unary.atom, name),
+        ir::Expr::FunctionDefinition(function_definition) => {
+            function_definition_uses_name(function_definition, name)
+        }
+        ir::Expr::FunctionCall(function_call) => {
+            atom_uses_name(&function_call.atom, name)
+                || function_call
+                    .args
+                    .iter()
+                    .any(|arg| atom_uses_name(arg, name))
+        }
+        ir::Expr::Lookup(lookup) => {
+            atom_uses_name(&lookup.atom, name) || atom_uses_name(&lookup.arg_atom, name)
+        }
+        ir::Expr::WildcardLookup(wildcard_lookup) => atom_uses_name(&wildcard_lookup.atom, name),
+        ir::Expr::Step(step) => atom_uses_name(&step.context, name),
+        ir::Expr::Deduplicate(expr) => expr_uses_name(expr, name),
+        ir::Expr::Map(map) => {
+            atom_uses_name(&map.var_atom, name) || expr_uses_name(&map.return_expr, name)
+        }
+        ir::Expr::Filter(filter) => {
+            atom_uses_name(&filter.var_atom, name) || expr_uses_name(&filter.return_expr, name)
+        }
+        ir::Expr::Iterate(iterate) => {
+            atom_uses_name(&iterate.var_atom, name)
+                || iterate
+                    .params
+                    .iter()
+                    .any(|param| expr_uses_name(&param.value, name))
+                || expr_uses_name(&iterate.expr, name)
+                || iterate
+                    .on_complete
+                    .as_ref()
+                    .is_some_and(|expr| expr_uses_name(expr, name))
+        }
+        ir::Expr::IterateBreak(iterate_break) => expr_uses_name(&iterate_break.return_expr, name),
+        ir::Expr::IterateLetNext(iterate_let_next) => {
+            iterate_let_next
+                .params
+                .iter()
+                .any(|param| expr_uses_name(&param.value, name))
+                || expr_uses_name(&iterate_let_next.return_expr, name)
+        }
+        ir::Expr::PatternPredicate(pattern_predicate) => {
+            atom_uses_name(&pattern_predicate.var_atom, name)
+                || expr_uses_name(&pattern_predicate.expr, name)
+        }
+        ir::Expr::Quantified(quantified) => {
+            atom_uses_name(&quantified.var_atom, name)
+                || expr_uses_name(&quantified.satisifies_expr, name)
+        }
+        ir::Expr::Cast(cast) => atom_uses_name(&cast.atom, name),
+        ir::Expr::Castable(castable) => atom_uses_name(&castable.atom, name),
+        ir::Expr::InstanceOf(instance_of) => atom_uses_name(&instance_of.atom, name),
+        ir::Expr::Treat(treat) => atom_uses_name(&treat.atom, name),
+        ir::Expr::ConvertSequence(convert_sequence) => atom_uses_name(&convert_sequence.atom, name),
+        ir::Expr::MapConstructor(map_constructor) => map_constructor
+            .members
+            .iter()
+            .any(|(key, value)| atom_uses_name(key, name) || atom_uses_name(value, name)),
+        ir::Expr::ArrayConstructor(array_constructor) => match array_constructor {
+            ir::ArrayConstructor::Square(atoms) => atoms.iter().any(|atom| atom_uses_name(atom, name)),
+            ir::ArrayConstructor::Curly(atom) => atom_uses_name(atom, name),
+        },
+        ir::Expr::XmlName(xml_name) => {
+            atom_uses_name(&xml_name.local_name, name) || atom_uses_name(&xml_name.namespace, name)
+        }
+        ir::Expr::XmlDocument(_) => false,
+        ir::Expr::XmlElement(element) => atom_uses_name(&element.name, name),
+        ir::Expr::XmlAttribute(attribute) => {
+            atom_uses_name(&attribute.name, name) || atom_uses_name(&attribute.value, name)
+        }
+        ir::Expr::XmlNamespace(namespace) => {
+            atom_uses_name(&namespace.prefix, name) || atom_uses_name(&namespace.namespace, name)
+        }
+        ir::Expr::XmlText(text) => atom_uses_name(&text.value, name),
+        ir::Expr::XmlComment(comment) => atom_uses_name(&comment.value, name),
+        ir::Expr::XmlProcessingInstruction(processing_instruction) => {
+            atom_uses_name(&processing_instruction.target, name)
+                || atom_uses_name(&processing_instruction.content, name)
+        }
+        ir::Expr::XmlAppend(xml_append) => {
+            atom_uses_name(&xml_append.parent, name) || atom_uses_name(&xml_append.child, name)
+        }
+        ir::Expr::ApplyTemplates(apply_templates) => {
+            atom_uses_name(&apply_templates.select, name)
+                || apply_templates
+                    .params
+                    .iter()
+                    .any(|param| with_param_uses_name(param, name))
+        }
+        ir::Expr::ContinueTemplate(continue_template) => continue_template
+            .params
+            .iter()
+            .any(|param| with_param_uses_name(param, name)),
+        ir::Expr::CallTemplate(call_template) => call_template
+            .params
+            .iter()
+            .any(|param| with_param_uses_name(param, name)),
+        ir::Expr::CopyShallow(copy_shallow) => atom_uses_name(&copy_shallow.select, name),
+        ir::Expr::CopyDeep(copy_deep) => atom_uses_name(&copy_deep.select, name),
+    }
+}
+
+fn atom_uses_name(atom: &ir::AtomS, name: &ir::Name) -> bool {
+    matches!(&atom.value, ir::Atom::Variable(variable_name) if variable_name == name)
+}
+
+fn function_definition_uses_name(
+    function_definition: &ir::FunctionDefinition,
+    name: &ir::Name,
+) -> bool {
+    function_definition
+        .params
+        .iter()
+        .any(|param| param.default.as_ref().is_some_and(|expr| expr_value_uses_name(expr, name)))
+        || expr_uses_name(&function_definition.body, name)
+}
+
+fn with_param_uses_name(with_param: &ir::WithParam, name: &ir::Name) -> bool {
+    with_param
+        .select
+        .as_ref()
+        .is_some_and(|select| atom_uses_name(select, name))
+        || with_param
+            .sequence_constructor
+            .as_ref()
+            .is_some_and(|expr| expr_uses_name(expr, name))
 }

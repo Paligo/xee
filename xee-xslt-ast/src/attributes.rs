@@ -133,6 +133,7 @@ impl<'a> Attributes<'a> {
     }
 
     fn _boolean(s: &str, span: Span) -> Result<bool, AttributeError> {
+        let s = s.trim();
         match s {
             "yes" | "true" | "1" => Ok(true),
             "no" | "false" | "0" => Ok(false),
@@ -975,6 +976,7 @@ impl<'a> Attributes<'a> {
     }
 
     fn _standalone(s: &str, _span: Span) -> Result<ast::Standalone, AttributeError> {
+        let s = s.trim();
         match s {
             "yes" | "1" | "true" => Ok(ast::Standalone::Bool(true)),
             "no" | "0" | "false" => Ok(ast::Standalone::Bool(false)),
@@ -1060,6 +1062,8 @@ impl<'a> Attributes<'a> {
 
     fn _new_each_time(s: &str, span: Span) -> Result<ast::NewEachTime, AttributeError> {
         use ast::NewEachTime::*;
+
+        let s = s.trim();
 
         match s {
             "yes" | "1" | "true" => Ok(Yes),

@@ -58,6 +58,7 @@ pub enum Expr {
     XmlProcessingInstruction(XmlProcessingInstruction),
     XmlAppend(XmlAppend),
     ApplyTemplates(ApplyTemplates),
+    ContinueTemplate(ContinueTemplate),
     CallTemplate(CallTemplate),
     CopyShallow(CopyShallow),
     CopyDeep(CopyDeep),
@@ -348,6 +349,11 @@ pub struct ApplyTemplates {
     pub mode: ApplyTemplatesModeValue,
     pub select: AtomS,
     pub builtin_template_params_passthrough: bool,
+    pub params: Vec<WithParam>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ContinueTemplate {
     pub params: Vec<WithParam>,
 }
 

@@ -40,6 +40,19 @@ impl<V: Clone> ModeLookup<V> {
         pattern_lookup.lookup(&mut matches)
     }
 
+    pub(crate) fn lookup_after(
+        &self,
+        mode: ModeId,
+        current: &V,
+        mut matches: impl FnMut(&Pattern<function::InlineFunctionId>) -> bool,
+    ) -> Option<&V>
+    where
+        V: PartialEq,
+    {
+        let pattern_lookup = self.modes.get(&mode)?;
+        pattern_lookup.lookup_after(current, &mut matches)
+    }
+
     pub fn add_rules(
         &mut self,
         mode: ModeId,

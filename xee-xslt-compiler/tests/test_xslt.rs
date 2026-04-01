@@ -84,6 +84,34 @@ fn test_transform_nested_apply_templates() {
 }
 
 #[test]
+fn test_match_node_pattern_does_not_capture_initial_document_node() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc>\n  <child1>This is the child number 1.</child1>\n</doc>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+  <xsl:template match="doc">
+    <out>
+      <xsl:apply-templates select="node()" mode="mode1"/>
+    </out>
+  </xsl:template>
+
+  <xsl:template match="node()" mode="mode1">
+    <xsl:value-of select="."/>
+  </xsl:template>
+
+  <xsl:template match="node()">
+    This test failed to execute properly.
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>\n  This is the child number 1.\n</out>");
+}
+
+#[test]
 fn test_apply_templates_sort_with_param() {
     let mut xot = Xot::new();
     let output = evaluate(
@@ -121,6 +149,72 @@ fn test_apply_templates_sort_with_param() {
         xml(&xot, output),
         "<out><list from=\"3rd\" proportion=\"172/920\">16,45,78,33,</list><list from=\"1st\" proportion=\"217/920\">35,44,12,98,28,</list><list from=\"2nd\" proportion=\"531/920\">62,440,29,</list></out>"
     );
+}
+
+#[test]
+fn test_whitespace_padded_required_attribute_values() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:template match="doc">
+    <out>
+      <xsl:call-template name="foo">
+        <xsl:with-param name="par1" select="'required'"/>
+        <xsl:with-param name="par2" select="'notRequired'"/>
+      </xsl:call-template>
+    </out>
+  </xsl:template>
+
+  <xsl:template name="foo">
+    <xsl:param name="par1" required=" true "/>
+    <xsl:param name="par2" required=" 0 "/>
+    <xsl:if test="$par1 = 'required'">
+      <xsl:text>Required parameter;</xsl:text>
+    </xsl:if>
+    <xsl:if test="$par2 = 'notRequired'">
+      <xsl:text>Not required parameter</xsl:text>
+    </xsl:if>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+
+    assert_eq!(
+        xml(&xot, output),
+        "<out>Required parameter;Not required parameter</out>"
+    );
+}
+
+#[test]
+fn test_next_match_with_param_falls_back_to_builtin_rule() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><data><inner><in><last>abc</last></in></inner></data></doc>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+  <xsl:template match="doc">
+    <out>
+      <xsl:next-match>
+        <xsl:with-param name="par1" select="'hola'"/>
+      </xsl:next-match>
+    </out>
+  </xsl:template>
+
+  <xsl:template match="data">
+    <xsl:variable name="par1" select="'defaultValue'"/>
+    <xsl:value-of select="$par1"/>
+  </xsl:template>
+
+  <xsl:template match="text()"/>
+</xsl:transform>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>defaultValue</out>");
 }
 
 #[test]
@@ -448,6 +542,73 @@ fn test_duplicate_local_template_params_are_rejected() {
     ));
 }
 
+  #[test]
+  fn test_missing_name_attribute_reports_xtse0010() {
+    let output = parse(
+      StaticContext::default(),
+      r#"
+  <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+    <xsl:variable select="'ABC'"/>
+  </xsl:transform>"#,
+    );
+
+    assert!(matches!(
+      output,
+      error::SpannedResult::Err(error::SpannedError {
+        error: error::Error::XTSE0010,
+        span: _
+      })
+    ));
+  }
+
+  #[test]
+  fn test_disallowed_with_param_attribute_reports_xtse0090() {
+    let output = parse(
+      StaticContext::default(),
+      r#"
+  <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+    <xsl:template match="/">
+    <xsl:call-template name="temp1">
+      <xsl:with-param name="par" select="'xyz'" required="yes"/>
+    </xsl:call-template>
+    </xsl:template>
+
+    <xsl:template name="temp1">
+    <xsl:param name="par"/>
+    </xsl:template>
+  </xsl:transform>"#,
+    );
+
+    assert!(matches!(
+      output,
+      error::SpannedResult::Err(error::SpannedError {
+        error: error::Error::XTSE0090,
+        span: _
+      })
+    ));
+  }
+
+  #[test]
+  fn test_invalid_required_attribute_value_reports_xtse0020() {
+    let output = parse(
+      StaticContext::default(),
+      r#"
+  <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+    <xsl:template name="foo">
+    <xsl:param name="par1" required="TRUE"/>
+    </xsl:template>
+  </xsl:transform>"#,
+    );
+
+    assert!(matches!(
+      output,
+      error::SpannedResult::Err(error::SpannedError {
+        error: error::Error::XTSE0020,
+        span: _
+      })
+    ));
+  }
+
 #[test]
 fn test_pattern_predicate_position_ignores_whitespace_text_nodes() {
     let mut xot = Xot::new();
@@ -653,6 +814,36 @@ fn test_transform_local_variable_from_sequence_constructor() {
     .unwrap();
 
     assert_eq!(xml(&xot, output), "<o>B</o>");
+}
+
+#[test]
+fn test_unused_local_variable_does_not_trigger_global_circularity() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:my="http://www.my.com"
+               xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+               version="2.0">
+  <xsl:variable name="x" select="my:func(1)"/>
+
+  <xsl:function name="my:func">
+    <xsl:param name="a"/>
+    <xsl:variable name="b" select="$x"/>
+    <xsl:sequence select="$a + 2"/>
+  </xsl:function>
+
+  <xsl:template match="/doc">
+    <out>
+      <xsl:value-of select="$x"/>
+    </out>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>3</out>");
 }
 
 #[test]

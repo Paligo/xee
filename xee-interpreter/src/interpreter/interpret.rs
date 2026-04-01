@@ -33,6 +33,7 @@ pub struct Interpreter<'a> {
     pub(crate) state: State<'a>,
     global_variables: Vec<GlobalValueState>,
     tunnel_params: Vec<function::Map>,
+    mode_stack: Vec<pattern::ModeId>,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +69,7 @@ impl<'a> Interpreter<'a> {
                 runnable.program().declarations.global_variables.len()
             ],
             tunnel_params: vec![function::Map::new(Vec::new()).unwrap()],
+            mode_stack: Vec::new(),
         }
     }
 
@@ -720,6 +722,12 @@ impl<'a> Interpreter<'a> {
                         &tunnel_params,
                         builtin_template_params_passthrough,
                     )?;
+                    self.state.push(value);
+                }
+                EncodedInstruction::ContinueTemplate => {
+                    let tunnel_params = self.state.pop()?.one()?.to_map()?;
+                    let params = self.state.pop()?.one()?.to_map()?;
+                    let value = self.continue_template_with_params(&params, &tunnel_params)?;
                     self.state.push(value);
                 }
                 EncodedInstruction::RaiseError => {
@@ -1416,7 +1424,8 @@ impl<'a> Interpreter<'a> {
         if let Some(function_id) = function_id {
             let position: IBig = (position + 1).into();
             let function = function::InlineFunctionData::new(function_id, Vec::new()).into();
-            self.call_template_with_params(
+            self.mode_stack.push(mode);
+            let result = self.call_template_with_params(
                 &function,
                 [
                     Some(item.into()),
@@ -1425,8 +1434,9 @@ impl<'a> Interpreter<'a> {
                 ],
                 params,
                 tunnel_params,
-            )
-            .map(Some)
+            );
+            self.mode_stack.pop();
+            result.map(Some)
         } else {
             self.apply_builtin_template_rule(
                 mode,
@@ -1580,6 +1590,60 @@ impl<'a> Interpreter<'a> {
             .mode_lookup
             .lookup(mode, |pattern| self.matches(pattern, item))
             .copied()
+    }
+
+    fn lookup_pattern_after(
+        &mut self,
+        mode: pattern::ModeId,
+        current: function::InlineFunctionId,
+        item: &sequence::Item,
+    ) -> Option<function::InlineFunctionId> {
+        self.runnable
+            .program()
+            .declarations
+            .mode_lookup
+            .lookup_after(mode, &current, |pattern| self.matches(pattern, item))
+            .copied()
+    }
+
+    fn continue_template_with_params(
+        &mut self,
+        params: &function::Map,
+        tunnel_params: &function::Map,
+    ) -> error::Result<sequence::Sequence> {
+        let mode = *self.mode_stack.last().ok_or_else(|| {
+            error::Error::Unsupported(
+                "No current apply-templates mode for template continuation".to_string(),
+            )
+        })?;
+        let base = self.state.frame().base();
+        let item_sequence: sequence::Sequence = (&self.state.stack()[base]).try_into()?;
+        let item = item_sequence.one()?;
+        let position_sequence: sequence::Sequence = (&self.state.stack()[base + 1]).try_into()?;
+        let position = position_sequence.one()?.try_into_value::<IBig>()?;
+        let size_sequence: sequence::Sequence = (&self.state.stack()[base + 2]).try_into()?;
+        let size = size_sequence.one()?.try_into_value::<IBig>()?;
+        let current_function = self.state.frame().function();
+
+        if let Some(function_id) = self.lookup_pattern_after(mode, current_function, &item) {
+            let function = function::InlineFunctionData::new(function_id, Vec::new()).into();
+            self.mode_stack.push(mode);
+            let result = self.call_template_with_params(
+                &function,
+                [
+                    Some(item.clone().into()),
+                    Some(atomic::Atomic::from(position).into()),
+                    Some(atomic::Atomic::from(size).into()),
+                ],
+                params,
+                tunnel_params,
+            );
+            self.mode_stack.pop();
+            result
+        } else {
+            self.apply_builtin_template_rule(mode, item, params, tunnel_params, true)
+                .map(|value| value.unwrap_or_default())
+        }
     }
 
     // The interpreter can return an error for any byte code, in any level of

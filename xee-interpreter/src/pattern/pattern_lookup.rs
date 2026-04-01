@@ -67,4 +67,28 @@ impl<V: Clone> PatternLookup<V> {
             .find(|(pattern, _)| matches(pattern))
             .map(|(_, value)| value)
     }
+
+    pub(crate) fn lookup_after(
+        &self,
+        current: &V,
+        mut matches: impl FnMut(&Pattern<function::InlineFunctionId>) -> bool,
+    ) -> Option<&V>
+    where
+        V: PartialEq,
+    {
+        let mut seen_current = false;
+        for (pattern, value) in &self.patterns {
+            if !matches(pattern) {
+                continue;
+            }
+            if !seen_current {
+                if value == current {
+                    seen_current = true;
+                }
+                continue;
+            }
+            return Some(value);
+        }
+        None
+    }
 }

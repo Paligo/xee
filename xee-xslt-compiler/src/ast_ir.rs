@@ -11,7 +11,11 @@ use xee_interpreter::{
 };
 use xee_ir::{compile_xslt, ir, Bindings, Variables};
 use xee_xpath_ast::{ast as xpath_ast, pattern::transform_pattern, span::Spanned};
-use xee_xslt_ast::{ast, error::ElementError, parse_transform};
+use xee_xslt_ast::{
+    ast,
+    error::{AttributeError, ElementError},
+    parse_transform,
+};
 use xot::xmlname::{NameStrInfo, OwnedName};
 
 use crate::priority::default_priority;
@@ -47,17 +51,8 @@ pub fn parse_with_base_dir(
     // TODO: better error handling
     let mut transform = match transform {
         Ok(transform) => transform,
-        Err(ElementError::Unexpected { span }) => {
-            let text = xslt.get(span.start..span.end);
-            return Err(error::Error::Unsupported(format!(
-                "Failed parsing XSLT, Unexpected {} {:?}",
-                text.unwrap_or_default(),
-                span
-            ))
-            .into());
-        }
         Err(e) => {
-            return Err(error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", e)).into());
+            return Err(map_parse_error(xslt, e));
         }
     };
 
@@ -67,6 +62,33 @@ pub fn parse_with_base_dir(
         process_imports_and_includes(transform.declarations, base_dir, &mut visited)?;
 
     compile(transform, static_context)
+}
+
+fn map_parse_error(xslt: &str, error: ElementError) -> error::SpannedError {
+    match error {
+        ElementError::Attribute(attribute_error) => match attribute_error {
+            AttributeError::NotFound { span, .. } => error::SpannedError {
+                error: error::Error::XTSE0010,
+                span: Some((span.start..span.end).into()),
+            },
+            AttributeError::Unexpected { span, .. } => error::SpannedError {
+                error: error::Error::XTSE0090,
+                span: Some((span.start..span.end).into()),
+            },
+            AttributeError::Invalid { span, .. } | AttributeError::InvalidEqName { span, .. } => {
+                error::SpannedError {
+                    error: error::Error::XTSE0020,
+                    span: Some((span.start..span.end).into()),
+                }
+            }
+            other => error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", other)).into(),
+        },
+        ElementError::Unexpected { span } => {
+            let text = xslt.get(span.start..span.end).unwrap_or_default();
+            error::Error::Unsupported(format!("Failed parsing XSLT, Unexpected {} {:?}", text, span)).into()
+        }
+        other => error::Error::Unsupported(format!("Failed parsing XSLT: {:?}", other)).into(),
+    }
 }
 
 fn process_imports_and_includes(
@@ -997,6 +1019,7 @@ impl<'a> IrConverter<'a> {
         use ast::SequenceConstructorInstruction::*;
         match instruction {
             ApplyTemplates(apply_templates) => self.apply_templates(apply_templates),
+            ApplyImports(apply_imports) => self.apply_imports(apply_imports),
             CallTemplate(call_template) => self.call_template(call_template),
             ValueOf(value_of) => self.value_of(value_of),
             If(if_) => self.if_(if_),
@@ -1005,6 +1028,7 @@ impl<'a> IrConverter<'a> {
             ForEachGroup(for_each_group) => self.for_each_group(for_each_group),
             Iterate(iterate) => self.iterate(iterate),
             NextIteration(next_iteration) => self.next_iteration(next_iteration),
+            NextMatch(next_match) => self.next_match(next_match),
             Break(break_) => self.break_(break_),
             Copy(copy) => self.copy(copy),
             CopyOf(copy_of) => self.copy_of(copy_of),
@@ -1223,6 +1247,56 @@ impl<'a> IrConverter<'a> {
                     .builtin_template_params_passthrough,
                 params,
             }),
+        ))
+    }
+
+    fn apply_imports(
+        &mut self,
+        apply_imports: &ast::ApplyImports,
+    ) -> error::SpannedResult<Bindings> {
+        self.continue_template(apply_imports.with_params.iter())
+    }
+
+    fn next_match(
+        &mut self,
+        next_match: &ast::NextMatch,
+    ) -> error::SpannedResult<Bindings> {
+        self.continue_template(next_match.content.iter().filter_map(|content| match content {
+            ast::NextMatchContent::WithParam(with_param) => Some(with_param),
+            ast::NextMatchContent::Fallback(_) => None,
+        }))
+    }
+
+    fn continue_template<'b>(
+        &mut self,
+        with_params: impl Iterator<Item = &'b ast::WithParam>,
+    ) -> error::SpannedResult<Bindings> {
+        let mut params = Vec::new();
+        let mut param_bindings = Bindings::empty();
+
+        for with_param in with_params {
+            let (select_atom, select_bindings) = if let Some(select) = &with_param.select {
+                let (atom, bindings) = self.expression(select)?.atom_bindings();
+                (Some(atom), bindings)
+            } else {
+                let sc_bindings = self.sequence_constructor(&with_param.sequence_constructor)?;
+                let (atom, bindings) = sc_bindings.atom_bindings();
+                (Some(atom), bindings)
+            };
+
+            param_bindings = param_bindings.concat(select_bindings);
+
+            params.push(ir::WithParam {
+                name: ir::Name::new(with_param.name.local_name().to_string()),
+                select: select_atom,
+                sequence_constructor: None,
+                tunnel: with_param.tunnel,
+            });
+        }
+
+        Ok(param_bindings.bind_expr_no_span(
+            &mut self.variables,
+            ir::Expr::ContinueTemplate(ir::ContinueTemplate { params }),
         ))
     }
 
