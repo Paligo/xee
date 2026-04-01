@@ -731,9 +731,8 @@ impl<'a> Interpreter<'a> {
                     let value = self.state.pop()?;
                     let fallback_mode_id = self.read_u16();
                     let builtin_template_params_passthrough = self.read_u8() != 0;
-                    let mode = self.current_mode_or_fallback(pattern::ModeId::new(
-                        fallback_mode_id as usize,
-                    ));
+                    let mode = self
+                        .current_mode_or_fallback(pattern::ModeId::new(fallback_mode_id as usize));
                     let value = self.apply_templates_sequence(
                         mode,
                         value,
@@ -1569,7 +1568,10 @@ impl<'a> Interpreter<'a> {
     ) -> error::Result<Option<sequence::Sequence>> {
         match item {
             sequence::Item::Node(node)
-                if matches!(self.state.xot.value(node), xot::Value::Document | xot::Value::Element(_)) =>
+                if matches!(
+                    self.state.xot.value(node),
+                    xot::Value::Document | xot::Value::Element(_)
+                ) =>
             {
                 let children = self
                     .state
@@ -1659,7 +1661,9 @@ impl<'a> Interpreter<'a> {
                     self.xml_append(copy, content)?;
                     Ok(Some(sequence::Item::Node(copy).into()))
                 }
-                _ => Ok(Some(sequence::Item::Node(self.state.xot.clone_node(node)).into())),
+                _ => Ok(Some(
+                    sequence::Item::Node(self.state.xot.clone_node(node)).into(),
+                )),
             },
             sequence::Item::Atomic(_) | sequence::Item::Function(_) => Ok(None),
         }
@@ -1670,9 +1674,9 @@ impl<'a> Interpreter<'a> {
         item: sequence::Item,
     ) -> error::Result<Option<sequence::Sequence>> {
         match item {
-            sequence::Item::Node(node) => {
-                Ok(Some(sequence::Item::Node(self.state.xot.clone_node(node)).into()))
-            }
+            sequence::Item::Node(node) => Ok(Some(
+                sequence::Item::Node(self.state.xot.clone_node(node)).into(),
+            )),
             sequence::Item::Atomic(_) | sequence::Item::Function(_) => Ok(None),
         }
     }

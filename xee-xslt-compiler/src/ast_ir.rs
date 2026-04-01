@@ -32,7 +32,11 @@ pub fn compile(
     transform: ast::Transform,
     static_context: StaticContext,
 ) -> error::SpannedResult<interpreter::Program> {
-    compile_with_initial_mode(transform, static_context, ast::ApplyTemplatesModeValue::Unnamed)
+    compile_with_initial_mode(
+        transform,
+        static_context,
+        ast::ApplyTemplatesModeValue::Unnamed,
+    )
 }
 
 pub fn compile_with_initial_mode(
@@ -101,9 +105,9 @@ fn parse_initial_mode_value(
     }
     if let Some(rest) = initial_mode.strip_prefix("Q{") {
         let Some((namespace, local_name)) = rest.split_once('}') else {
-            return Err(error::Error::Unsupported(
-                format!("Unsupported initial mode name: {initial_mode}"),
-            )
+            return Err(error::Error::Unsupported(format!(
+                "Unsupported initial mode name: {initial_mode}"
+            ))
             .into());
         };
         return Ok(ast::ApplyTemplatesModeValue::EqName(OwnedName::new(
@@ -113,9 +117,9 @@ fn parse_initial_mode_value(
         )));
     }
     if initial_mode.contains(':') {
-        return Err(error::Error::Unsupported(
-            format!("Unsupported prefixed initial mode name: {initial_mode}"),
-        )
+        return Err(error::Error::Unsupported(format!(
+            "Unsupported prefixed initial mode name: {initial_mode}"
+        ))
         .into());
     }
 
@@ -2324,11 +2328,9 @@ impl<'a> IrConverter<'a> {
         let (element_atom, bindings) = bindings
             .bind_expr_no_span(&mut self.variables, expr)
             .atom_bindings();
-        let (element_atom, bindings) = if let Some(namespace) = self.static_name_namespace(
-            &element.name,
-            &element.namespace,
-            &element.namespaces,
-        ) {
+        let (element_atom, bindings) = if let Some(namespace) =
+            self.static_name_namespace(&element.name, &element.namespace, &element.namespaces)
+        {
             let prefix_atom = Spanned::new(
                 ir::Atom::Const(ir::Const::String(namespace.prefix)),
                 (0..0).into(),
