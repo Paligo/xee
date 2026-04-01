@@ -428,6 +428,7 @@ impl SelectOrSequenceConstructor for Break {
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct CallTemplate {
     pub name: EqName,
+    pub backwards_compatible: bool,
 
     pub with_params: Vec<WithParam>,
 

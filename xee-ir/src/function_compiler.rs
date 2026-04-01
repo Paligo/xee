@@ -1172,9 +1172,10 @@ impl<'a> FunctionCompiler<'a> {
                         .unwrap_or_else(|| param.name.as_str().to_string())
                 })
                 .collect();
-            if with_param_map
-                .keys()
-                .any(|param_name| !valid_param_names.contains(param_name))
+            if !call_template.backwards_compatible
+                && with_param_map
+                    .keys()
+                    .any(|param_name| !valid_param_names.contains(param_name))
             {
                 return Err(error::Error::XTSE0680.into());
             }

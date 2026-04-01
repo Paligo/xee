@@ -84,6 +84,246 @@ fn test_transform_nested_apply_templates() {
 }
 
 #[test]
+fn test_apply_templates_sort_with_param() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        r#"<doc>
+  <a-set s="217" g="1st"><a>35</a><a>44</a><a>12</a><a>98</a><a>28</a></a-set>
+  <a-set s="531" g="2nd"><a>62</a><a>440</a><a>29</a></a-set>
+  <a-set s="172" g="3rd"><a>16</a><a>45</a><a>78</a><a>33</a></a-set>
+</doc>"#,
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:template match="doc">
+    <out>
+      <xsl:apply-templates select="a-set">
+        <xsl:sort select="@s" data-type="number" order="ascending"/>
+        <xsl:with-param name="total" select="sum(a-set/a)"/>
+      </xsl:apply-templates>
+    </out>
+  </xsl:template>
+
+  <xsl:template match="a-set">
+    <xsl:param name="total"/>
+    <list from="{@g}" proportion="{concat(sum(a), '/', $total)}">
+      <xsl:for-each select="a">
+        <xsl:value-of select="."/>
+        <xsl:text>,</xsl:text>
+      </xsl:for-each>
+    </list>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(
+        xml(&xot, output),
+        "<out><list from=\"3rd\" proportion=\"172/920\">16,45,78,33,</list><list from=\"1st\" proportion=\"217/920\">35,44,12,98,28,</list><list from=\"2nd\" proportion=\"531/920\">62,440,29,</list></out>"
+    );
+}
+
+#[test]
+fn test_repeated_local_variable_reference_in_union_expression() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:template match="/">
+    <xsl:variable name="analysis">
+      <result><span/></result>
+      <unique><span/></unique>
+    </xsl:variable>
+    <out>
+      <xsl:value-of select="count($analysis/result/span | $analysis/unique/span)"/>
+    </out>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>2</out>");
+}
+
+#[test]
+fn test_global_variable_can_reference_later_global_param() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:variable name="tata" select="$toto"/>
+  <xsl:param name="toto" select="'titi'"/>
+
+  <xsl:template match="/">
+    <xsl:param name="toto" select="'templ'"/>
+    <out>
+      <xsl:value-of select="$toto"/>
+      <xsl:text>, </xsl:text>
+      <xsl:value-of select="$tata"/>
+    </out>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>templ, titi</out>");
+}
+
+#[test]
+fn test_call_template_unknown_param_is_ignored_in_xslt_1_mode() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:param name="test" select="'global'"/>
+
+  <xsl:template match="/">
+    <out>
+      <xsl:call-template name="temtest">
+        <xsl:with-param name="test" select="'local'"/>
+      </xsl:call-template>
+    </out>
+  </xsl:template>
+
+  <xsl:template name="temtest">
+    <xsl:choose>
+      <xsl:when test="$test = 'global'">It is global!</xsl:when>
+      <xsl:otherwise>Not global!!!</xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>It is global!</out>");
+}
+
+#[test]
+fn test_union_match_without_explicit_priority_registers_multiple_rules() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><a>1</a><d>2</d></doc>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:template match="doc">
+    <out><xsl:apply-templates/></out>
+  </xsl:template>
+
+  <xsl:template match="a|d">
+    <xsl:value-of select="name(.)"/>
+    <xsl:text>=</xsl:text>
+    <xsl:value-of select="."/>
+    <xsl:text>;</xsl:text>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>a=1;d=2;</out>");
+}
+
+#[test]
+fn test_builtin_text_template_rule_constructs_text_nodes() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><a>begin</a><b>middle</b><c>end</c></doc>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:template match="doc">
+    <out>
+      <xsl:apply-templates select="a/text(), b/text(), c/text()"/>
+    </out>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>beginmiddleend</out>");
+}
+
+#[test]
+fn test_xslt_user_defined_function_call_in_select() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:test="urn:test"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    exclude-result-prefixes="test xs"
+    version="3.0">
+  <xsl:function name="test:double" as="xs:integer">
+    <xsl:param name="value" as="xs:integer"/>
+    <xsl:sequence select="$value * 2"/>
+  </xsl:function>
+
+  <xsl:template match="/">
+    <out><xsl:value-of select="test:double(21)"/></out>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>42</out>");
+}
+
+#[test]
+fn test_for_each_sort_uses_xslt_sort_order() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:template match="/">
+    <out>
+      <xsl:for-each select="('id-0', 'id-2', 'id-10')">
+        <xsl:sort select="."/>
+        <xsl:value-of select="."/>
+        <xsl:text>|</xsl:text>
+      </xsl:for-each>
+    </out>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>id-0|id-10|id-2|</out>");
+}
+
+#[test]
+fn test_for_each_group_group_by_keeps_first_item_per_key() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc><record key='a' n='1'/><record key='a' n='2'/><record key='b' n='3'/></doc>",
+        r#"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:template match="/">
+    <out>
+      <xsl:for-each-group select="doc/record" group-by="string(@key)">
+        <xsl:value-of select="@n"/>
+        <xsl:text>|</xsl:text>
+      </xsl:for-each-group>
+    </out>
+  </xsl:template>
+</xsl:stylesheet>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>1|3|</out>");
+}
+
+#[test]
 fn test_transform_value_of_select() {
     let mut xot = Xot::new();
     let output = evaluate(

@@ -362,6 +362,7 @@ pub enum ApplyTemplatesModeValue {
 pub struct CallTemplate {
     pub name: Name,
     pub context: Option<ContextNames>,
+    pub backwards_compatible: bool,
     pub params: Vec<WithParam>,
 }
 

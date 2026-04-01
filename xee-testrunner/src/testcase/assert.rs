@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use xee_xpath::context::{Collation, DynamicContext};
 use xee_xpath::SerializationParameters;
 use xot::xmlname::{NameStrInfo, OwnedName as Name};
-use xot::Xot;
+use xot::{Value, Xot};
 
 use xee_xpath::query::RecurseQuery;
 use xee_xpath::{context, error, Documents, Item, Queries, Query, Recurse, Sequence};
@@ -419,6 +419,7 @@ impl Assertable for AssertXml {
                 return TestOutcome::EnvironmentError("Cannot parse result XML".to_string());
             }
         };
+        normalize_outer_fragment_whitespace(&mut compare_xot, found);
 
         let expected = match &self {
             Self::MatchString(s) => compare_xot.parse_fragment(s).unwrap(),
@@ -438,6 +439,7 @@ impl Assertable for AssertXml {
                 compare_xot.parse(&expected_xml).unwrap()
             }
         };
+        normalize_outer_fragment_whitespace(&mut compare_xot, expected);
 
         // and compare
         let c = compare_xot.deep_equal(expected, found);
@@ -447,6 +449,35 @@ impl Assertable for AssertXml {
         } else {
             TestOutcome::Failed(Failure::Xml(self.clone(), AssertXmlFailure::WrongXml(xml)))
         }
+    }
+}
+
+fn normalize_outer_fragment_whitespace(xot: &mut Xot, fragment: xot::Node) {
+    let children = xot.children(fragment).collect::<Vec<_>>();
+    let leading = children
+        .iter()
+        .take_while(|child| is_whitespace_text(xot, **child))
+        .copied()
+        .collect::<Vec<_>>();
+    let trailing = children
+        .iter()
+        .rev()
+        .take_while(|child| is_whitespace_text(xot, **child))
+        .copied()
+        .collect::<Vec<_>>();
+
+    for child in leading.into_iter().chain(trailing) {
+        let _ = xot.remove(child);
+    }
+}
+
+fn is_whitespace_text(xot: &Xot, node: xot::Node) -> bool {
+    match xot.value(node) {
+        Value::Text(text) => text
+            .get()
+            .chars()
+            .all(|c| matches!(c, '\u{9}' | '\u{A}' | '\u{D}' | ' ')),
+        _ => false,
     }
 }
 
@@ -1150,5 +1181,17 @@ mod tests {
         let result = run_xpath_with_result(&expr, &sequence, &mut documents).unwrap();
 
         assert!(result.effective_boolean_value().unwrap());
+    }
+
+    #[test]
+    fn test_assert_xml_ignores_outer_fragment_whitespace() {
+        let mut xot = Xot::new();
+        let expected = xot.parse_fragment("\t<b><d>17</d></b>").unwrap();
+        let actual = xot.parse_fragment("<b><d>17</d></b>").unwrap();
+
+        normalize_outer_fragment_whitespace(&mut xot, expected);
+        normalize_outer_fragment_whitespace(&mut xot, actual);
+
+        assert!(xot.deep_equal(expected, actual));
     }
 }

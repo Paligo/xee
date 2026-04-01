@@ -1470,10 +1470,15 @@ impl<'a> Interpreter<'a> {
                     )
                     .map(Some)
                 }
-                xot::Value::Text(text) => Ok(Some(sequence::Item::from(text.get().to_string())
-                    .into())),
+                xot::Value::Text(text) => {
+                    let text = text.get().to_string();
+                    let text_node = self.state.xot.new_text(&text);
+                    Ok(Some(sequence::Item::Node(text_node).into()))
+                }
                 xot::Value::Attribute(attribute) => {
-                    Ok(Some(sequence::Item::from(attribute.value().to_string()).into()))
+                    let value = attribute.value().to_string();
+                    let text_node = self.state.xot.new_text(&value);
+                    Ok(Some(sequence::Item::Node(text_node).into()))
                 }
                 _ => Ok(None),
             },

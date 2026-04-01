@@ -413,6 +413,7 @@ impl InstructionParser for ast::CallTemplate {
 
         Ok(ast::CallTemplate {
             name: attributes.required(names.name, attributes.eqname())?,
+            backwards_compatible: content.context.backwards_compatible(),
 
             span: content.span()?,
 

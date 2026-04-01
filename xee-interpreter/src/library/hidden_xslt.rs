@@ -1,8 +1,11 @@
 // functions used to implement the XSLT that aren't supposed to be
 // exposed to XPath
+use std::collections::HashSet;
+
 use xee_xpath_macros::xpath_fn;
 use xot::Xot;
 
+use crate::atomic;
 use crate::error;
 use crate::function::StaticFunctionDescription;
 use crate::interpreter::Interpreter;
@@ -32,6 +35,29 @@ fn simple_content(
         first = false;
     }
     Ok(s)
+}
+
+#[xpath_fn("fn:group-by-first($seq as item()*, $key as function(item()) as xs:anyAtomicType*) as item()*")]
+fn group_by_first(
+    interpreter: &mut Interpreter,
+    seq: &sequence::Sequence,
+    key: sequence::Item,
+) -> error::Result<sequence::Sequence> {
+    let function = key.to_function()?;
+    let mut seen: HashSet<atomic::Atomic> = HashSet::new();
+    let mut result = Vec::new();
+
+    for item in seq.iter() {
+        let value = interpreter.call_function_with_arguments(&function, &[item.clone().into()])?;
+        let keys = value
+            .atomized(interpreter.xot())
+            .collect::<error::Result<Vec<_>>>()?;
+        if keys.into_iter().any(|atomic| seen.insert(atomic)) {
+            result.push(item.clone());
+        }
+    }
+
+    Ok(result.into())
 }
 
 fn simple_content_text_nodes(
@@ -77,7 +103,7 @@ fn simple_content_text_nodes(
 }
 
 pub(crate) fn static_function_descriptions() -> Vec<StaticFunctionDescription> {
-    vec![wrap_xpath_fn!(simple_content)]
+    vec![wrap_xpath_fn!(simple_content), wrap_xpath_fn!(group_by_first)]
 }
 
 #[cfg(test)]
