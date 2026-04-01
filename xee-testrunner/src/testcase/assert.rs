@@ -1131,10 +1131,18 @@ fn run_xpath_with_result(
     let q = queries.sequence_with_context(expr, static_context)?;
 
     let variables = AHashMap::from([(name, sequence.clone())]);
-    let context_item = sequence.normalize(" ", documents.xot_mut())?;
+    let context_item = match sequence.normalize(" ", documents.xot_mut()) {
+        Ok(context_item) => Some(context_item.into()),
+        // Function items cannot become the implicit context item for the
+        // assertion query, but $result should still be available.
+        Err(error::ErrorValue::SENR0001) => None,
+        Err(error) => return Err(error.into()),
+    };
 
     q.execute_build_context(documents, |build| {
-        build.context_item(context_item.into());
+        if let Some(context_item) = context_item {
+            build.context_item(context_item);
+        }
         build.variables(variables);
     })
 }
@@ -1207,6 +1215,17 @@ mod tests {
         let sequence: Sequence = document_node.into();
 
         let expr = "/result/a = 'true'".to_string();
+        let result = run_xpath_with_result(&expr, &sequence, &mut documents).unwrap();
+
+        assert!(result.effective_boolean_value().unwrap());
+    }
+
+    #[test]
+    fn test_run_xpath_with_result_allows_function_item_results_via_result_variable() {
+        let mut documents = Documents::new();
+        let sequence = run_xpath(&"map:entry('foo', 3)".to_string()).unwrap();
+
+        let expr = "$result?foo = 3".to_string();
         let result = run_xpath_with_result(&expr, &sequence, &mut documents).unwrap();
 
         assert!(result.effective_boolean_value().unwrap());
