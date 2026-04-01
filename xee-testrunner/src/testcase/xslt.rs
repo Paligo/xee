@@ -35,6 +35,7 @@ impl XsltTestCase {}
 pub(crate) struct XsltTest {
     pub(crate) base_dir: PathBuf,
     pub(crate) stylesheets: Vec<Stylesheet>,
+    pub(crate) initial_mode: Option<String>,
     pub(crate) initial_template: Option<String>,
 }
 
@@ -104,7 +105,12 @@ impl Runnable<XsltLanguage> for XsltTestCase {
 
         // Get the directory of the stylesheet for resolving imports/includes
         let stylesheet_dir = path.parent().map(|p| p.to_path_buf());
-        let program = xee_xslt_compiler::parse_with_base_dir(static_context, &xslt, stylesheet_dir);
+        let program = xee_xslt_compiler::parse_with_base_dir_and_initial_mode(
+            static_context,
+            &xslt,
+            stylesheet_dir,
+            self.test.initial_mode.clone(),
+        );
         let program = match program {
             Ok(program) => program,
             Err(error) => {
@@ -226,6 +232,7 @@ impl ContextLoadable<LoadContext> for XsltTestCase {
 
     fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let file_query = queries.option("@file/string()", convert_string)?;
+        let initial_mode_query = queries.option("initial-mode/@name/string()", convert_string)?;
         let initial_template_query =
             queries.option("initial-template/@name/string()", convert_string)?;
         let stylesheets_query = queries.many("stylesheet", move |documents, item| {
@@ -239,10 +246,12 @@ impl ContextLoadable<LoadContext> for XsltTestCase {
             let base_dir = context.path.parent().unwrap();
 
             let stylesheets = stylesheets_query.execute(documents, item)?;
+            let initial_mode = initial_mode_query.execute(documents, item)?;
             let initial_template = initial_template_query.execute(documents, item)?;
             Ok(XsltTest {
                 stylesheets,
                 base_dir: base_dir.to_path_buf(),
+                initial_mode,
                 initial_template,
             })
         })?;

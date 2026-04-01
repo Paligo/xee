@@ -602,6 +602,11 @@ pub enum Error {
     /// It is a type error if the supplied value of a template parameter cannot
     /// be converted to the required type of the parameter.
     XTTE0590,
+    /// Typed mode applied to untyped nodes.
+    ///
+    /// It is a type error if xsl:apply-templates is evaluated in a mode with
+    /// typed="yes" and the selected nodes are untyped.
+    XTTE3100,
     /// Shallow copy
     ///
     /// Shallow copy of sequence of more than one item is not allowed.

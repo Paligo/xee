@@ -23,6 +23,7 @@ use crate::priority::default_priority;
 struct IrConverter<'a> {
     variables: Variables,
     static_context: &'a StaticContext,
+    initial_mode: ast::ApplyTemplatesModeValue,
     xslt_functions: HashMap<(OwnedName, u8), OwnedName>,
 }
 
@@ -30,7 +31,15 @@ pub fn compile(
     transform: ast::Transform,
     static_context: StaticContext,
 ) -> error::SpannedResult<interpreter::Program> {
-    let mut ir_converter = IrConverter::new(&static_context);
+    compile_with_initial_mode(transform, static_context, ast::ApplyTemplatesModeValue::Unnamed)
+}
+
+pub fn compile_with_initial_mode(
+    transform: ast::Transform,
+    static_context: StaticContext,
+    initial_mode: ast::ApplyTemplatesModeValue,
+) -> error::SpannedResult<interpreter::Program> {
+    let mut ir_converter = IrConverter::new(&static_context, initial_mode);
     let declarations = ir_converter.transform(&transform)?;
     compile_xslt(declarations, static_context)
 }
@@ -47,6 +56,15 @@ pub fn parse_with_base_dir(
     xslt: &str,
     base_dir: Option<std::path::PathBuf>,
 ) -> error::SpannedResult<interpreter::Program> {
+    parse_with_base_dir_and_initial_mode(static_context, xslt, base_dir, None)
+}
+
+pub fn parse_with_base_dir_and_initial_mode(
+    static_context: StaticContext,
+    xslt: &str,
+    base_dir: Option<std::path::PathBuf>,
+    initial_mode: Option<String>,
+) -> error::SpannedResult<interpreter::Program> {
     let transform = parse_transform(xslt);
     // TODO: better error handling
     let mut transform = match transform {
@@ -61,7 +79,50 @@ pub fn parse_with_base_dir(
     transform.declarations =
         process_imports_and_includes(transform.declarations, base_dir, &mut visited)?;
 
-    compile(transform, static_context)
+    let initial_mode = parse_initial_mode_value(initial_mode)?;
+    if matches!(initial_mode, ast::ApplyTemplatesModeValue::Unnamed) {
+        compile(transform, static_context)
+    } else {
+        compile_with_initial_mode(transform, static_context, initial_mode)
+    }
+}
+
+fn parse_initial_mode_value(
+    initial_mode: Option<String>,
+) -> error::SpannedResult<ast::ApplyTemplatesModeValue> {
+    let Some(initial_mode) = initial_mode else {
+        return Ok(ast::ApplyTemplatesModeValue::Unnamed);
+    };
+
+    let initial_mode = initial_mode.trim();
+    if initial_mode == "#unnamed" {
+        return Ok(ast::ApplyTemplatesModeValue::Unnamed);
+    }
+    if let Some(rest) = initial_mode.strip_prefix("Q{") {
+        let Some((namespace, local_name)) = rest.split_once('}') else {
+            return Err(error::Error::Unsupported(
+                format!("Unsupported initial mode name: {initial_mode}"),
+            )
+            .into());
+        };
+        return Ok(ast::ApplyTemplatesModeValue::EqName(OwnedName::new(
+            local_name.to_string(),
+            namespace.to_string(),
+            "".to_string(),
+        )));
+    }
+    if initial_mode.contains(':') {
+        return Err(error::Error::Unsupported(
+            format!("Unsupported prefixed initial mode name: {initial_mode}"),
+        )
+        .into());
+    }
+
+    Ok(ast::ApplyTemplatesModeValue::EqName(OwnedName::new(
+        initial_mode.to_string(),
+        "".to_string(),
+        "".to_string(),
+    )))
 }
 
 fn map_parse_error(xslt: &str, error: ElementError) -> error::SpannedError {
@@ -190,10 +251,11 @@ fn load_stylesheet(
 }
 
 impl<'a> IrConverter<'a> {
-    fn new(static_context: &'a StaticContext) -> Self {
+    fn new(static_context: &'a StaticContext, initial_mode: ast::ApplyTemplatesModeValue) -> Self {
         IrConverter {
             variables: Variables::new(),
             static_context,
+            initial_mode,
             xslt_functions: HashMap::new(),
         }
     }
@@ -201,9 +263,7 @@ impl<'a> IrConverter<'a> {
     fn main_sequence_constructor(&mut self) -> ast::SequenceConstructor {
         vec![ast::SequenceConstructorItem::Instruction(
             ast::SequenceConstructorInstruction::ApplyTemplates(Box::new(ast::ApplyTemplates {
-                // TODO: mode should be configurable from the outside somehow,
-                // the XSTL test suite I think requires this.
-                mode: ast::ApplyTemplatesModeValue::Unnamed,
+                mode: self.initial_mode.clone(),
                 builtin_template_params_passthrough: true,
                 select: ast::Expression {
                     xpath: xee_xpath_ast::ast::XPath::parse(
@@ -783,7 +843,28 @@ impl<'a> IrConverter<'a> {
         declarations: &mut ir::Declarations,
         mode: &ast::Mode,
     ) -> error::SpannedResult<()> {
-        declarations.modes.insert(mode.name.clone(), ir::Mode {});
+        declarations.modes.insert(
+            mode.name.clone(),
+            ir::Mode {
+                on_no_match: match mode.on_no_match.as_ref() {
+                    Some(ast::OnNoMatch::DeepCopy) => ir::ModeOnNoMatch::DeepCopy,
+                    Some(ast::OnNoMatch::ShallowCopy) => ir::ModeOnNoMatch::ShallowCopy,
+                    Some(ast::OnNoMatch::DeepSkip) => ir::ModeOnNoMatch::DeepSkip,
+                    Some(ast::OnNoMatch::ShallowSkip) => ir::ModeOnNoMatch::ShallowSkip,
+                    Some(ast::OnNoMatch::Fail) => ir::ModeOnNoMatch::Fail,
+                    Some(ast::OnNoMatch::TextOnlyCopy) | None => ir::ModeOnNoMatch::TextOnlyCopy,
+                },
+                warning_on_no_match: mode.warning_on_no_match,
+                typed: match mode.typed.as_ref() {
+                    Some(ast::Typed::Yes) => ir::ModeTyped::Yes,
+                    Some(ast::Typed::Strict) => ir::ModeTyped::Strict,
+                    Some(ast::Typed::Lax) => ir::ModeTyped::Lax,
+                    Some(ast::Typed::No) | Some(ast::Typed::Unspecified) | None => {
+                        ir::ModeTyped::No
+                    }
+                },
+            },
+        );
         Ok(())
     }
 

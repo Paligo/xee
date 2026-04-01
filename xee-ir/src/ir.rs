@@ -406,7 +406,29 @@ pub enum ModeValue {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Mode {}
+pub struct Mode {
+    pub on_no_match: ModeOnNoMatch,
+    pub warning_on_no_match: bool,
+    pub typed: ModeTyped,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModeOnNoMatch {
+    DeepCopy,
+    ShallowCopy,
+    DeepSkip,
+    ShallowSkip,
+    TextOnlyCopy,
+    Fail,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModeTyped {
+    Yes,
+    No,
+    Strict,
+    Lax,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GlobalVariable {

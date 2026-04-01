@@ -133,6 +133,49 @@ impl<'a> DeclarationCompiler<'a> {
                 });
             }
         }
+
+        for (mode, mode_id) in &self.mode_ids {
+            let declaration = match mode {
+                ir::ApplyTemplatesModeValue::Named(name) => declarations
+                    .modes
+                    .get(&Some(name.clone()))
+                    .map(Self::mode_declaration)
+                    .unwrap_or_default(),
+                ir::ApplyTemplatesModeValue::Unnamed => declarations
+                    .modes
+                    .get(&None)
+                    .map(Self::mode_declaration)
+                    .unwrap_or_default(),
+                ir::ApplyTemplatesModeValue::Current => continue,
+            };
+            self.program.declarations.add_mode(*mode_id, declaration);
+        }
+    }
+
+    fn mode_declaration(mode: &ir::Mode) -> xee_interpreter::declaration::ModeDeclaration {
+        xee_interpreter::declaration::ModeDeclaration {
+            on_no_match: match mode.on_no_match {
+                ir::ModeOnNoMatch::DeepCopy => xee_interpreter::declaration::ModeOnNoMatch::DeepCopy,
+                ir::ModeOnNoMatch::ShallowCopy => {
+                    xee_interpreter::declaration::ModeOnNoMatch::ShallowCopy
+                }
+                ir::ModeOnNoMatch::DeepSkip => xee_interpreter::declaration::ModeOnNoMatch::DeepSkip,
+                ir::ModeOnNoMatch::ShallowSkip => {
+                    xee_interpreter::declaration::ModeOnNoMatch::ShallowSkip
+                }
+                ir::ModeOnNoMatch::TextOnlyCopy => {
+                    xee_interpreter::declaration::ModeOnNoMatch::TextOnlyCopy
+                }
+                ir::ModeOnNoMatch::Fail => xee_interpreter::declaration::ModeOnNoMatch::Fail,
+            },
+            warning_on_no_match: mode.warning_on_no_match,
+            typed: match mode.typed {
+                ir::ModeTyped::Yes => xee_interpreter::declaration::ModeTyped::Yes,
+                ir::ModeTyped::No => xee_interpreter::declaration::ModeTyped::No,
+                ir::ModeTyped::Strict => xee_interpreter::declaration::ModeTyped::Strict,
+                ir::ModeTyped::Lax => xee_interpreter::declaration::ModeTyped::Lax,
+            },
+        }
     }
 
     fn register_mode(&mut self, mode: ir::ApplyTemplatesModeValue) {

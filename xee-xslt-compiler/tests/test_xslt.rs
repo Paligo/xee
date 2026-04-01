@@ -701,6 +701,48 @@ fn test_mode_typed_no_is_accepted() {
 }
 
 #[test]
+fn test_mode_on_no_match_shallow_copy_preserves_attributes() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc a=\"1\"><child>text</child></doc>",
+        r##"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:mode name="s" on-no-match="shallow-copy"/>
+
+  <xsl:template match="/">
+    <out>
+      <xsl:apply-templates select="doc" mode="s"/>
+    </out>
+  </xsl:template>
+</xsl:stylesheet>"##,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out><doc a=\"1\"><child>text</child></doc></out>");
+}
+
+#[test]
+fn test_mode_typed_yes_rejects_untyped_nodes() {
+    let mut xot = Xot::new();
+    let err = evaluate(
+        &mut xot,
+        "<doc/>",
+        r##"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+  <xsl:mode name="s" typed="yes"/>
+
+  <xsl:template match="/">
+    <xsl:apply-templates select="doc" mode="s"/>
+  </xsl:template>
+</xsl:stylesheet>"##,
+    )
+    .unwrap_err();
+
+    assert_eq!(err.value(), error::Error::XTTE3100);
+}
+
+#[test]
 fn test_sequence_document_loads_relative_to_stylesheet_base_uri() {
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)

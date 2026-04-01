@@ -14,6 +14,7 @@ use crate::atomic::{
     op_add, op_div, op_idiv, op_mod, op_multiply, op_subtract, OpEq, OpGe, OpGt, OpLe, OpLt, OpNe,
 };
 use crate::context::DynamicContext;
+use crate::declaration;
 use crate::function;
 use crate::pattern::PredicateMatcher;
 use crate::sequence;
@@ -1437,6 +1438,11 @@ impl<'a> Interpreter<'a> {
         tunnel_params: &function::Map,
         builtin_template_params_passthrough: bool,
     ) -> error::Result<Option<sequence::Sequence>> {
+        let mode_declaration = self.runnable.program().declarations.mode(mode);
+        if self.mode_requires_typed_nodes(mode_declaration) && self.item_is_untyped_node(&item) {
+            return Err(error::Error::XTTE3100);
+        }
+
         let function_id = self.lookup_pattern(mode, &item);
 
         if let Some(function_id) = function_id {
@@ -1467,6 +1473,45 @@ impl<'a> Interpreter<'a> {
     }
 
     fn apply_builtin_template_rule(
+        &mut self,
+        mode: pattern::ModeId,
+        item: sequence::Item,
+        params: &function::Map,
+        tunnel_params: &function::Map,
+        builtin_template_params_passthrough: bool,
+    ) -> error::Result<Option<sequence::Sequence>> {
+        let mode_declaration = self.runnable.program().declarations.mode(mode);
+        match mode_declaration.on_no_match {
+            declaration::ModeOnNoMatch::ShallowCopy => self.apply_builtin_shallow_copy_rule(
+                mode,
+                item,
+                params,
+                tunnel_params,
+                builtin_template_params_passthrough,
+            ),
+            declaration::ModeOnNoMatch::ShallowSkip => self.apply_builtin_shallow_skip_rule(
+                mode,
+                item,
+                params,
+                tunnel_params,
+                builtin_template_params_passthrough,
+            ),
+            declaration::ModeOnNoMatch::DeepSkip => Ok(None),
+            declaration::ModeOnNoMatch::DeepCopy => self.apply_builtin_deep_copy_rule(item),
+            declaration::ModeOnNoMatch::Fail => Err(error::Error::Unsupported(
+                "xsl:mode on-no-match=\"fail\" is not supported yet".to_string(),
+            )),
+            declaration::ModeOnNoMatch::TextOnlyCopy => self.apply_builtin_text_only_copy_rule(
+                mode,
+                item,
+                params,
+                tunnel_params,
+                builtin_template_params_passthrough,
+            ),
+        }
+    }
+
+    fn apply_builtin_text_only_copy_rule(
         &mut self,
         mode: pattern::ModeId,
         item: sequence::Item,
@@ -1511,6 +1556,138 @@ impl<'a> Interpreter<'a> {
                 _ => Ok(None),
             },
             sequence::Item::Atomic(_) | sequence::Item::Function(_) => Ok(None),
+        }
+    }
+
+    fn apply_builtin_shallow_skip_rule(
+        &mut self,
+        mode: pattern::ModeId,
+        item: sequence::Item,
+        params: &function::Map,
+        tunnel_params: &function::Map,
+        builtin_template_params_passthrough: bool,
+    ) -> error::Result<Option<sequence::Sequence>> {
+        match item {
+            sequence::Item::Node(node)
+                if matches!(self.state.xot.value(node), xot::Value::Document | xot::Value::Element(_)) =>
+            {
+                let children = self
+                    .state
+                    .xot
+                    .children(node)
+                    .map(sequence::Item::Node)
+                    .collect::<Vec<_>>();
+                let empty_params = function::Map::new(Vec::new()).unwrap();
+                let params = if builtin_template_params_passthrough {
+                    params
+                } else {
+                    &empty_params
+                };
+                self.apply_templates_sequence(
+                    mode,
+                    children.into(),
+                    params,
+                    tunnel_params,
+                    builtin_template_params_passthrough,
+                )
+                .map(Some)
+            }
+            _ => Ok(None),
+        }
+    }
+
+    fn apply_builtin_shallow_copy_rule(
+        &mut self,
+        mode: pattern::ModeId,
+        item: sequence::Item,
+        params: &function::Map,
+        tunnel_params: &function::Map,
+        builtin_template_params_passthrough: bool,
+    ) -> error::Result<Option<sequence::Sequence>> {
+        match item {
+            sequence::Item::Node(node) => match self.state.xot.value(node) {
+                xot::Value::Document => {
+                    let copy = self.state.xot.new_document();
+                    let children = self
+                        .state
+                        .xot
+                        .children(node)
+                        .map(sequence::Item::Node)
+                        .collect::<Vec<_>>();
+                    let content = self.apply_templates_sequence(
+                        mode,
+                        children.into(),
+                        params,
+                        tunnel_params,
+                        builtin_template_params_passthrough,
+                    )?;
+                    self.xml_append(copy, content)?;
+                    Ok(Some(sequence::Item::Node(copy).into()))
+                }
+                xot::Value::Element(element) => {
+                    let copy = self.state.xot.new_element(element.name());
+
+                    let namespace_nodes = self
+                        .state
+                        .xot
+                        .namespaces(node)
+                        .keys()
+                        .filter_map(|prefix| self.state.xot.namespaces(node).get_node(prefix))
+                        .collect::<Vec<_>>();
+                    for namespace_node in namespace_nodes {
+                        let namespace_copy = self.state.xot.clone_node(namespace_node);
+                        self.state.xot.any_append(copy, namespace_copy).unwrap();
+                    }
+
+                    let mut content = self
+                        .state
+                        .xot
+                        .attributes(node)
+                        .keys()
+                        .filter_map(|name| self.state.xot.attributes(node).get_node(name))
+                        .map(sequence::Item::Node)
+                        .collect::<Vec<_>>();
+                    content.extend(self.state.xot.children(node).map(sequence::Item::Node));
+
+                    let content = self.apply_templates_sequence(
+                        mode,
+                        content.into(),
+                        params,
+                        tunnel_params,
+                        builtin_template_params_passthrough,
+                    )?;
+                    self.xml_append(copy, content)?;
+                    Ok(Some(sequence::Item::Node(copy).into()))
+                }
+                _ => Ok(Some(sequence::Item::Node(self.state.xot.clone_node(node)).into())),
+            },
+            sequence::Item::Atomic(_) | sequence::Item::Function(_) => Ok(None),
+        }
+    }
+
+    fn apply_builtin_deep_copy_rule(
+        &mut self,
+        item: sequence::Item,
+    ) -> error::Result<Option<sequence::Sequence>> {
+        match item {
+            sequence::Item::Node(node) => {
+                Ok(Some(sequence::Item::Node(self.state.xot.clone_node(node)).into()))
+            }
+            sequence::Item::Atomic(_) | sequence::Item::Function(_) => Ok(None),
+        }
+    }
+
+    fn mode_requires_typed_nodes(&self, mode_declaration: declaration::ModeDeclaration) -> bool {
+        matches!(mode_declaration.typed, declaration::ModeTyped::Yes)
+    }
+
+    fn item_is_untyped_node(&self, item: &sequence::Item) -> bool {
+        match item {
+            sequence::Item::Node(node) => matches!(
+                self.state.xot.value(*node),
+                xot::Value::Document | xot::Value::Element(_) | xot::Value::Attribute(_)
+            ),
+            sequence::Item::Atomic(_) | sequence::Item::Function(_) => false,
         }
     }
 
