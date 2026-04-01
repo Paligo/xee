@@ -1564,7 +1564,7 @@ fn test_copy_function() {
     assert!(matches!(
         output,
         error::SpannedResult::Err(error::SpannedError {
-        error: error::Error::XTDE0450,
+            error: error::Error::XTDE0450,
             span: _
         })
     ));
