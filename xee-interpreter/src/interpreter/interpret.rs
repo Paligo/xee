@@ -50,6 +50,12 @@ pub struct ContextInfo {
     pub size: stack::Value,
 }
 
+struct ApplyTemplatesOptions<'a> {
+    params: &'a function::Map,
+    tunnel_params: &'a function::Map,
+    builtin_template_params_passthrough: bool,
+}
+
 impl From<sequence::Item> for ContextInfo {
     fn from(item: sequence::Item) -> Self {
         ContextInfo {
@@ -1407,17 +1413,14 @@ impl<'a> Interpreter<'a> {
     ) -> error::Result<sequence::Sequence> {
         let mut r: Vec<sequence::Item> = Vec::new();
         let size: IBig = sequence.len().into();
+        let options = ApplyTemplatesOptions {
+            params,
+            tunnel_params,
+            builtin_template_params_passthrough,
+        };
 
         for (i, item) in sequence.iter().enumerate() {
-            let sequence = self.apply_templates_item(
-                mode,
-                item,
-                i,
-                size.clone(),
-                params,
-                tunnel_params,
-                builtin_template_params_passthrough,
-            )?;
+            let sequence = self.apply_templates_item(mode, item, i, size.clone(), &options)?;
             if let Some(sequence) = sequence {
                 for item in sequence.iter() {
                     r.push(item.clone());
@@ -1433,9 +1436,7 @@ impl<'a> Interpreter<'a> {
         item: sequence::Item,
         position: usize,
         size: IBig,
-        params: &function::Map,
-        tunnel_params: &function::Map,
-        builtin_template_params_passthrough: bool,
+        options: &ApplyTemplatesOptions<'_>,
     ) -> error::Result<Option<sequence::Sequence>> {
         let mode_declaration = self.runnable.program().declarations.mode(mode);
         if self.mode_requires_typed_nodes(mode_declaration) && self.item_is_untyped_node(&item) {
@@ -1455,8 +1456,8 @@ impl<'a> Interpreter<'a> {
                     Some(atomic::Atomic::from(position).into()),
                     Some(atomic::Atomic::from(size.clone()).into()),
                 ],
-                params,
-                tunnel_params,
+                options.params,
+                options.tunnel_params,
             );
             self.mode_stack.pop();
             result.map(Some)
@@ -1464,9 +1465,9 @@ impl<'a> Interpreter<'a> {
             self.apply_builtin_template_rule(
                 mode,
                 item,
-                params,
-                tunnel_params,
-                builtin_template_params_passthrough,
+                options.params,
+                options.tunnel_params,
+                options.builtin_template_params_passthrough,
             )
         }
     }
