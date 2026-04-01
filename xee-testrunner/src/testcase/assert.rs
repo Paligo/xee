@@ -419,7 +419,7 @@ impl Assertable for AssertXml {
                 return TestOutcome::EnvironmentError("Cannot parse result XML".to_string());
             }
         };
-        normalize_outer_fragment_whitespace(&mut compare_xot, found);
+        normalize_xml_for_comparison(&mut compare_xot, found);
 
         let expected = match &self {
             Self::MatchString(s) => compare_xot.parse_fragment(s).unwrap(),
@@ -439,7 +439,7 @@ impl Assertable for AssertXml {
                 compare_xot.parse(&expected_xml).unwrap()
             }
         };
-        normalize_outer_fragment_whitespace(&mut compare_xot, expected);
+        normalize_xml_for_comparison(&mut compare_xot, expected);
 
         // and compare
         let c = compare_xot.deep_equal(expected, found);
@@ -450,6 +450,11 @@ impl Assertable for AssertXml {
             TestOutcome::Failed(Failure::Xml(self.clone(), AssertXmlFailure::WrongXml(xml)))
         }
     }
+}
+
+fn normalize_xml_for_comparison(xot: &mut Xot, fragment: xot::Node) {
+    normalize_outer_fragment_whitespace(xot, fragment);
+    normalize_ignorable_whitespace(xot, fragment);
 }
 
 fn normalize_outer_fragment_whitespace(xot: &mut Xot, fragment: xot::Node) {
@@ -468,6 +473,30 @@ fn normalize_outer_fragment_whitespace(xot: &mut Xot, fragment: xot::Node) {
 
     for child in leading.into_iter().chain(trailing) {
         let _ = xot.remove(child);
+    }
+}
+
+fn normalize_ignorable_whitespace(xot: &mut Xot, node: xot::Node) {
+    let children = xot.children(node).collect::<Vec<_>>();
+    for child in &children {
+        normalize_ignorable_whitespace(xot, *child);
+    }
+
+    let has_element_child = children.iter().any(|child| xot.is_element(*child));
+    let has_non_whitespace_text = children.iter().any(|child| match xot.value(*child) {
+        Value::Text(text) => !text
+            .get()
+            .chars()
+            .all(|c| matches!(c, '\u{9}' | '\u{A}' | '\u{D}' | ' ')),
+        _ => false,
+    });
+
+    if has_element_child && !has_non_whitespace_text {
+        for child in children {
+            if is_whitespace_text(xot, child) {
+                let _ = xot.remove(child);
+            }
+        }
     }
 }
 
@@ -1189,8 +1218,22 @@ mod tests {
         let expected = xot.parse_fragment("\t<b><d>17</d></b>").unwrap();
         let actual = xot.parse_fragment("<b><d>17</d></b>").unwrap();
 
-        normalize_outer_fragment_whitespace(&mut xot, expected);
-        normalize_outer_fragment_whitespace(&mut xot, actual);
+        normalize_xml_for_comparison(&mut xot, expected);
+        normalize_xml_for_comparison(&mut xot, actual);
+
+        assert!(xot.deep_equal(expected, actual));
+    }
+
+    #[test]
+    fn test_assert_xml_ignores_indentation_in_element_only_content() {
+        let mut xot = Xot::new();
+        let expected = xot
+            .parse_fragment("<out>\n  <a>1</a>\n  <b>2</b>\n</out>")
+            .unwrap();
+        let actual = xot.parse_fragment("<out><a>1</a><b>2</b></out>").unwrap();
+
+        normalize_xml_for_comparison(&mut xot, expected);
+        normalize_xml_for_comparison(&mut xot, actual);
 
         assert!(xot.deep_equal(expected, actual));
     }

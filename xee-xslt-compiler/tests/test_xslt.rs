@@ -743,6 +743,58 @@ fn test_mode_typed_yes_rejects_untyped_nodes() {
 }
 
 #[test]
+fn test_document_instruction_creates_document_node_variable() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+  <xsl:variable name="var1" as="document-node()">
+    <xsl:document>
+      <item>hello</item>
+    </xsl:document>
+  </xsl:variable>
+
+  <xsl:template match="/doc">
+    <out>
+      <xsl:value-of select="$var1 instance of document-node()"/>
+    </out>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out>true</out>");
+}
+
+#[test]
+fn test_document_instruction_satisfies_item_return_type() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:my="http://uri.test" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+  <xsl:template match="/">
+    <out>
+      <xsl:call-template name="a5"/>
+    </out>
+  </xsl:template>
+
+  <xsl:template name="a5" as="item()">
+    <xsl:document>
+      <my:item>1</my:item>
+    </xsl:document>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+
+    assert_eq!(xml(&xot, output), "<out><my:item xmlns:my=\"http://uri.test\">1</my:item></out>");
+}
+
+#[test]
 fn test_sequence_document_loads_relative_to_stylesheet_base_uri() {
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -1860,25 +1912,26 @@ fn test_xsl_element() {
     assert_eq!(xml(&xot, output), r#"<o><foo>content</foo></o>"#);
 }
 
-// cannot test this yet as we need namespace prefix handling
+#[test]
+fn test_xsl_element_with_prefixed_name_uses_static_namespace() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        r#"<doc/>"#,
+        r#"
+<xsl:transform expand-text="true" xmlns:my="http://www.mytest.net" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <o><xsl:element name="my:elem">content</xsl:element></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
 
-// #[test]
-// fn test_xsl_element_with_namespace() {
-//     let mut xot = Xot::new();
-//     let output = evaluate(
-//         &mut xot,
-//         r#"<doc/>"#,
-//         r#"
-//   <xsl:transform expand-text="true" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
-//     <xsl:template match="/">
-//       <o><xsl:element name="foo" namespace="http://example.com">content</xsl:element></o>
-//     </xsl:template>
-//   </xsl:transform>"#,
-//     )
-//     .unwrap();
-
-//     assert_eq!(xml(&xot, output), r#"<o><foo>content</foo></o>"#);
-// }
+    assert_eq!(
+        xml(&xot, output),
+        r#"<o><my:elem xmlns:my="http://www.mytest.net">content</my:elem></o>"#
+    );
+}
 
 #[test]
 fn test_xsl_text() {

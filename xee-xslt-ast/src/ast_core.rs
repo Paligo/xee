@@ -353,6 +353,7 @@ impl From<Assert> for SequenceConstructorItem {
 pub struct Attribute {
     pub name: ValueTemplate<QName>,
     pub namespace: Option<ValueTemplate<Uri>>,
+    pub namespaces: Vec<LiteralNamespace>,
     pub select: Option<Expression>,
     pub separator: Option<ValueTemplate<String>>,
     pub type_: Option<EqName>,
@@ -605,6 +606,7 @@ impl From<Document> for SequenceConstructorItem {
 pub struct Element {
     pub name: ValueTemplate<QName>,
     pub namespace: Option<ValueTemplate<Uri>>,
+    pub namespaces: Vec<LiteralNamespace>,
     pub inherit_namespaces: bool,
     pub use_attribute_sets: Option<Vec<EqName>>,
     pub type_: Option<EqName>,
@@ -1099,6 +1101,8 @@ impl SelectOrSequenceConstructor for Namespace {
 pub struct NamespaceAlias {
     pub stylesheet_prefix: PrefixOrDefault,
     pub result_prefix: PrefixOrDefault,
+    pub stylesheet_namespace: Uri,
+    pub result_namespace: Uri,
 
     pub span: Span,
 }

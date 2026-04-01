@@ -184,6 +184,16 @@ impl Context {
         )
     }
 
+    pub(crate) fn literal_namespaces(&self, state: &State) -> Vec<ast::LiteralNamespace> {
+        self.prefixes
+            .iter()
+            .map(|(prefix, namespace)| ast::LiteralNamespace {
+                prefix: state.xot.prefix_str(*prefix).to_string(),
+                uri: state.xot.namespace_str(*namespace).to_string(),
+            })
+            .collect()
+    }
+
     pub(crate) fn variable_names(&self) -> &VariableNames {
         &self.variable_names
     }
