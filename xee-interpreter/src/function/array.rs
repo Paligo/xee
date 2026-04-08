@@ -33,7 +33,7 @@ impl Array {
         self.0.get(index)
     }
 
-    pub(crate) fn iter(&self) -> impl DoubleEndedIterator<Item = &sequence::Sequence> {
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item = &sequence::Sequence> {
         self.0.iter()
     }
 
@@ -98,7 +98,7 @@ impl Array {
         Some(Self::new(vec))
     }
 
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.0.len()
     }
 
