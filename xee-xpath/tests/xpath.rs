@@ -396,6 +396,23 @@ fn test_sequence_predicate_sequence_empty() {
 }
 
 #[test]
+fn test_node_predicate_with_multiple_children() -> error::Result<()> {
+    // Regression: `a[b]` must match even when an `<a>` has multiple `<b>`
+    // children. The inner sequence should be treated as a node sequence and
+    // evaluated via EBV, not rejected by the numeric-predicate probe.
+    assert_nodes(
+        r#"<root><a><b>1</b></a><a><b>2</b><b>3</b></a></root>"#,
+        "//a[b]",
+        |xot, root| {
+            let root_el = xot.document_element(root).unwrap();
+            let a1 = xot.first_child(root_el).unwrap();
+            let a2 = xot.next_sibling(a1).unwrap();
+            vec![a1, a2]
+        },
+    )
+}
+
+#[test]
 fn test_child_axis_step1() -> error::Result<()> {
     assert_nodes(r#"<doc><a/><b/></doc>"#, "doc/*", |xot, root| {
         let doc_el = xot.document_element(root).unwrap();

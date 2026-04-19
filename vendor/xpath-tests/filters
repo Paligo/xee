@@ -1991,11 +1991,6 @@ K2-NodeTest-19
 = prod-PathExpr
 = prod-PositionalVar
 = prod-Predicate
-K-FilterExpr-38
-K-FilterExpr-40
-K-FilterExpr-92
-K-FilterExpr-93
-K-FilterExpr-94
 = prod-QuantifiedExpr
 = prod-ReturnClause
 = prod-SchemaImport

@@ -162,7 +162,7 @@ fn find_helper(
                 function::Function::Array(array) => {
                     for entry in array.iter() {
                         let found = find_helper(entry, key.clone())?;
-                        result.extend(found.into_iter())
+                        result.extend(found)
                     }
                 }
                 function::Function::Map(map) => {
@@ -171,7 +171,7 @@ fn find_helper(
                             result.push(v.clone());
                         }
                         let found = find_helper(v, key.clone())?;
-                        result.extend(found.into_iter())
+                        result.extend(found)
                     }
                 }
                 _ => {}

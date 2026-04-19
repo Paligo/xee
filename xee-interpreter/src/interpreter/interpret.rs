@@ -1045,11 +1045,13 @@ impl<'a> Interpreter<'a> {
 
     fn pop_is_numeric(&mut self) -> error::Result<bool> {
         let value = self.state.pop()?;
-        let a = value.atomized_option(self.state.xot())?;
-        if let Some(a) = a {
-            Ok(a.is_numeric())
-        } else {
-            Ok(false)
+        // Only a single atomized value can be numeric; an empty or multi-item
+        // sequence is not numeric (and must not error — the caller falls back
+        // to EBV for those).
+        let mut atomized = value.atomized(self.state.xot());
+        match (atomized.next(), atomized.next()) {
+            (Some(only), None) => Ok(only?.is_numeric()),
+            _ => Ok(false),
         }
     }
 
@@ -1130,13 +1132,11 @@ impl<'a> Interpreter<'a> {
                                 "Appending a whole document is not supported yet",
                             )));
                         }
-                        xot::Value::Text(text) => {
-                            // zero length text nodes are skipped
-                            // Can this even exist, or does Xot not have
-                            // them anyway?
-                            if text.get().is_empty() {
-                                continue;
-                            }
+                        // zero length text nodes are skipped
+                        // Can this even exist, or does Xot not have
+                        // them anyway?
+                        xot::Value::Text(text) if text.get().is_empty() => {
+                            continue;
                         }
                         _ => {}
                     }
