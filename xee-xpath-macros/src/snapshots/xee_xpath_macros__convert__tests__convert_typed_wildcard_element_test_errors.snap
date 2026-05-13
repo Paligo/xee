@@ -1,5 +1,5 @@
 ---
 source: xee-xpath-macros/src/convert.rs
-expression: "convert_err(\"element(foo)\")"
+expression: "convert_err(\"element(*, xs:string)\")"
 ---
 "constrained element tests (e.g. `element(foo)`, `element(*, xs:string)`) are not yet supported in #[xpath_fn] signatures — use `element()`"

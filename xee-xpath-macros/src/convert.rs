@@ -175,7 +175,8 @@ fn convert_kind_test(
             if element_test.is_some() {
                 bail_spanned!(
                     fn_arg.span() =>
-                    "named element tests (e.g. `element(foo)`) are not yet supported in #[xpath_fn] signatures — use `element()`"
+                    "constrained element tests (e.g. `element(foo)`, `element(*, xs:string)`) \
+                     are not yet supported in #[xpath_fn] signatures — use `element()`"
                 );
             }
             Ok(quote!(#arg.elements(interpreter.xot())?))
@@ -314,8 +315,17 @@ mod tests {
 
     #[test]
     fn test_convert_named_element_test_errors() {
-        // element(foo) — named element tests aren't supported yet
+        // element(foo) — name-constrained element tests aren't supported yet
         assert_debug_snapshot!(convert_err("element(foo)"));
+    }
+
+    #[test]
+    fn test_convert_typed_wildcard_element_test_errors() {
+        // element(*, xs:string) — wildcard name + type constraint,
+        // which is still Element(Some(_)) in the AST. The error
+        // message must not mislead the user into thinking only
+        // *named* element tests are rejected.
+        assert_debug_snapshot!(convert_err("element(*, xs:string)"));
     }
 
     #[test]
