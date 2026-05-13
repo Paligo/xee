@@ -271,9 +271,13 @@ Five changes make this work:
    `Option<Arc<dyn Any + Send + Sync>>` field with a
    `user_data::<T>()` typed accessor. Set via `DynamicContextBuilder`.
 4. **Public macro re-exports.** `xee_xpath::function::xpath_fn` and
-   `xee_xpath::function::wrap_xpath_fn`. Macros' code-gen uses
-   absolute paths under `::xee_xpath::function::*`, freeing them
-   from `crate::` assumptions.
+   `xee_xpath::function::wrap_xpath_fn` re-export the existing
+   macros from `xee-xpath-macros` and `xee-interpreter`. The macros'
+   code-gen emits absolute paths directly to where the types live
+   (`::xee_interpreter::context::DynamicContext`, etc.) — the same
+   path resolves both inside `xee-interpreter` (edition-2021 self-
+   reference) and in external crates that have `xee-interpreter`
+   as a direct dep.
 5. **Signature-namespace plumbing.** Signature parsing is deferred
    to `.build()` time, against the namespaces the builder holds at
    that point. Builder method order doesn't matter; `.build()`
@@ -295,12 +299,8 @@ Add to `xee-xpath/src/lib.rs`:
 pub mod function {
     pub use xee_xpath_macros::xpath_fn;
     pub use xee_interpreter::wrap_xpath_fn;
-    pub use xee_interpreter::function::{
-        StaticFunctionDescription,
-        // and the inner types the macro-generated code needs to name:
-        StaticFunctionType,
-    };
-    // re-exports of the types that user function bodies need:
+    pub use xee_interpreter::function::StaticFunctionDescription;
+    // convenience re-exports for the types user function bodies write:
     pub use xee_interpreter::context::DynamicContext;
     pub use xee_interpreter::interpreter::Interpreter;
     pub use xee_interpreter::sequence::Sequence;
@@ -308,7 +308,12 @@ pub mod function {
 }
 ```
 
-This is the *only* import path public consumers need to know.
+These re-exports are for ergonomics — they let users write
+`use xee_xpath::function::DynamicContext;` rather than reaching into
+`xee_interpreter` directly. The macro itself does *not* depend on
+these re-exports: its generated code references the types by their
+real paths in `xee-interpreter` (see §7.3), so consumers can also
+choose to import from `xee_interpreter` directly if they prefer.
 
 ### 6.2 `StaticContextBuilder::add_function`
 
@@ -409,9 +414,11 @@ to the macro's user contract.
 
 ### 6.5 What stays private
 
-- `StaticFunctionType` (the bare fn-pointer alias) is exposed because
-  the macro-generated code refers to it, but it's marked
-  `#[doc(hidden)]` — not part of the stable surface.
+- `StaticFunctionType` (the bare fn-pointer alias in
+  `xee-interpreter::function`) becomes `pub` because the macro-
+  generated code names it in absolute path form, but it's marked
+  `#[doc(hidden)]` and not re-exported through `xee_xpath::function` —
+  not part of the stable surface.
 - `StaticFunctions` (the registry struct) stays crate-internal. The
   builder/runtime never hand it out directly.
 - `StaticFunctionId` stays crate-internal. External consumers never
@@ -460,34 +467,58 @@ rationale.
 
 ### 7.3 Macro path repointing
 
-`xee-xpath-macros/src/wrapper.rs` currently emits code with paths
-like `crate::function::StaticFunctionType`,
-`crate::context::DynamicContext`, etc. These assume the user is
-inside `xee-interpreter`.
+`xee-xpath-macros/src/wrapper.rs` and `src/convert.rs` currently
+emit code with paths rooted at `crate::*`:
 
-The fix: emit absolute paths through a configurable crate root.
-Cleanest is the standard `$crate` trick used by declarative macros,
-adapted to proc-macros: a small helper at the top of the generated
-code resolves the right crate root via a re-export.
+- `crate::function::StaticFunctionType`
+- `crate::context::DynamicContext`
+- `crate::interpreter::Interpreter`
+- `crate::sequence::Sequence`
+- `crate::error::Error`
+- `crate::occurrence::one`, `crate::occurrence::option`
 
-```rust
-// generated code now references:
-::xee_xpath::function::__macro_support::StaticFunctionType
-::xee_xpath::function::__macro_support::DynamicContext
-::xee_xpath::function::__macro_support::Interpreter
-::xee_xpath::function::__macro_support::Sequence
-::xee_xpath::function::__macro_support::Error
+The `crate::` prefix resolves to whichever crate invoked the macro.
+That works today because the only invoker is `xee-interpreter`'s own
+library code; for an external invoker the paths resolve to types
+that don't exist.
+
+**The fix.** Replace `crate::` with `::xee_interpreter::` throughout
+the macro's emitted code. The same absolute path resolves correctly
+in both contexts:
+
+- Inside `xee-interpreter`: edition-2021 lets a crate name itself in
+  absolute paths, so `::xee_interpreter::context::DynamicContext`
+  resolves to the local definition. No `extern crate self as ...`
+  needed.
+- In external crates: `::xee_interpreter::*` resolves provided the
+  consumer has `xee-interpreter` as a *direct* Cargo dependency. A
+  transitive dep via `xee-xpath` is not enough — Cargo only puts
+  direct deps into the user crate's name namespace.
+
+This is the entire mechanism. One macro, one set of emitted paths,
+no feature flags, no `__macro_support` re-export module, no parallel
+internal-vs-public bifurcation. The earlier draft of this section
+proposed a `#[doc(hidden)] __macro_support` re-export module under
+`xee_xpath`; that approach is captured as a rejected alternative
+in §11.6.
+
+`StaticFunctionType` needs to become `pub` in `xee-interpreter`
+(currently `pub(crate)`), marked `#[doc(hidden)]`. Everything else
+the macro emits is either already `pub` or becomes `pub` as part of
+the same change.
+
+**Consumer surface.** External consumers add two direct dependencies:
+
+```toml
+[dependencies]
+xee-xpath = "..."        # high-level API + macro re-export
+xee-interpreter = "..."  # types named by macro-generated code
 ```
 
-`xee_xpath::function::__macro_support` is a `#[doc(hidden)]` module
-that re-exports the inner types. The internal library code keeps
-using the `crate::` paths via a parallel re-export inside
-`xee-interpreter` (or via the same path through a workspace
-re-export).
-
-Alternative: keep two macros, one internal (`crate::` paths) and one
-public (`xee_xpath::function::` paths). Loses DRY but is less
-invasive. See Open Question 10.5.
+The `xee-xpath::function` module re-exports the macro and the most
+commonly-used types from `xee-interpreter` for ergonomics, but
+neither the macro's emitted paths nor the consumer's `use`
+statements need to go through that re-export.
 
 ### 7.4 `DynamicContext` user-data field
 
@@ -561,8 +592,14 @@ of every external namespace set.
 - The shape of `StaticFunctionDescription` is **not** stable API.
   Consumers should produce it only via `wrap_xpath_fn!`. The
   struct itself is `#[doc(hidden)]`.
-- The `__macro_support` re-export module is `#[doc(hidden)]` and
-  may change between minor versions in lockstep with the macro.
+- `StaticFunctionType` is `pub` but `#[doc(hidden)]`. The macro's
+  generated code names it; consumer code should not.
+- The internal-module structure of `xee-interpreter` (i.e. that
+  `DynamicContext` lives at `::xee_interpreter::context::*`, etc.)
+  is part of the contract for macro-generated code. Reorganising
+  the module tree of `xee-interpreter` is a minor-version break
+  because it breaks already-compiled `#[xpath_fn]` invocations in
+  consumer crates that target an earlier version.
 
 ## 9. Implementation plan — phased PRs
 
@@ -651,19 +688,29 @@ is infallible.
 
 ### Phase 3 — macro path repointing + `xee_xpath::function` re-exports
 
-`xee-xpath-macros` emits absolute paths through
-`::xee_xpath::function::__macro_support`. `xee-xpath` adds the
-`function` module with re-exports. End-to-end smoke test: an
-external integration test crate in the workspace registers a
-toy function and evaluates an expression that calls it.
+`xee-xpath-macros` emits absolute paths rooted at
+`::xee_interpreter::*` instead of `crate::*` (see §7.3 for the
+mechanism). `xee-interpreter::function::StaticFunctionType`
+changes from `pub(crate)` to `pub` + `#[doc(hidden)]`. `xee-xpath`
+adds a `function` module re-exporting the macros and the most-
+used types for consumer ergonomics.
 
-**Risk:** internal library code (`xee-interpreter/src/library/*.rs`)
-still uses the macro with `crate::` paths in mind. Two options
-(see Open Question 10.5). The simplest: the macro emits paths
-via a configurable root and a workspace-internal feature flag.
-Internal library uses one root; external consumers use another.
+End-to-end smoke test: an external integration test crate in the
+workspace declares both `xee-xpath` and `xee-interpreter` as
+direct deps, registers a toy `#[xpath_fn]` function, and evaluates
+an XPath expression that calls it.
 
-**LOC estimate:** ~400 lines including the integration test crate.
+**Risk:** edition-2021 self-reference (a crate naming itself in
+absolute paths) is well-established but there's a non-zero chance
+of a wrinkle inside `xee-interpreter`'s own use of the macro. The
+Phase 3 PR's first compile check exercises every internal library
+function, so any breakage surfaces immediately. If a wrinkle does
+appear, the fallback is the rejected `__macro_support` re-export
+approach (§11.6) — more mechanism but proven idiomatic.
+
+**LOC estimate:** ~150 lines including the integration test crate
+(down from ~400 in earlier drafts that included the
+`__macro_support` plumbing).
 
 ### Phase 4 — user-data slot on `DynamicContext`
 
@@ -756,22 +803,28 @@ conservative choice that doesn't constrain the macro contract; a
 later iteration can lift the restriction once we've seen what shapes
 consumers actually want.
 
-### 10.5 One macro or two?
+### 10.5 Consumer direct-dep on `xee-interpreter`
 
-The internal library uses `crate::function::*` paths today. If the
-public macro emits `::xee_xpath::function::*` paths, the same macro
-cannot serve both unless we feature-flag the crate root.
+The macro emits `::xee_interpreter::*` absolute paths (§7.3).
+External consumers must therefore have `xee-interpreter` as a
+direct Cargo dependency, not just a transitive dep via
+`xee-xpath`. Is that an acceptable UX papercut?
 
-**Recommendation: one macro with a feature-flagged crate root.**
-`xee-xpath-macros` gains a `internal` Cargo feature; when active,
-generated paths use `crate::function::*`, otherwise
-`::xee_xpath::function::__macro_support::*`. `xee-interpreter`'s
-dep on `xee-xpath-macros` enables the feature; downstream consumers
-do not. This keeps the macro DRY.
+**Recommendation: yes.** `xee-interpreter` is already a published
+crate with its own README and documentation page; asking consumers
+to list it alongside `xee-xpath` makes the dependency relationship
+visible rather than hidden behind a transitive resolution. The
+alternatives all introduce mechanism: `extern crate xee_interpreter
+as _xi;` injection in the macro output runs into the self-reference
+problem inside `xee-interpreter`'s own library; the
+`__macro_support` re-export trick adds a `#[doc(hidden)]` module
+and a parallel re-export path inside `xee-interpreter`.
 
-Alternative: two macros (`xpath_fn` public, `xpath_fn_internal`
-private). More code, less risk of accidentally exposing internal
-paths.
+If upstream review flags this as friction, the cleanest mitigation
+is documentation: a top-level rustdoc line on `xee_xpath::function`
+that names the second dep explicitly, plus an example
+`Cargo.toml` snippet. Mechanism changes are not worth it for the
+papercut size.
 
 ### 10.6 Error model for user function errors
 
@@ -911,6 +964,41 @@ default-configured contexts) without paying the IR / bytecode /
 choice that can be added as a lint or builder option (`strict_spec(
 true)` rejecting overrides of names in well-known XPath namespaces)
 without touching the IR.
+
+### 11.6 Macro emits paths via a `__macro_support` re-export module
+
+An earlier draft of this design proposed having `xee-xpath` host a
+`#[doc(hidden)] pub mod function::__macro_support` that re-exports
+`DynamicContext`, `Interpreter`, `Sequence`, `Error`, and the
+helpers, and have the macro emit
+`::xee_xpath::function::__macro_support::DynamicContext` etc. This
+required a Cargo feature flag on `xee-xpath-macros` to make the
+macro emit `crate::*` paths when invoked inside `xee-interpreter`
+(which doesn't and cannot depend on `xee-xpath`) and the
+`__macro_support` paths when invoked externally.
+
+What this would buy: consumers depending only on `xee-xpath`
+(no direct `xee-interpreter` dep) could use the macro.
+
+What it costs:
+
+- A `#[doc(hidden)]` module with re-exports that mirror the
+  internal-module layout of `xee-interpreter` — invented surface
+  area whose only job is to be a path target for macro output.
+- A Cargo feature flag on `xee-xpath-macros` to switch emitted
+  paths based on caller crate.
+- A maintenance burden whenever the macro's emitted paths
+  change: two paths to keep in sync (internal-flag and external).
+- The macro DX becomes meaningfully more opaque: the *real* types
+  live in `xee-interpreter` but the macro pretends they live in a
+  hidden submodule of `xee-xpath`.
+
+**Rejected** in favour of the simpler design described in §7.3:
+the macro emits paths to the real location of the types
+(`::xee_interpreter::*`), edition-2021 self-reference handles
+internal use, and external consumers take a direct dep on
+`xee-interpreter` (§10.5). The complexity of the re-export module
+is not justified by the size of the UX papercut it eliminates.
 
 ## 12. Risks
 
