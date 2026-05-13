@@ -1,0 +1,5 @@
+---
+source: xee-xpath-macros/src/convert.rs
+expression: "convert_err(\"map(xs:string, xs:integer)\")"
+---
+"typed map tests (e.g. `map(xs:string, xs:integer)`) are not yet supported in #[xpath_fn] signatures — use `map(*)`"
