@@ -75,6 +75,24 @@ fn make_wrapper(
         conversion_names.push(interpreter_ident);
         adjust += 1;
     }
+
+    let expected_inputs = signature.params.len() + adjust;
+    if ast.sig.inputs.len() != expected_inputs {
+        let sig_count = signature.params.len();
+        let rust_user_count = ast.sig.inputs.len().saturating_sub(adjust);
+        let injected_note = match adjust {
+            0 => String::new(),
+            n => format!(" (after subtracting {n} injected `context`/`interpreter` argument(s))"),
+        };
+        bail_spanned!(
+            ast.sig.ident.span() =>
+            format!(
+                "#[xpath_fn] arity mismatch: signature declares {sig_count} XPath parameter(s), \
+                 but the Rust function takes {rust_user_count}{injected_note}"
+            )
+        );
+    }
+
     for (i, param) in signature.params.iter().enumerate() {
         let name = Ident::new(param.name.local_name(), Span::call_site());
         conversion_names.push(name.clone());
@@ -186,5 +204,41 @@ mod tests {
         )
         .unwrap();
         assert_debug_snapshot!(xpath_fn_wrapper(&ast, &options).unwrap().to_string());
+    }
+
+    #[test]
+    fn test_wrapper_too_few_rust_args_errors() {
+        // signature declares two XPath parameters but the Rust fn only
+        // takes one — used to panic with index-out-of-bounds; now should
+        // surface as a clean syn::Error pointing at the fn name.
+        let options =
+            parse_str::<XPathFnOptions>(r#""fn:foo($x as xs:int, $y as xs:int) as xs:string""#)
+                .unwrap();
+        let ast = parse_str::<ItemFn>(r#"fn foo(x: &i64) -> String { format!("{}", x) }"#).unwrap();
+        assert_debug_snapshot!(xpath_fn_wrapper(&ast, &options).unwrap_err().to_string());
+    }
+
+    #[test]
+    fn test_wrapper_too_many_rust_args_errors() {
+        // Rust fn has one more arg than the signature declares.
+        // The old code silently dropped the extra arg; we now reject.
+        let options =
+            parse_str::<XPathFnOptions>(r#""fn:foo($x as xs:int) as xs:string""#).unwrap();
+        let ast = parse_str::<ItemFn>(r#"fn foo(x: &i64, y: &i64) -> String { format!("{}", x) }"#)
+            .unwrap();
+        assert_debug_snapshot!(xpath_fn_wrapper(&ast, &options).unwrap_err().to_string());
+    }
+
+    #[test]
+    fn test_wrapper_arity_mismatch_with_injected_context() {
+        // Even with context injection, arity is checked correctly:
+        // signature 0 params + context injected = 1 Rust arg expected,
+        // but Rust fn has 2.
+        let options = parse_str::<XPathFnOptions>(r#""fn:foo() as xs:string""#).unwrap();
+        let ast = parse_str::<ItemFn>(
+            r#"fn foo(context: &DynamicContext, extra: &i64) -> String { String::new() }"#,
+        )
+        .unwrap();
+        assert_debug_snapshot!(xpath_fn_wrapper(&ast, &options).unwrap_err().to_string());
     }
 }

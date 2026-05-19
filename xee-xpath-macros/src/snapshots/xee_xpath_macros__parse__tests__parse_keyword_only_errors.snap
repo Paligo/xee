@@ -1,0 +1,9 @@
+---
+source: xee-xpath-macros/src/parse.rs
+expression: "syn::parse_str::<XPathFnOptions>(r#\"context_first\"#)"
+---
+Err(
+    Error(
+        "unexpected end of input, missing XPath signature string — #[xpath_fn(...)] requires a signature literal like \"fn:foo($x as xs:integer) as xs:integer\" as one of its arguments",
+    ),
+)

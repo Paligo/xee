@@ -46,7 +46,12 @@ impl Parse for XPathFnOptions {
                 }
             }
         }
-        let signature_string = signature.expect("Signature not found");
+        let Some(signature_string) = signature else {
+            return Err(input.error(
+                "missing XPath signature string — #[xpath_fn(...)] requires a signature literal \
+                 like \"fn:foo($x as xs:integer) as xs:integer\" as one of its arguments",
+            ));
+        };
         let namespaces = Namespaces::default();
         let signature = Signature::parse(&signature_string, &namespaces)
             .map_err(|e| input.error(format!("{:?}", e)))?;
@@ -133,5 +138,12 @@ mod tests {
         assert_debug_snapshot!(syn::parse_str::<XPathFnOptions>(
             r#""fn:foo() as xs:string",blah"#
         ));
+    }
+
+    #[test]
+    fn test_parse_keyword_only_errors() {
+        // #[xpath_fn(context_first)] with no signature string should
+        // surface a clean error, not a panic.
+        assert_debug_snapshot!(syn::parse_str::<XPathFnOptions>(r#"context_first"#));
     }
 }
