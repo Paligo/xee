@@ -1130,13 +1130,11 @@ impl<'a> Interpreter<'a> {
                                 "Appending a whole document is not supported yet",
                             )));
                         }
-                        xot::Value::Text(text) => {
+                        xot::Value::Text(text) if text.get().is_empty() => {
                             // zero length text nodes are skipped
                             // Can this even exist, or does Xot not have
                             // them anyway?
-                            if text.get().is_empty() {
-                                continue;
-                            }
+                            continue;
                         }
                         _ => {}
                     }

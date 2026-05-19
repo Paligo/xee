@@ -14,12 +14,11 @@ pub(crate) fn strip_whitespace(xot: &mut Xot, names: &Names, node: Node) {
     for edge in xot.traverse(node) {
         match edge {
             NodeEdge::Start(node) => match xot.value(node) {
-                Value::Text(text) => {
+                Value::Text(text)
                     if is_xml_whitespace(text.get())
-                        && !is_xml_space_preserve(xot, names, node, &xml_space_preserve)
-                    {
-                        to_remove.push(node);
-                    }
+                        && !is_xml_space_preserve(xot, names, node, &xml_space_preserve) =>
+                {
+                    to_remove.push(node);
                 }
                 Value::Element(_) => {
                     if let Some(xml_space) = xot.attributes(node).get(xot.xml_space_name()) {
