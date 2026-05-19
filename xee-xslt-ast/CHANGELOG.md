@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/Paligo/xee/compare/xee-xslt-ast-v0.1.6...xee-xslt-ast-v0.2.0) - 2026-05-19
+
+### Other
+
+- Fix clippy issues. ([#152](https://github.com/Paligo/xee/pull/152))
+- Low hanging fruits ([#125](https://github.com/Paligo/xee/pull/125))
+- Add tracking for various unsupported features and implement xsl:output as the one failing the most tests ([#124](https://github.com/Paligo/xee/pull/124))
+- Implement support for xsl:iterate ([#122](https://github.com/Paligo/xee/pull/122))
+- linter fixes ([#115](https://github.com/Paligo/xee/pull/115))
+
 ## [0.1.6](https://github.com/Paligo/xee/compare/xee-xslt-ast-v0.1.5...xee-xslt-ast-v0.1.6) - 2025-08-05
 
 ### Other

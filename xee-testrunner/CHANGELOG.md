@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7](https://github.com/Paligo/xee/compare/xee-testrunner-v0.1.6...xee-testrunner-v0.1.7) - 2026-05-19
+
+### Other
+
+- Low hanging fruits ([#125](https://github.com/Paligo/xee/pull/125))
+- Implement support for <assert-xml file=".."/> for XSLT tests ([#119](https://github.com/Paligo/xee/pull/119))
+- Specify a timezone when running tests instead of taking it from the environment ([#118](https://github.com/Paligo/xee/pull/118))
+- add both cargo fmt as well as clippy to build process. ([#120](https://github.com/Paligo/xee/pull/120))
+- linter fixes ([#115](https://github.com/Paligo/xee/pull/115))
+
 ## [0.1.6](https://github.com/Paligo/xee/compare/xee-testrunner-v0.1.5...xee-testrunner-v0.1.6) - 2025-08-05
 
 ### Other

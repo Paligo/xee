@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/Paligo/xee/compare/xee-interpreter-v0.2.0...xee-interpreter-v0.3.0) - 2026-05-19
+
+### Other
+
+- Fix clippy issues. ([#152](https://github.com/Paligo/xee/pull/152))
+- Improve the xee-xpath::Documents docs  ([#130](https://github.com/Paligo/xee/pull/130))
+- Add tracking for various unsupported features and implement xsl:output as the one failing the most tests ([#124](https://github.com/Paligo/xee/pull/124))
+- Implement support for xsl:iterate ([#122](https://github.com/Paligo/xee/pull/122))
+- add both cargo fmt as well as clippy to build process. ([#120](https://github.com/Paligo/xee/pull/120))
+- linter fixes ([#115](https://github.com/Paligo/xee/pull/115))
+
 ## [0.2.0](https://github.com/Paligo/xee/compare/xee-interpreter-v0.1.5...xee-interpreter-v0.2.0) - 2025-08-05
 
 ### Features
