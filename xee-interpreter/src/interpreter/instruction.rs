@@ -1,5 +1,28 @@
 use num::{FromPrimitive, ToPrimitive};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RaisedError {
+    XTDE0700,
+    XTTE0570,
+}
+
+impl RaisedError {
+    pub(crate) fn to_u16(self) -> u16 {
+        match self {
+            RaisedError::XTDE0700 => 0,
+            RaisedError::XTTE0570 => 1,
+        }
+    }
+
+    pub(crate) fn from_u16(value: u16) -> Self {
+        match value {
+            0 => RaisedError::XTDE0700,
+            1 => RaisedError::XTTE0570,
+            _ => panic!("unknown raised error id: {value}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Instruction {
     // binary operators
@@ -14,10 +37,14 @@ pub enum Instruction {
     Minus,
     //
     Concat,
+    Absent,
     Const(u16),
     Closure(u16),
+    NamedTemplate(u16),
     StaticClosure(u16),
     Var(u16),
+    GlobalVar(u16),
+    VarIsAbsent(u16),
     Set(u16),
     ClosureVar(u16),
     Comma,
@@ -52,6 +79,7 @@ pub enum Instruction {
     Deduplicate,
     Return,
     ReturnConvert(u16),
+    ConvertSequence(u16, RaisedError),
     Dup,
     Pop,
     LetDone,
@@ -77,7 +105,11 @@ pub enum Instruction {
     XmlAppend,
     CopyShallow,
     CopyDeep,
-    ApplyTemplates(u16),
+    CallTemplate,
+    ContinueTemplate,
+    ApplyTemplates(u16, bool),
+    ApplyTemplatesCurrent(u16, bool),
+    RaiseError(RaisedError),
     PrintTop,
     PrintStack,
 }
@@ -93,10 +125,14 @@ pub(crate) enum EncodedInstruction {
     Plus,
     Minus,
     Concat,
+    Absent,
     Const,
     Closure,
+    NamedTemplate,
     StaticClosure,
     Var,
+    GlobalVar,
+    VarIsAbsent,
     Set,
     ClosureVar,
     Comma,
@@ -131,6 +167,7 @@ pub(crate) enum EncodedInstruction {
     Deduplicate,
     Return,
     ReturnConvert,
+    ConvertSequence,
     Dup,
     Pop,
     LetDone,
@@ -154,9 +191,13 @@ pub(crate) enum EncodedInstruction {
     XmlComment,
     XmlProcessingInstruction,
     XmlAppend,
-    ApplyTemplates,
     CopyShallow,
     CopyDeep,
+    CallTemplate,
+    ContinueTemplate,
+    ApplyTemplates,
+    ApplyTemplatesCurrent,
+    RaiseError,
     PrintTop,
     PrintStack,
 }
@@ -174,6 +215,7 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::Plus => (Instruction::Plus, 1),
         EncodedInstruction::Minus => (Instruction::Minus, 1),
         EncodedInstruction::Concat => (Instruction::Concat, 1),
+        EncodedInstruction::Absent => (Instruction::Absent, 1),
         EncodedInstruction::Const => {
             let constant = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::Const(constant), 3)
@@ -182,6 +224,10 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
             let function = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::Closure(function), 3)
         }
+        EncodedInstruction::NamedTemplate => {
+            let function = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::NamedTemplate(function), 3)
+        }
         EncodedInstruction::StaticClosure => {
             let function = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::StaticClosure(function), 3)
@@ -189,6 +235,14 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::Var => {
             let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::Var(variable), 3)
+        }
+        EncodedInstruction::GlobalVar => {
+            let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::GlobalVar(variable), 3)
+        }
+        EncodedInstruction::VarIsAbsent => {
+            let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::VarIsAbsent(variable), 3)
         }
         EncodedInstruction::Set => {
             let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
@@ -264,6 +318,14 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
             let sequence_type_id = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::ReturnConvert(sequence_type_id), 3)
         }
+        EncodedInstruction::ConvertSequence => {
+            let sequence_type_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            let error_id = u16::from_le_bytes([bytes[3], bytes[4]]);
+            (
+                Instruction::ConvertSequence(sequence_type_id, RaisedError::from_u16(error_id)),
+                5,
+            )
+        }
         EncodedInstruction::Dup => (Instruction::Dup, 1),
         EncodedInstruction::Pop => (Instruction::Pop, 1),
         EncodedInstruction::LetDone => (Instruction::LetDone, 1),
@@ -285,9 +347,30 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::XmlAppend => (Instruction::XmlAppend, 1),
         EncodedInstruction::CopyShallow => (Instruction::CopyShallow, 1),
         EncodedInstruction::CopyDeep => (Instruction::CopyDeep, 1),
+        EncodedInstruction::CallTemplate => (Instruction::CallTemplate, 1),
+        EncodedInstruction::ContinueTemplate => (Instruction::ContinueTemplate, 1),
         EncodedInstruction::ApplyTemplates => {
             let mode_id = u16::from_le_bytes([bytes[1], bytes[2]]);
-            (Instruction::ApplyTemplates(mode_id), 3)
+            let builtin_template_params_passthrough = bytes[3] != 0;
+            (
+                Instruction::ApplyTemplates(mode_id, builtin_template_params_passthrough),
+                4,
+            )
+        }
+        EncodedInstruction::ApplyTemplatesCurrent => {
+            let fallback_mode_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            let builtin_template_params_passthrough = bytes[3] != 0;
+            (
+                Instruction::ApplyTemplatesCurrent(
+                    fallback_mode_id,
+                    builtin_template_params_passthrough,
+                ),
+                4,
+            )
+        }
+        EncodedInstruction::RaiseError => {
+            let error_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::RaiseError(RaisedError::from_u16(error_id)), 3)
         }
         EncodedInstruction::PrintTop => (Instruction::PrintTop, 1),
         EncodedInstruction::PrintStack => (Instruction::PrintStack, 1),
@@ -316,6 +399,7 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
         Instruction::Plus => bytes.push(EncodedInstruction::Plus.to_u8().unwrap()),
         Instruction::Minus => bytes.push(EncodedInstruction::Minus.to_u8().unwrap()),
         Instruction::Concat => bytes.push(EncodedInstruction::Concat.to_u8().unwrap()),
+        Instruction::Absent => bytes.push(EncodedInstruction::Absent.to_u8().unwrap()),
         Instruction::Const(constant) => {
             bytes.push(EncodedInstruction::Const.to_u8().unwrap());
             bytes.extend_from_slice(&constant.to_le_bytes());
@@ -324,12 +408,24 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
             bytes.push(EncodedInstruction::Closure.to_u8().unwrap());
             bytes.extend_from_slice(&function_id.to_le_bytes());
         }
+        Instruction::NamedTemplate(function_id) => {
+            bytes.push(EncodedInstruction::NamedTemplate.to_u8().unwrap());
+            bytes.extend_from_slice(&function_id.to_le_bytes());
+        }
         Instruction::StaticClosure(function_id) => {
             bytes.push(EncodedInstruction::StaticClosure.to_u8().unwrap());
             bytes.extend_from_slice(&function_id.to_le_bytes());
         }
         Instruction::Var(variable) => {
             bytes.push(EncodedInstruction::Var.to_u8().unwrap());
+            bytes.extend_from_slice(&variable.to_le_bytes());
+        }
+        Instruction::GlobalVar(variable) => {
+            bytes.push(EncodedInstruction::GlobalVar.to_u8().unwrap());
+            bytes.extend_from_slice(&variable.to_le_bytes());
+        }
+        Instruction::VarIsAbsent(variable) => {
+            bytes.push(EncodedInstruction::VarIsAbsent.to_u8().unwrap());
             bytes.extend_from_slice(&variable.to_le_bytes());
         }
         Instruction::Set(variable) => {
@@ -394,6 +490,11 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
             bytes.push(EncodedInstruction::ReturnConvert.to_u8().unwrap());
             bytes.extend_from_slice(&sequence_type_id.to_le_bytes());
         }
+        Instruction::ConvertSequence(sequence_type_id, error) => {
+            bytes.push(EncodedInstruction::ConvertSequence.to_u8().unwrap());
+            bytes.extend_from_slice(&sequence_type_id.to_le_bytes());
+            bytes.extend_from_slice(&error.to_u16().to_le_bytes());
+        }
         Instruction::Dup => bytes.push(EncodedInstruction::Dup.to_u8().unwrap()),
         Instruction::Pop => bytes.push(EncodedInstruction::Pop.to_u8().unwrap()),
         Instruction::LetDone => bytes.push(EncodedInstruction::LetDone.to_u8().unwrap()),
@@ -437,9 +538,26 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
         Instruction::XmlAppend => bytes.push(EncodedInstruction::XmlAppend.to_u8().unwrap()),
         Instruction::CopyShallow => bytes.push(EncodedInstruction::CopyShallow.to_u8().unwrap()),
         Instruction::CopyDeep => bytes.push(EncodedInstruction::CopyDeep.to_u8().unwrap()),
-        Instruction::ApplyTemplates(mode_id) => {
+        Instruction::CallTemplate => bytes.push(EncodedInstruction::CallTemplate.to_u8().unwrap()),
+        Instruction::ContinueTemplate => {
+            bytes.push(EncodedInstruction::ContinueTemplate.to_u8().unwrap())
+        }
+        Instruction::ApplyTemplates(mode_id, builtin_template_params_passthrough) => {
             bytes.push(EncodedInstruction::ApplyTemplates.to_u8().unwrap());
             bytes.extend_from_slice(&mode_id.to_le_bytes());
+            bytes.push(u8::from(builtin_template_params_passthrough));
+        }
+        Instruction::ApplyTemplatesCurrent(
+            fallback_mode_id,
+            builtin_template_params_passthrough,
+        ) => {
+            bytes.push(EncodedInstruction::ApplyTemplatesCurrent.to_u8().unwrap());
+            bytes.extend_from_slice(&fallback_mode_id.to_le_bytes());
+            bytes.push(u8::from(builtin_template_params_passthrough));
+        }
+        Instruction::RaiseError(error) => {
+            bytes.push(EncodedInstruction::RaiseError.to_u8().unwrap());
+            bytes.extend_from_slice(&error.to_u16().to_le_bytes());
         }
         Instruction::PrintTop => bytes.push(EncodedInstruction::PrintTop.to_u8().unwrap()),
         Instruction::PrintStack => bytes.push(EncodedInstruction::PrintStack.to_u8().unwrap()),
@@ -464,6 +582,7 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::Plus
         | Instruction::Minus
         | Instruction::Concat
+        | Instruction::Absent
         | Instruction::Comma
         | Instruction::CurlyArray
         | Instruction::SquareArray
@@ -511,13 +630,18 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::XmlAppend
         | Instruction::CopyShallow
         | Instruction::CopyDeep
+        | Instruction::CallTemplate
+        | Instruction::ContinueTemplate
         | Instruction::PrintTop
         | Instruction::PrintStack => 1,
         Instruction::Call(_) => 2,
         Instruction::Const(_)
         | Instruction::Closure(_)
+        | Instruction::NamedTemplate(_)
         | Instruction::StaticClosure(_)
         | Instruction::Var(_)
+        | Instruction::GlobalVar(_)
+        | Instruction::VarIsAbsent(_)
         | Instruction::Set(_)
         | Instruction::ClosureVar(_)
         | Instruction::Jump(_)
@@ -528,8 +652,10 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::InstanceOf(_)
         | Instruction::Treat(_)
         | Instruction::ReturnConvert(_)
-        | Instruction::JumpIfFalse(_) => 3,
-        Instruction::ApplyTemplates(_) => 3,
+        | Instruction::JumpIfFalse(_)
+        | Instruction::RaiseError(_) => 3,
+        Instruction::ApplyTemplates(_, _) | Instruction::ApplyTemplatesCurrent(_, _) => 4,
+        Instruction::ConvertSequence(_, _) => 5,
     }
 }
 

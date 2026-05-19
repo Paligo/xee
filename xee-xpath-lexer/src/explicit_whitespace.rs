@@ -79,13 +79,6 @@ impl<'a> ExplicitWhitespace<'a> {
     ) -> Option<(Token<'a>, Span)> {
         let (next_token, next_span) = self.base.peek()?;
         match next_token {
-            Ok(Token::NCName(local_name)) => {
-                let span = span.start..next_span.end;
-                Some((
-                    Token::URIQualifiedName(URIQualifiedName { uri, local_name }),
-                    span,
-                ))
-            }
             Ok(Token::Asterisk) => {
                 let span = span.start..next_span.end;
                 Some((
@@ -93,8 +86,14 @@ impl<'a> ExplicitWhitespace<'a> {
                     span,
                 ))
             }
+            Ok(next_token) => next_token.ncname().map(|local_name| {
+                let span = span.start..next_span.end;
+                (
+                    Token::URIQualifiedName(URIQualifiedName { uri, local_name }),
+                    span,
+                )
+            }),
             Err(_) => Some((Token::Error, span.clone())),
-            _ => None,
         }
     }
 
@@ -277,6 +276,22 @@ mod tests {
                     local_name: "bar"
                 }),
                 0..24
+            ))
+        );
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_uri_qualified_name_with_keyword_local_name() {
+        let mut iter = ExplicitWhitespace::from_str("Q{}mod");
+        assert_eq!(
+            iter.next(),
+            Some((
+                Token::URIQualifiedName(URIQualifiedName {
+                    uri: "",
+                    local_name: "mod"
+                }),
+                0..6
             ))
         );
         assert_eq!(iter.next(), None);

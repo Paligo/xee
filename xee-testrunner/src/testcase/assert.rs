@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use xee_xpath::context::{Collation, DynamicContext};
 use xee_xpath::SerializationParameters;
 use xot::xmlname::{NameStrInfo, OwnedName as Name};
-use xot::Xot;
+use xot::{Value, Xot};
 
 use xee_xpath::query::RecurseQuery;
 use xee_xpath::{context, error, Documents, Item, Queries, Query, Recurse, Sequence};
@@ -419,6 +419,7 @@ impl Assertable for AssertXml {
                 return TestOutcome::EnvironmentError("Cannot parse result XML".to_string());
             }
         };
+        normalize_xml_for_comparison(&mut compare_xot, found);
 
         let expected = match &self {
             Self::MatchString(s) => compare_xot.parse_fragment(s).unwrap(),
@@ -438,6 +439,7 @@ impl Assertable for AssertXml {
                 compare_xot.parse(&expected_xml).unwrap()
             }
         };
+        normalize_xml_for_comparison(&mut compare_xot, expected);
 
         // and compare
         let c = compare_xot.deep_equal(expected, found);
@@ -447,6 +449,64 @@ impl Assertable for AssertXml {
         } else {
             TestOutcome::Failed(Failure::Xml(self.clone(), AssertXmlFailure::WrongXml(xml)))
         }
+    }
+}
+
+fn normalize_xml_for_comparison(xot: &mut Xot, fragment: xot::Node) {
+    normalize_outer_fragment_whitespace(xot, fragment);
+    normalize_ignorable_whitespace(xot, fragment);
+}
+
+fn normalize_outer_fragment_whitespace(xot: &mut Xot, fragment: xot::Node) {
+    let children = xot.children(fragment).collect::<Vec<_>>();
+    let leading = children
+        .iter()
+        .take_while(|child| is_whitespace_text(xot, **child))
+        .copied()
+        .collect::<Vec<_>>();
+    let trailing = children
+        .iter()
+        .rev()
+        .take_while(|child| is_whitespace_text(xot, **child))
+        .copied()
+        .collect::<Vec<_>>();
+
+    for child in leading.into_iter().chain(trailing) {
+        let _ = xot.remove(child);
+    }
+}
+
+fn normalize_ignorable_whitespace(xot: &mut Xot, node: xot::Node) {
+    let children = xot.children(node).collect::<Vec<_>>();
+    for child in &children {
+        normalize_ignorable_whitespace(xot, *child);
+    }
+
+    let has_element_child = children.iter().any(|child| xot.is_element(*child));
+    let has_non_whitespace_text = children.iter().any(|child| match xot.value(*child) {
+        Value::Text(text) => !text
+            .get()
+            .chars()
+            .all(|c| matches!(c, '\u{9}' | '\u{A}' | '\u{D}' | ' ')),
+        _ => false,
+    });
+
+    if has_element_child && !has_non_whitespace_text {
+        for child in children {
+            if is_whitespace_text(xot, child) {
+                let _ = xot.remove(child);
+            }
+        }
+    }
+}
+
+fn is_whitespace_text(xot: &Xot, node: xot::Node) -> bool {
+    match xot.value(node) {
+        Value::Text(text) => text
+            .get()
+            .chars()
+            .all(|c| matches!(c, '\u{9}' | '\u{A}' | '\u{D}' | ' ')),
+        _ => false,
     }
 }
 
@@ -1071,8 +1131,18 @@ fn run_xpath_with_result(
     let q = queries.sequence_with_context(expr, static_context)?;
 
     let variables = AHashMap::from([(name, sequence.clone())]);
+    let context_item = match sequence.normalize(" ", documents.xot_mut()) {
+        Ok(context_item) => Some(context_item.into()),
+        // Function items cannot become the implicit context item for the
+        // assertion query, but $result should still be available.
+        Err(error::ErrorValue::SENR0001) => None,
+        Err(error) => return Err(error.into()),
+    };
 
     q.execute_build_context(documents, |build| {
+        if let Some(context_item) = context_item {
+            build.context_item(context_item);
+        }
         build.variables(variables);
     })
 }
@@ -1080,6 +1150,8 @@ fn run_xpath_with_result(
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf, vec};
+
+    use iri_string::types::IriStr;
 
     use super::*;
 
@@ -1130,5 +1202,58 @@ mod tests {
                 )),
             ]))
         );
+    }
+
+    #[test]
+    fn test_run_xpath_with_result_uses_result_tree_as_context() {
+        let mut documents = Documents::new();
+        let uri: &IriStr = "http://example.com/result.xml".try_into().unwrap();
+        let handle = documents
+            .add_string(uri, "<result><a>true</a><b>0</b><c>false</c><d/></result>")
+            .unwrap();
+        let document_node = documents.document_node(handle).unwrap();
+        let sequence: Sequence = document_node.into();
+
+        let expr = "/result/a = 'true'".to_string();
+        let result = run_xpath_with_result(&expr, &sequence, &mut documents).unwrap();
+
+        assert!(result.effective_boolean_value().unwrap());
+    }
+
+    #[test]
+    fn test_run_xpath_with_result_allows_function_item_results_via_result_variable() {
+        let mut documents = Documents::new();
+        let sequence = run_xpath(&"map:entry('foo', 3)".to_string()).unwrap();
+
+        let expr = "$result?foo = 3".to_string();
+        let result = run_xpath_with_result(&expr, &sequence, &mut documents).unwrap();
+
+        assert!(result.effective_boolean_value().unwrap());
+    }
+
+    #[test]
+    fn test_assert_xml_ignores_outer_fragment_whitespace() {
+        let mut xot = Xot::new();
+        let expected = xot.parse_fragment("\t<b><d>17</d></b>").unwrap();
+        let actual = xot.parse_fragment("<b><d>17</d></b>").unwrap();
+
+        normalize_xml_for_comparison(&mut xot, expected);
+        normalize_xml_for_comparison(&mut xot, actual);
+
+        assert!(xot.deep_equal(expected, actual));
+    }
+
+    #[test]
+    fn test_assert_xml_ignores_indentation_in_element_only_content() {
+        let mut xot = Xot::new();
+        let expected = xot
+            .parse_fragment("<out>\n  <a>1</a>\n  <b>2</b>\n</out>")
+            .unwrap();
+        let actual = xot.parse_fragment("<out><a>1</a><b>2</b></out>").unwrap();
+
+        normalize_xml_for_comparison(&mut xot, expected);
+        normalize_xml_for_comparison(&mut xot, actual);
+
+        assert!(xot.deep_equal(expected, actual));
     }
 }

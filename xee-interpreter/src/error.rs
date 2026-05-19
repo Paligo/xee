@@ -546,7 +546,33 @@ pub enum Error {
     /// binding of a global variable with the same name and same import
     /// precedence, unless it also contains another binding with the same name
     /// and higher import precedence.
+    XTSE0010,
+    /// Invalid value for an XSLT-defined attribute.
+    ///
+    /// It is a static error if an attribute defined for an XSLT instruction
+    /// has a value that is not one of the permitted values.
+    XTSE0020,
+    /// Required global parameter not supplied.
+    ///
+    /// It is a dynamic error if a stylesheet parameter is declared with
+    /// required="yes" and no value is supplied.
+    XTDE0050,
+    /// Attribute not permitted on an XSLT element.
+    ///
+    /// It is a static error if an XSLT element has an attribute that is not
+    /// permitted for that instruction.
+    XTSE0090,
+    /// Duplicate local parameter name.
+    ///
+    /// It is a static error if two xsl:param declarations within the same
+    /// template specify the same name.
+    XTSE0580,
     XTSE0630,
+    /// xsl:with-param does not match any declared template parameter.
+    ///
+    /// It is a static error if xsl:call-template supplies a non-tunnel
+    /// parameter that is not declared by the called template.
+    XTSE0680,
     /// xsl:break or xsl:next-iteration outside of xsl:iterate's tail position
     ///
     /// It is a static error if an xsl:break or xsl:next-iteration element
@@ -562,6 +588,25 @@ pub enum Error {
     ///
     /// Circularity in global declarations is now allowed.
     XTDE0640,
+    /// Required template parameter not supplied.
+    ///
+    /// It is a dynamic error if a required template parameter is not supplied.
+    XTDE0700,
+    /// Variable value does not match declared type.
+    ///
+    /// It is a type error if the value of a variable does not match the
+    /// required type specified in its as attribute.
+    XTTE0570,
+    /// Supplied template parameter value has the wrong type.
+    ///
+    /// It is a type error if the supplied value of a template parameter cannot
+    /// be converted to the required type of the parameter.
+    XTTE0590,
+    /// Typed mode applied to untyped nodes.
+    ///
+    /// It is a type error if xsl:apply-templates is evaluated in a mode with
+    /// typed="yes" and the selected nodes are untyped.
+    XTTE3100,
     /// Shallow copy
     ///
     /// Shallow copy of sequence of more than one item is not allowed.

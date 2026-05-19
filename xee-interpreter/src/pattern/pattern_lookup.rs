@@ -22,30 +22,19 @@ impl<'a> InterpreterPredicateMatcher<'a> {
 }
 
 impl PredicateMatcher for Interpreter<'_> {
-    fn match_predicate(
+    fn match_predicate_with_context(
         &mut self,
         inline_function_id: function::InlineFunctionId,
         item: &Item,
+        position: usize,
+        size: usize,
     ) -> bool {
-        // TODO: extract 'call_function_id_with_arguments' that is used also by
-        // apply_templates_sequence. call it with context, position and length,
-        // again see apply_templates_sequence
         let function = function::InlineFunctionData::new(inline_function_id, Vec::new()).into();
-        let arguments = if let Item::Node(node) = item {
-            if let Some(parent) = self.xot().parent(*node) {
-                let position = self.xot().child_index(parent, *node).unwrap() + 1;
-                let size = self.xot().children(parent).count();
-                [
-                    item.clone().into(),
-                    (position as u64).into(),
-                    (size as u64).into(),
-                ]
-            } else {
-                [item.clone().into(), 1.into(), 1.into()]
-            }
-        } else {
-            [item.clone().into(), 1.into(), 1.into()]
-        };
+        let arguments = [
+            item.clone().into(),
+            (position as u64).into(),
+            (size as u64).into(),
+        ];
 
         // the specification says to swallow any errors
         // TODO: log errors somehow here?
@@ -81,5 +70,29 @@ impl<V: Clone> PatternLookup<V> {
             .iter()
             .find(|(pattern, _)| matches(pattern))
             .map(|(_, value)| value)
+    }
+
+    pub(crate) fn lookup_after(
+        &self,
+        current: &V,
+        mut matches: impl FnMut(&Pattern<function::InlineFunctionId>) -> bool,
+    ) -> Option<&V>
+    where
+        V: PartialEq,
+    {
+        let mut seen_current = false;
+        for (pattern, value) in &self.patterns {
+            if !matches(pattern) {
+                continue;
+            }
+            if !seen_current {
+                if value == current {
+                    seen_current = true;
+                }
+                continue;
+            }
+            return Some(value);
+        }
+        None
     }
 }

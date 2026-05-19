@@ -301,6 +301,7 @@ impl From<ApplyImports> for SequenceConstructorItem {
 pub struct ApplyTemplates {
     pub select: Expression,
     pub mode: ApplyTemplatesModeValue,
+    pub builtin_template_params_passthrough: bool,
 
     pub content: Vec<ApplyTemplatesContent>,
 
@@ -352,6 +353,7 @@ impl From<Assert> for SequenceConstructorItem {
 pub struct Attribute {
     pub name: ValueTemplate<QName>,
     pub namespace: Option<ValueTemplate<Uri>>,
+    pub namespaces: Vec<LiteralNamespace>,
     pub select: Option<Expression>,
     pub separator: Option<ValueTemplate<String>>,
     pub type_: Option<EqName>,
@@ -427,6 +429,7 @@ impl SelectOrSequenceConstructor for Break {
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct CallTemplate {
     pub name: EqName,
+    pub backwards_compatible: bool,
 
     pub with_params: Vec<WithParam>,
 
@@ -459,6 +462,12 @@ pub struct CharacterMap {
     pub output_characters: Vec<OutputCharacter>,
 
     pub span: Span,
+}
+
+impl From<CharacterMap> for Declaration {
+    fn from(c: CharacterMap) -> Self {
+        Declaration::CharacterMap(Box::new(c))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -569,6 +578,12 @@ pub struct DecimalFormat {
     pub span: Span,
 }
 
+impl From<DecimalFormat> for Declaration {
+    fn from(d: DecimalFormat) -> Self {
+        Declaration::DecimalFormat(Box::new(d))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Document {
@@ -591,6 +606,7 @@ impl From<Document> for SequenceConstructorItem {
 pub struct Element {
     pub name: ValueTemplate<QName>,
     pub namespace: Option<ValueTemplate<Uri>>,
+    pub namespaces: Vec<LiteralNamespace>,
     pub inherit_namespaces: bool,
     pub use_attribute_sets: Option<Vec<EqName>>,
     pub type_: Option<EqName>,
@@ -748,6 +764,12 @@ impl From<Function> for OverrideContent {
     }
 }
 
+impl From<Function> for Declaration {
+    fn from(f: Function) -> Self {
+        Declaration::Function(Box::new(f))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Streamability {
@@ -778,6 +800,12 @@ pub struct GlobalContextItem {
     pub span: Span,
 }
 
+impl From<GlobalContextItem> for Declaration {
+    fn from(g: GlobalContextItem) -> Self {
+        Declaration::GlobalContextItem(Box::new(g))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct If {
@@ -802,6 +830,12 @@ pub struct Import {
     pub span: Span,
 }
 
+impl From<Import> for Declaration {
+    fn from(i: Import) -> Self {
+        Declaration::Import(Box::new(i))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ImportSchema {
@@ -813,12 +847,24 @@ pub struct ImportSchema {
     pub schema: Option<Schema>,
 }
 
+impl From<ImportSchema> for Declaration {
+    fn from(i: ImportSchema) -> Self {
+        Declaration::ImportSchema(Box::new(i))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Include {
     pub href: Uri,
 
     pub span: Span,
+}
+
+impl From<Include> for Declaration {
+    fn from(i: Include) -> Self {
+        Declaration::Include(Box::new(i))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -851,6 +897,12 @@ pub struct Key {
     pub span: Span,
 
     pub sequence_constructor: SequenceConstructor,
+}
+
+impl From<Key> for Declaration {
+    fn from(k: Key) -> Self {
+        Declaration::Key(Box::new(k))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -983,6 +1035,12 @@ pub struct Mode {
     pub span: Span,
 }
 
+impl From<Mode> for Declaration {
+    fn from(m: Mode) -> Self {
+        Declaration::Mode(Box::new(m))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum OnNoMatch {
@@ -1004,7 +1062,8 @@ pub enum OnMultipleMatch {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Typed {
-    Boolean,
+    Yes,
+    No,
     Strict,
     Lax,
     Unspecified,
@@ -1042,8 +1101,16 @@ impl SelectOrSequenceConstructor for Namespace {
 pub struct NamespaceAlias {
     pub stylesheet_prefix: PrefixOrDefault,
     pub result_prefix: PrefixOrDefault,
+    pub stylesheet_namespace: Uri,
+    pub result_namespace: Uri,
 
     pub span: Span,
+}
+
+impl From<NamespaceAlias> for Declaration {
+    fn from(n: NamespaceAlias) -> Self {
+        Declaration::NamespaceAlias(Box::new(n))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1382,6 +1449,12 @@ impl SelectOrSequenceConstructor for Param {
     }
 }
 
+impl From<Param> for Declaration {
+    fn from(p: Param) -> Self {
+        Declaration::Param(Box::new(p))
+    }
+}
+
 impl From<Param> for OverrideContent {
     fn from(i: Param) -> Self {
         OverrideContent::Param(Box::new(i))
@@ -1405,6 +1478,12 @@ pub struct PreserveSpace {
     pub elements: Vec<Token>,
 
     pub span: Span,
+}
+
+impl From<PreserveSpace> for Declaration {
+    fn from(p: PreserveSpace) -> Self {
+        Declaration::PreserveSpace(Box::new(p))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1540,6 +1619,12 @@ pub struct StripSpace {
     pub span: Span,
 }
 
+impl From<StripSpace> for Declaration {
+    fn from(s: StripSpace) -> Self {
+        Declaration::StripSpace(Box::new(s))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Template {
@@ -1643,6 +1728,12 @@ pub struct UsePackage {
     pub span: Span,
 }
 
+impl From<UsePackage> for Declaration {
+    fn from(u: UsePackage) -> Self {
+        Declaration::UsePackage(Box::new(u))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum UsePackageContent {
@@ -1696,6 +1787,12 @@ pub struct Variable {
 impl From<Variable> for SequenceConstructorItem {
     fn from(v: Variable) -> Self {
         SequenceConstructorInstruction::Variable(Box::new(v)).into()
+    }
+}
+
+impl From<Variable> for Declaration {
+    fn from(v: Variable) -> Self {
+        Declaration::Variable(Box::new(v))
     }
 }
 
@@ -1825,8 +1922,16 @@ pub type SequenceConstructor = Vec<SequenceConstructorItem>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct LiteralNamespace {
+    pub prefix: Prefix,
+    pub uri: Uri,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ElementNode {
     pub name: Name,
+    pub namespaces: Vec<LiteralNamespace>,
     pub attributes: Vec<(Name, ValueTemplate<String>)>,
     pub sequence_constructor: SequenceConstructor,
     pub span: Span,

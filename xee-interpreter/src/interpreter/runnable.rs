@@ -8,7 +8,7 @@ use crate::context::DocumentsRef;
 use crate::context::DynamicContext;
 use crate::context::StaticContext;
 use crate::error::SpannedError;
-use crate::function::Function;
+use crate::function::{Function, InlineFunctionData};
 use crate::interpreter::interpret::ContextInfo;
 use crate::sequence;
 use crate::stack;
@@ -81,6 +81,31 @@ impl<'a> Runnable<'a> {
     /// Run the program against a sequence item.
     pub fn many(&self, xot: &'a mut Xot) -> error::SpannedResult<sequence::Sequence> {
         Ok(self.run_value(xot)?.try_into()?)
+    }
+
+    pub fn named_template(
+        &self,
+        name: &str,
+        xot: &'a mut Xot,
+    ) -> error::SpannedResult<sequence::Sequence> {
+        let named_template = self
+            .program
+            .declarations
+            .named_template_by_name(name)
+            .ok_or(SpannedError {
+                error: error::Error::Unsupported(format!("Initial template not found: {name}")),
+                span: Some(self.program.span().into()),
+            })?;
+        let function: Function =
+            InlineFunctionData::new(named_template.function_id, Vec::new()).into();
+        let mut interpreter = Interpreter::new(self, xot);
+        let arguments = vec![None; self.program.function_info(&function).arity()];
+        interpreter
+            .call_function_with_optional_arguments(&function, &arguments)
+            .map_err(|error| SpannedError {
+                error,
+                span: Some(self.program.span().into()),
+            })
     }
 
     /// Run the program, expect a single item as the result.

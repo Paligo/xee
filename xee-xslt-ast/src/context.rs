@@ -184,8 +184,26 @@ impl Context {
         )
     }
 
+    pub(crate) fn literal_namespaces(&self, state: &State) -> Vec<ast::LiteralNamespace> {
+        self.prefixes
+            .iter()
+            .map(|(prefix, namespace)| ast::LiteralNamespace {
+                prefix: state.xot.prefix_str(*prefix).to_string(),
+                uri: state.xot.namespace_str(*namespace).to_string(),
+            })
+            .collect()
+    }
+
     pub(crate) fn variable_names(&self) -> &VariableNames {
         &self.variable_names
+    }
+
+    pub(crate) fn builtin_template_params_passthrough(&self) -> bool {
+        true
+    }
+
+    pub(crate) fn backwards_compatible(&self) -> bool {
+        self.version < Decimal::from_str("2.0").unwrap()
     }
 
     pub(crate) fn parser_context(&self, state: &State) -> XPathParserContext {

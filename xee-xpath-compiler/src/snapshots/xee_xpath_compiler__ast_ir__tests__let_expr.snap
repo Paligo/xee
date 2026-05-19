@@ -7,7 +7,7 @@ Ok(
         value: Let(
             Let {
                 name: Name(
-                    "v0",
+                    "v1",
                 ),
                 var_expr: Spanned {
                     value: Atom(

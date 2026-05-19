@@ -123,6 +123,16 @@ impl InstructionParser for ast::Declaration {
 
 impl InstructionParser for ast::ElementNode {
     fn parse(content: &Content, attributes: &Attributes) -> Result<ast::ElementNode> {
+        let namespaces = content
+            .state
+            .xot
+            .namespace_declarations(content.node)
+            .into_iter()
+            .map(|(prefix, namespace)| ast::LiteralNamespace {
+                prefix: content.state.xot.prefix_str(prefix).to_string(),
+                uri: content.state.xot.namespace_str(namespace).to_string(),
+            })
+            .collect();
         let mut element_attributes = Vec::new();
         for key in content.state.xot.attributes(content.node).keys() {
             let name = content.state.xot.name_ref(key, content.node)?;
@@ -140,6 +150,7 @@ impl InstructionParser for ast::ElementNode {
             .name_ref(attributes.element.name(), content.node)?;
         Ok(ast::ElementNode {
             name: name.to_owned(),
+            namespaces,
             attributes: element_attributes,
             span: content.span()?,
             sequence_constructor: content.sequence_constructor()?,
@@ -307,6 +318,9 @@ impl InstructionParser for ast::ApplyTemplates {
                     },
                 ),
             mode,
+            builtin_template_params_passthrough: content
+                .context
+                .builtin_template_params_passthrough(),
             span: content.span()?,
             content: parse(content)?,
         })
@@ -334,10 +348,12 @@ impl InstructionParser for ast::Assert {
 impl InstructionParser for ast::Attribute {
     fn parse(content: &Content, attributes: &Attributes) -> Result<Self> {
         let names = &content.state.names;
+        let namespaces = content.context.literal_namespaces(content.state);
         Ok(ast::Attribute {
             name: attributes.required(names.name, attributes.value_template(attributes.qname()))?,
             namespace: attributes
                 .optional(names.namespace, attributes.value_template(attributes.uri()))?,
+            namespaces,
             select: attributes.optional(names.select, attributes.xpath())?,
             separator: attributes.optional(
                 names.separator,
@@ -358,10 +374,8 @@ static ATTRIBUTE_SET_CONTENT: ContentParseLock<Vec<ast::Attribute>> = OnceLock::
 impl InstructionParser for ast::AttributeSet {
     fn parse(content: &Content, attributes: &Attributes) -> Result<Self> {
         let names = &content.state.names;
-
         let parse =
             ATTRIBUTE_SET_CONTENT.get_or_init(|| children(instruction(names.xsl_attribute).many()));
-
         Ok(ast::AttributeSet {
             name: attributes.required(names.name, attributes.eqname())?,
             use_attribute_sets: attributes
@@ -399,6 +413,7 @@ impl InstructionParser for ast::CallTemplate {
 
         Ok(ast::CallTemplate {
             name: attributes.required(names.name, attributes.eqname())?,
+            backwards_compatible: content.context.backwards_compatible(),
 
             span: content.span()?,
 
@@ -580,10 +595,12 @@ impl InstructionParser for ast::Document {
 impl InstructionParser for ast::Element {
     fn parse(content: &Content, attributes: &Attributes) -> Result<Self> {
         let names = &content.state.names;
+        let namespaces = content.context.literal_namespaces(content.state);
         Ok(ast::Element {
             name: attributes.required(names.name, attributes.value_template(attributes.qname()))?,
             namespace: attributes
                 .optional(names.namespace, attributes.value_template(attributes.uri()))?,
+            namespaces,
             inherit_namespaces: attributes.boolean_with_default(names.inherit_namespaces, false)?,
             use_attribute_sets: attributes
                 .optional(names.use_attribute_sets, attributes.eqnames())?,
@@ -1145,17 +1162,36 @@ impl InstructionParser for ast::NamespaceAlias {
 
     fn parse(content: &Content, attributes: &Attributes) -> Result<Self> {
         let names = &content.state.names;
+        let stylesheet_prefix =
+            attributes.required(names.stylesheet_prefix, attributes.prefix_or_default())?;
+        let result_prefix =
+            attributes.required(names.result_prefix, attributes.prefix_or_default())?;
+        let namespaces = content.context.namespaces(content.state);
         Ok(ast::NamespaceAlias {
-            stylesheet_prefix: attributes
-                .required(names.stylesheet_prefix, attributes.prefix_or_default())?,
-            result_prefix: attributes
-                .required(names.result_prefix, attributes.prefix_or_default())?,
+            stylesheet_namespace: resolve_prefix_or_default_namespace(
+                &stylesheet_prefix,
+                &namespaces,
+            )
+            .unwrap_or_default(),
+            result_namespace: resolve_prefix_or_default_namespace(&result_prefix, &namespaces)
+                .unwrap_or_default(),
+            stylesheet_prefix,
+            result_prefix,
 
             span: content.span()?,
         })
     }
 }
 
+fn resolve_prefix_or_default_namespace(
+    prefix_or_default: &ast::PrefixOrDefault,
+    namespaces: &xee_xpath_ast::Namespaces,
+) -> Option<String> {
+    match prefix_or_default {
+        ast::PrefixOrDefault::Default => Some(namespaces.default_element_namespace().to_string()),
+        ast::PrefixOrDefault::Prefix(prefix) => namespaces.by_prefix(prefix).map(str::to_string),
+    }
+}
 static NEXT_ITERATION_CONTENT: ContentParseLock<Vec<ast::WithParam>> = OnceLock::new();
 
 impl InstructionParser for ast::NextIteration {
