@@ -71,7 +71,7 @@ impl Map {
         Ok(Map::from_map(result))
     }
 
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         match self {
             Map::Empty(map) => map.len(),
             Map::One(map) => map.len(),
@@ -85,21 +85,21 @@ impl Map {
             Map::Many(map) => map.is_empty(),
         }
     }
-    pub(crate) fn get(&self, key: &atomic::Atomic) -> Option<&sequence::Sequence> {
+    pub fn get(&self, key: &atomic::Atomic) -> Option<&sequence::Sequence> {
         match self {
             Map::Empty(map) => map.get(key),
             Map::One(map) => map.get(key),
             Map::Many(map) => map.get(key),
         }
     }
-    pub(crate) fn keys(&self) -> Box<dyn Iterator<Item = &atomic::Atomic> + '_> {
+    pub fn keys(&self) -> Box<dyn Iterator<Item = &atomic::Atomic> + '_> {
         match self {
             Map::Empty(map) => Box::new(map.keys()),
             Map::One(map) => Box::new(map.keys()),
             Map::Many(map) => Box::new(map.keys()),
         }
     }
-    pub(crate) fn entries(
+    pub fn entries(
         &self,
     ) -> Box<dyn Iterator<Item = (&atomic::Atomic, &sequence::Sequence)> + '_> {
         match self {
