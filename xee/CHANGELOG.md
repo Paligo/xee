@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7](https://github.com/Paligo/xee/compare/xee-v0.1.6...xee-v0.1.7) - 2026-05-19
+
+### Other
+
+- add both cargo fmt as well as clippy to build process. ([#120](https://github.com/Paligo/xee/pull/120))
+- linter fixes ([#115](https://github.com/Paligo/xee/pull/115))
+
 ## [0.1.6](https://github.com/Paligo/xee/compare/xee-v0.1.5...xee-v0.1.6) - 2025-08-05
 
 ### Features

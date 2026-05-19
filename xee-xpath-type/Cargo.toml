@@ -1,6 +1,6 @@
 [package]
 name = "xee-xpath-type"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["The Xee Project Developers"]
 keywords = ["xml", "xpath"]
@@ -18,6 +18,6 @@ serde = ["dep:serde", "xot/serde"]
 
 [dependencies]
 xee-schema-type = { path = "../xee-schema-type", version = "0.1.4" }
-xee-name = { path = "../xee-name", version = "0.1.5" }
+xee-name = { path = "../xee-name", version = "0.1.6" }
 xot = { workspace = true }
 serde = { workspace = true, features = ["derive"], optional = true }

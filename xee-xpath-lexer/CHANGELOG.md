@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5](https://github.com/Paligo/xee/compare/xee-xpath-lexer-v0.1.4...xee-xpath-lexer-v0.1.5) - 2026-05-19
+
+### Other
+
+- Fix keywords not recognized as NCNames in QNames ([#142](https://github.com/Paligo/xee/pull/142))
+- add both cargo fmt as well as clippy to build process. ([#120](https://github.com/Paligo/xee/pull/120))
+- linter fixes ([#115](https://github.com/Paligo/xee/pull/115))
+
 ## [0.1.4](https://github.com/Paligo/xee/compare/xee-xpath-lexer-v0.1.3...xee-xpath-lexer-v0.1.4) - 2025-08-05
 
 ### Other

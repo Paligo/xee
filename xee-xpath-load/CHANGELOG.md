@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/Paligo/xee/compare/xee-xpath-load-v0.2.0...xee-xpath-load-v0.2.1) - 2026-05-19
+
+### Other
+
+- linter fixes ([#115](https://github.com/Paligo/xee/pull/115))
+
 ## [0.2.0](https://github.com/Paligo/xee/compare/xee-xpath-load-v0.1.4...xee-xpath-load-v0.2.0) - 2025-08-05
 
 ### Other
