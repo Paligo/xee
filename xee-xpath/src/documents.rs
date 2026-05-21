@@ -1,6 +1,6 @@
 use iri_string::types::IriStr;
 use xee_interpreter::{
-    context::DocumentsRef,
+    context::{DocumentsRef, BorrowWith},
     xml::{DocumentHandle, DocumentsError},
 };
 use xot::Xot;

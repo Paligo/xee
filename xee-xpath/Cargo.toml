@@ -14,6 +14,7 @@ homepage = "https://github.com/Paligo/xee"
 
 [features]
 serde = ["xee-xpath-ast/serde", "xee-interpreter/serde"]
+sync = ["xee-interpreter/sync"]
 
 [dependencies]
 xee-xpath-compiler = { path = "../xee-xpath-compiler", version = "0.1.5" }

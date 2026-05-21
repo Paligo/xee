@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use xee_xpath::{context, Documents, Queries, Query};
 use xee_xpath_load::{convert_string, ContextLoadable};
+use xee_interpreter::context::BorrowWith;
 
 use crate::catalog::LoadContext;
 use crate::metadata::Metadata;
