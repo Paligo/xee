@@ -20,6 +20,7 @@ pub enum Instruction {
     Var(u16),
     Set(u16),
     ClosureVar(u16),
+    ClosureRecursiveSelf,
     Comma,
     CurlyArray,
     SquareArray,
@@ -77,7 +78,7 @@ pub enum Instruction {
     XmlAppend,
     CopyShallow,
     CopyDeep,
-    ApplyTemplates(u16),
+    MatchPattern(u16),
     PrintTop,
     PrintStack,
 }
@@ -99,6 +100,7 @@ pub(crate) enum EncodedInstruction {
     Var,
     Set,
     ClosureVar,
+    ClosureRecursiveSelf,
     Comma,
     CurlyArray,
     SquareArray,
@@ -154,7 +156,7 @@ pub(crate) enum EncodedInstruction {
     XmlComment,
     XmlProcessingInstruction,
     XmlAppend,
-    ApplyTemplates,
+    MatchPattern,
     CopyShallow,
     CopyDeep,
     PrintTop,
@@ -198,6 +200,7 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
             let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::ClosureVar(variable), 3)
         }
+        EncodedInstruction::ClosureRecursiveSelf => (Instruction::ClosureRecursiveSelf, 1),
         EncodedInstruction::Comma => (Instruction::Comma, 1),
         EncodedInstruction::CurlyArray => (Instruction::CurlyArray, 1),
         EncodedInstruction::SquareArray => (Instruction::SquareArray, 1),
@@ -285,9 +288,9 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::XmlAppend => (Instruction::XmlAppend, 1),
         EncodedInstruction::CopyShallow => (Instruction::CopyShallow, 1),
         EncodedInstruction::CopyDeep => (Instruction::CopyDeep, 1),
-        EncodedInstruction::ApplyTemplates => {
-            let mode_id = u16::from_le_bytes([bytes[1], bytes[2]]);
-            (Instruction::ApplyTemplates(mode_id), 3)
+        EncodedInstruction::MatchPattern => {
+            let pattern_id = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::MatchPattern(pattern_id), 3)
         }
         EncodedInstruction::PrintTop => (Instruction::PrintTop, 1),
         EncodedInstruction::PrintStack => (Instruction::PrintStack, 1),
@@ -339,6 +342,9 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
         Instruction::ClosureVar(variable) => {
             bytes.push(EncodedInstruction::ClosureVar.to_u8().unwrap());
             bytes.extend_from_slice(&variable.to_le_bytes());
+        }
+        Instruction::ClosureRecursiveSelf => {
+            bytes.push(EncodedInstruction::ClosureRecursiveSelf.to_u8().unwrap())
         }
         Instruction::Comma => bytes.push(EncodedInstruction::Comma.to_u8().unwrap()),
         Instruction::CurlyArray => bytes.push(EncodedInstruction::CurlyArray.to_u8().unwrap()),
@@ -437,9 +443,9 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
         Instruction::XmlAppend => bytes.push(EncodedInstruction::XmlAppend.to_u8().unwrap()),
         Instruction::CopyShallow => bytes.push(EncodedInstruction::CopyShallow.to_u8().unwrap()),
         Instruction::CopyDeep => bytes.push(EncodedInstruction::CopyDeep.to_u8().unwrap()),
-        Instruction::ApplyTemplates(mode_id) => {
-            bytes.push(EncodedInstruction::ApplyTemplates.to_u8().unwrap());
-            bytes.extend_from_slice(&mode_id.to_le_bytes());
+        Instruction::MatchPattern(pattern_id) => {
+            bytes.push(EncodedInstruction::MatchPattern.to_u8().unwrap());
+            bytes.extend_from_slice(&pattern_id.to_le_bytes());
         }
         Instruction::PrintTop => bytes.push(EncodedInstruction::PrintTop.to_u8().unwrap()),
         Instruction::PrintStack => bytes.push(EncodedInstruction::PrintStack.to_u8().unwrap()),
@@ -468,6 +474,7 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::CurlyArray
         | Instruction::SquareArray
         | Instruction::CurlyMap
+        | Instruction::ClosureRecursiveSelf
         | Instruction::Eq
         | Instruction::Ne
         | Instruction::Lt
@@ -529,7 +536,7 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::Treat(_)
         | Instruction::ReturnConvert(_)
         | Instruction::JumpIfFalse(_) => 3,
-        Instruction::ApplyTemplates(_) => 3,
+        Instruction::MatchPattern(_) => 3,
     }
 }
 

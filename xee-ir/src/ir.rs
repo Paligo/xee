@@ -56,6 +56,7 @@ pub enum Expr {
     XmlProcessingInstruction(XmlProcessingInstruction),
     XmlAppend(XmlAppend),
     ApplyTemplates(ApplyTemplates),
+    DefineTemplates(DefineTemplates),
     CopyShallow(CopyShallow),
     CopyDeep(CopyDeep),
 }
@@ -74,6 +75,7 @@ pub enum Const {
     Double(OrderedFloat<f64>),
     Decimal(Decimal),
     StaticFunctionReference(StaticFunctionId, Option<ContextNames>),
+    Name(xmlname::OwnedName),
     // XXX replace this with a sequence constant? useful once we have constant folding
     EmptySequence,
 }
@@ -343,6 +345,13 @@ pub enum ApplyTemplatesModeValue {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DefineTemplates {
+    pub rules: Vec<Rule>,
+    pub modes: HashMap<Option<xmlname::OwnedName>, Mode>,
+    pub body: Box<ExprS>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CopyShallow {
     pub select: AtomS,
 }
@@ -367,14 +376,13 @@ pub enum ModeValue {
     All,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Mode {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Declarations {
     pub rules: Vec<Rule>,
     pub modes: HashMap<Option<xmlname::OwnedName>, Mode>,
-    pub functions: Vec<FunctionBinding>,
     pub main: FunctionDefinition,
     pub serialization_params: SerializationParameters,
 }
@@ -384,7 +392,6 @@ impl Declarations {
         Self {
             rules: Vec::new(),
             modes: HashMap::new(),
-            functions: Vec::new(),
             main,
             serialization_params: SerializationParameters::new(),
         }
