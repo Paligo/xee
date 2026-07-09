@@ -113,7 +113,8 @@ impl MapKey {
                     Ok(MapKey::NaiveDateTime(d.date_time))
                 }
             }
-            Atomic::DateTimeStamp(d) => Ok(MapKey::DateTime(d.naive_local())),
+            // normalized to UTC, like the DateTime case above
+            Atomic::DateTimeStamp(d) => Ok(MapKey::DateTime(d.naive_utc())),
             // times and dates with a timezone are stored as a chrono
             // datetime (but separately), or they are stored as a naive
             // time or date
