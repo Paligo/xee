@@ -62,7 +62,8 @@ impl atomic::Atomic {
         let mut s = String::new();
         let offset = date_time.offset;
         let date_time = date_time.date_time;
-        s.push_str(&date_time.format("%Y-%m-%dT%H:%M:%S").to_string());
+        Self::push_canonical_year(&mut s, date_time.year());
+        s.push_str(&date_time.format("-%m-%dT%H:%M:%S").to_string());
         let millis = date_time.and_utc().timestamp_subsec_millis();
         Self::push_millis(&mut s, millis);
         if let Some(offset) = offset {
@@ -75,7 +76,8 @@ impl atomic::Atomic {
         date_time: &chrono::DateTime<chrono::FixedOffset>,
     ) -> String {
         let mut s = String::new();
-        s.push_str(&date_time.format("%Y-%m-%dT%H:%M:%S").to_string());
+        Self::push_canonical_year(&mut s, date_time.year());
+        s.push_str(&date_time.format("-%m-%dT%H:%M:%S").to_string());
         let millis = date_time.timestamp_subsec_millis();
         Self::push_millis(&mut s, millis);
         let offset = date_time.offset();
@@ -100,7 +102,8 @@ impl atomic::Atomic {
         let mut s = String::new();
         let offset = date.offset;
         let date = date.date;
-        s.push_str(&date.format("%Y-%m-%d").to_string());
+        Self::push_canonical_year(&mut s, date.year());
+        s.push_str(&date.format("-%m-%d").to_string());
         if let Some(offset) = offset {
             Self::push_canonical_time_zone_offset(&mut s, &offset);
         }
@@ -203,6 +206,16 @@ impl atomic::Atomic {
         }
         if s != Decimal::from(0) {
             v.push_str(&format!("{}S", s));
+        }
+    }
+
+    fn push_canonical_year(s: &mut String, year: i32) {
+        // chrono's %Y writes years above 9999 with a leading '+', which is
+        // not part of the XSD lexical space, so write the year ourselves
+        if year >= 0 {
+            s.push_str(&format!("{:04}", year));
+        } else {
+            s.push_str(&format!("-{:04}", year.abs()));
         }
     }
 
