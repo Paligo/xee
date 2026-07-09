@@ -11,6 +11,7 @@ mod fn_;
 mod hidden_xslt;
 mod hof;
 mod id;
+mod ietf_date;
 mod json;
 mod map;
 mod math;

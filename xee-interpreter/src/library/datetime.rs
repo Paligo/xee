@@ -328,14 +328,7 @@ fn duration_to_offset(
 
 #[xpath_fn("fn:parse-ietf-date($value as xs:string?) as xs:dateTime?")]
 fn parse_ietf_date(value: Option<&str>) -> error::Result<Option<NaiveDateTimeWithOffset>> {
-    if let Some(value) = value {
-        match chrono::DateTime::parse_from_rfc2822(value.trim()) {
-            Ok(date_time) => Ok(Some(date_time.into())),
-            Err(_) => Err(error::Error::FORG0010),
-        }
-    } else {
-        Ok(None)
-    }
+    value.map(super::ietf_date::parse).transpose()
 }
 
 pub(crate) fn static_function_descriptions() -> Vec<StaticFunctionDescription> {
