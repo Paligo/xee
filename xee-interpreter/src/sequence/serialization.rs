@@ -207,12 +207,35 @@ pub(crate) fn serialize_sequence(
     }
 }
 
+/// Namespace fixup on a normalized document: constructed elements and
+/// attributes can use a namespace that has no prefix binding anywhere in
+/// the tree; invent prefixes for these so the result can be serialized.
+/// The document can have multiple top-level elements, and each is fixed
+/// up separately.
+fn namespace_fixup(xot: &mut Xot, node: xot::Node) -> Result<(), error::Error> {
+    let xml_prefix = xot.xml_prefix();
+    let xml_namespace = xot.xml_namespace();
+    let elements: Vec<_> = xot
+        .children(node)
+        .filter(|child| xot.is_element(*child))
+        .collect();
+    for element in elements {
+        // bind the implicit xml prefix explicitly so create_missing_prefixes
+        // doesn't invent a prefix for it; the binding is never serialized
+        xot.namespaces_mut(element)
+            .insert(xml_prefix, xml_namespace);
+        xot.create_missing_prefixes(element)?;
+    }
+    Ok(())
+}
+
 fn serialize_xml(
     arg: &Sequence,
     parameters: SerializationParameters,
     xot: &mut Xot,
 ) -> Result<String, error::Error> {
     let node = arg.normalize(&parameters.item_separator, xot)?;
+    namespace_fixup(xot, node)?;
     let indentation = xot_indentation(&parameters, xot);
     let cdata_section_elements = xot_names(&parameters.cdata_section_elements, xot);
     let declaration = if !parameters.omit_xml_declaration {

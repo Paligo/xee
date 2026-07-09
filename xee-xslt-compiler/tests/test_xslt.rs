@@ -1230,3 +1230,231 @@ fn test_basic_iterate_params() {
         "<o><baz>1</baz><baz>2</baz><baz>4</baz></o>"
     );
 }
+
+// https://github.com/Paligo/xee/issues/139
+#[test]
+fn test_literal_result_element_default_namespace() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/"><html xmlns="http://www.w3.org/1999/xhtml"><head/></html></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(
+        xml(&xot, output),
+        r#"<html xmlns="http://www.w3.org/1999/xhtml"><head/></html>"#
+    );
+}
+
+#[test]
+fn test_literal_result_element_prefixed_namespace() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:x="http://example.com/ns" version="3">
+  <xsl:template match="/"><x:a><x:b/></x:a></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(
+        xml(&xot, output),
+        r#"<x:a xmlns:x="http://example.com/ns"><x:b/></x:a>"#
+    );
+}
+
+#[test]
+fn test_literal_result_element_stylesheet_default_namespace() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml" version="3">
+  <xsl:template match="/"><html><head/></html></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(
+        xml(&xot, output),
+        r#"<html xmlns="http://www.w3.org/1999/xhtml"><head/></html>"#
+    );
+}
+
+#[test]
+fn test_literal_result_element_copies_unused_namespace() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/"><a xmlns:u="http://u.example"/></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), r#"<a xmlns:u="http://u.example"/>"#);
+}
+
+#[test]
+fn test_literal_result_element_exclude_result_prefixes() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:u="http://u.example" exclude-result-prefixes="u" version="3">
+  <xsl:template match="/"><a/></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<a/>");
+}
+
+#[test]
+fn test_xsl_element_with_namespace_serializes() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/"><xsl:element name="html" namespace="http://www.w3.org/1999/xhtml"/></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    let serialized = output
+        .serialize(
+            xee_interpreter::sequence::SerializationParameters::new(),
+            &mut xot,
+        )
+        .unwrap();
+    assert!(
+        serialized.contains("http://www.w3.org/1999/xhtml"),
+        "namespace must survive serialization, got: {}",
+        serialized
+    );
+}
+
+#[test]
+fn test_literal_result_element_namespaced_attribute() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/"><html xml:lang="en-GB"/></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), r#"<html xml:lang="en-GB"/>"#);
+}
+
+#[test]
+fn test_literal_result_element_in_variable_keeps_namespaces() {
+    // xsl:variable content builds a separate tree, so its elements must
+    // carry their own in-scope namespace copies
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/"><out xmlns:u="http://u.example"><xsl:variable name="v"><item/></xsl:variable><xsl:copy-of select="$v"/></out></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(
+        xml(&xot, output),
+        r#"<out xmlns:u="http://u.example"><item xmlns:u="http://u.example"/></out>"#
+    );
+}
+
+#[test]
+fn test_exclude_result_prefixes_resolved_where_specified() {
+    // exclude-result-prefixes designates the namespace bound to the prefix
+    // at the element bearing the attribute, not wherever the prefix is
+    // later rebound
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:p="http://one" exclude-result-prefixes="p" version="3">
+  <xsl:template match="/"><out xmlns:p="http://two"/></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), r#"<out xmlns:p="http://two"/>"#);
+}
+
+#[test]
+fn test_exclude_result_prefixes_all_keeps_local_namespaces() {
+    // #all designates the namespaces in scope at the bearing element; a
+    // namespace declared further down on the literal result element itself
+    // is not excluded
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r##"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:g="http://g.example" exclude-result-prefixes="#all" version="3">
+  <xsl:template match="/"><a xmlns:u="http://u.example"/></xsl:template>
+</xsl:transform>"##,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), r#"<a xmlns:u="http://u.example"/>"#);
+}
+
+#[test]
+fn test_serialize_fixes_prefixes_on_all_top_level_elements() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/"><xsl:element name="a" namespace="http://one"/><xsl:element name="b" namespace="http://two"/></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    let serialized = output
+        .serialize(
+            xee_interpreter::sequence::SerializationParameters::new(),
+            &mut xot,
+        )
+        .unwrap();
+    assert!(
+        serialized.contains("http://one") && serialized.contains("http://two"),
+        "both top-level elements need their namespaces bound, got: {}",
+        serialized
+    );
+}
+
+#[test]
+fn test_serialize_html_method_applies_namespace_fixup() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/"><xsl:element name="svg" namespace="http://www.w3.org/2000/svg"/></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    let mut parameters = xee_interpreter::sequence::SerializationParameters::new();
+    parameters.method = xee_interpreter::sequence::QNameOrString::String("html".to_string());
+    let serialized = output.serialize(parameters, &mut xot);
+    assert!(
+        serialized.is_ok(),
+        "html serialization must not fail on a constructed namespace: {:?}",
+        serialized
+    );
+}
