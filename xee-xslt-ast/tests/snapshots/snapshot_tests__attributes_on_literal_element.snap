@@ -1,5 +1,6 @@
 ---
-source: xee-xslt-ast/src/instruction.rs
+source: xee-xslt-ast/tests/snapshot_tests.rs
+assertion_line: 258
 expression: "parse_sequence_constructor_item(r#\"<p xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" foo=\"FOO\"/>\"#)"
 ---
 Ok(Content(Element(ElementNode(
@@ -8,6 +9,7 @@ Ok(Content(Element(ElementNode(
     namespace_str: "",
     prefix_str: "",
   ),
+  namespaces: [],
   attributes: [
     (OwnedName(
       local_name_str: "foo",

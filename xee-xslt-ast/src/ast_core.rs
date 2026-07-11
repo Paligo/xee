@@ -112,25 +112,6 @@ pub enum ExcludeResultPrefixes {
     Prefixes(Vec<ExcludeResultPrefix>),
 }
 
-impl ExcludeResultPrefixes {
-    // TODO: This combine isn't good enough; it should take existing prefixes
-    // into account, which we do have on context
-    pub(crate) fn combine(&self, other: ExcludeResultPrefixes) -> Self {
-        match (self, other) {
-            (ExcludeResultPrefixes::All, _) => ExcludeResultPrefixes::All,
-            (_, ExcludeResultPrefixes::All) => ExcludeResultPrefixes::All,
-            (
-                ExcludeResultPrefixes::Prefixes(prefixes),
-                ExcludeResultPrefixes::Prefixes(other_prefixes),
-            ) => {
-                let mut prefixes = prefixes.clone();
-                prefixes.extend(other_prefixes);
-                ExcludeResultPrefixes::Prefixes(prefixes)
-            }
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum ExcludeResultPrefix {
@@ -1827,6 +1808,8 @@ pub type SequenceConstructor = Vec<SequenceConstructorItem>;
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ElementNode {
     pub name: Name,
+    /// prefix/namespace pairs this element declares in the result
+    pub namespaces: Vec<(String, String)>,
     pub attributes: Vec<(Name, ValueTemplate<String>)>,
     pub sequence_constructor: SequenceConstructor,
     pub span: Span,
