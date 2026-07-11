@@ -328,10 +328,13 @@ impl atomic::Atomic {
             }
             atomic::Atomic::DateTime(date_time) => {
                 if let Some(offset) = date_time.offset {
-                    Ok(atomic::Atomic::DateTimeStamp(
-                        chrono::DateTime::from_naive_utc_and_offset(date_time.date_time, offset)
-                            .into(),
-                    ))
+                    // the naive datetime is local to its offset; normalizing
+                    // it to UTC can overflow chrono's range at the extremes
+                    let date_time_stamp = offset
+                        .from_local_datetime(&date_time.date_time)
+                        .single()
+                        .ok_or(error::Error::FODT0001)?;
+                    Ok(atomic::Atomic::DateTimeStamp(date_time_stamp.into()))
                 } else {
                     Err(error::Error::XPTY0004)
                 }
@@ -366,7 +369,8 @@ impl atomic::Atomic {
             )),
             atomic::Atomic::DateTimeStamp(date_time) => Ok(atomic::Atomic::Date(
                 NaiveDateWithOffset::new(
-                    date_time.naive_utc().date(),
+                    // the date in the timezone of the value, not the UTC date
+                    date_time.naive_local().date(),
                     Some(date_time.offset().fix()),
                 )
                 .into(),
@@ -987,7 +991,13 @@ fn date_time_stamp_parser<'a>(
     let tz = tz_parser().boxed();
     date_time
         .then(tz)
-        .map(|(date_time, tz)| tz.from_utc_datetime(&date_time))
+        // the lexical datetime is local to its timezone; normalizing it to
+        // UTC can overflow chrono's datetime range at the extremes
+        .try_map(|(date_time, tz), _| {
+            tz.from_local_datetime(&date_time)
+                .single()
+                .ok_or_else(|| error::Error::FODT0001.into())
+        })
 }
 
 fn offset_time_parser<'a>() -> impl Parser<'a, &'a str, i32, MyExtra> {

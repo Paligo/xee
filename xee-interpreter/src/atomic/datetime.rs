@@ -136,10 +136,8 @@ pub struct NaiveDateTimeWithOffset {
 
 impl From<NaiveDateTimeWithOffset> for chrono::DateTime<chrono::FixedOffset> {
     fn from(naive_date_time_with_offset: NaiveDateTimeWithOffset) -> Self {
-        let offset = naive_date_time_with_offset
-            .offset
-            .unwrap_or_else(|| chrono::offset::Utc.fix());
-        chrono::DateTime::from_naive_utc_and_offset(naive_date_time_with_offset.date_time, offset)
+        // the naive datetime is local to its offset
+        naive_date_time_with_offset.to_date_time_stamp(chrono::offset::Utc.fix())
     }
 }
 
