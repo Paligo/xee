@@ -54,11 +54,6 @@ fo-test-fn-json-to-xml-001
 fo-test-fn-json-to-xml-002
 fo-test-fn-json-to-xml-003
 fo-test-fn-json-to-xml-004
-fo-test-fn-parse-ietf-date-001
-fo-test-fn-parse-ietf-date-002
-fo-test-fn-parse-ietf-date-003
-fo-test-fn-parse-ietf-date-004
-fo-test-fn-parse-ietf-date-005
 fo-test-fn-parse-json-005
 fo-test-fn-parse-json-007
 fo-test-fn-starts-with-004
@@ -1138,52 +1133,6 @@ cbcl-fn-normalize-unicode-006
 = fn-one-or-more
 = fn-outermost
 = fn-parse-ietf-date
-parse-ietf-date-10
-parse-ietf-date-11
-parse-ietf-date-12
-parse-ietf-date-13
-parse-ietf-date-18
-parse-ietf-date-19
-parse-ietf-date-20
-parse-ietf-date-21
-parse-ietf-date-22
-parse-ietf-date-23
-parse-ietf-date-24
-parse-ietf-date-25
-parse-ietf-date-26
-parse-ietf-date-27
-parse-ietf-date-28
-parse-ietf-date-29
-parse-ietf-date-3
-parse-ietf-date-31
-parse-ietf-date-4
-parse-ietf-date-41
-parse-ietf-date-42
-parse-ietf-date-43
-parse-ietf-date-44
-parse-ietf-date-45
-parse-ietf-date-46
-parse-ietf-date-47
-parse-ietf-date-48
-parse-ietf-date-5
-parse-ietf-date-52
-parse-ietf-date-53
-parse-ietf-date-54
-parse-ietf-date-54a
-parse-ietf-date-55
-parse-ietf-date-56
-parse-ietf-date-57
-parse-ietf-date-58
-parse-ietf-date-59
-parse-ietf-date-6
-parse-ietf-date-60
-parse-ietf-date-61
-parse-ietf-date-62
-parse-ietf-date-63
-parse-ietf-date-64
-parse-ietf-date-errs28
-parse-ietf-date-errs4
-parse-ietf-date-errs5
 = fn-parse-json
 fn-parse-json-050
 fn-parse-json-052
