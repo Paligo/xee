@@ -12,6 +12,9 @@ use crate::{default_declarations::text_only_copy_declarations, priority::default
 struct IrConverter<'a> {
     variables: Variables,
     static_context: &'a StaticContext,
+    // Top-level xsl:variable declarations in order: the registered name and the
+    // declaration, kept so the main function can evaluate each into its global slot.
+    global_variables: Vec<(ir::Name, ast::Variable)>,
 }
 
 pub fn compile(
@@ -56,6 +59,7 @@ impl<'a> IrConverter<'a> {
         IrConverter {
             variables: Variables::new(),
             static_context,
+            global_variables: Vec::new(),
         }
     }
 
@@ -116,14 +120,79 @@ impl<'a> IrConverter<'a> {
     }
 
     fn transform(&mut self, transform: &ast::Transform) -> error::SpannedResult<ir::Declarations> {
+        // Register the global variable names first so every reference, in main or
+        // in a template, resolves while its declaration order fixes its slot id.
+        self.collect_globals(transform);
         let main_sequence_constructor = self.main_sequence_constructor();
-        let main = self.sequence_constructor_function(&main_sequence_constructor)?;
+        let main = self.main_function(&main_sequence_constructor)?;
         let mut declarations = ir::Declarations::new(main);
+        declarations.global_variables = self
+            .global_variables
+            .iter()
+            .map(|(name, _)| name.clone())
+            .collect();
 
         for declaration in &transform.declarations {
             self.declaration(&mut declarations, declaration)?;
         }
         Ok(declarations)
+    }
+
+    fn collect_globals(&mut self, transform: &ast::Transform) {
+        for declaration in &transform.declarations {
+            if let ast::Declaration::Variable(variable) = declaration {
+                let name = self.variables.new_var_name(&variable.name);
+                self.global_variables.push((name, (**variable).clone()));
+            }
+        }
+    }
+
+    // The main function evaluates each global variable into its slot before it
+    // applies templates, so the source document is the context and the values are
+    // ready for every rule.
+    fn main_function(
+        &mut self,
+        sequence_constructor: &ast::SequenceConstructor,
+    ) -> error::SpannedResult<ir::FunctionDefinition> {
+        let context_names = self.variables.push_context();
+        let bindings = self.sequence_constructor(sequence_constructor)?;
+        let mut body = bindings.expr();
+        let globals = self.global_variables.clone();
+        for (id, (_name, variable)) in globals.iter().enumerate().rev() {
+            let value = if let Some(select) = &variable.select {
+                self.expression(select)?
+            } else {
+                self.sequence_constructor(&variable.sequence_constructor)?
+            };
+            body = Spanned::new(
+                ir::Expr::SetGlobal(ir::SetGlobal {
+                    id,
+                    value: Box::new(value.expr()),
+                    return_expr: Box::new(body),
+                }),
+                (0..0).into(),
+            );
+        }
+        self.variables.pop_context();
+        let params = vec![
+            ir::Param {
+                name: context_names.item,
+                type_: None,
+            },
+            ir::Param {
+                name: context_names.position,
+                type_: None,
+            },
+            ir::Param {
+                name: context_names.last,
+                type_: None,
+            },
+        ];
+        Ok(ir::FunctionDefinition {
+            params,
+            return_type: None,
+            body: Box::new(body),
+        })
     }
 
     fn declaration(
@@ -136,6 +205,8 @@ impl<'a> IrConverter<'a> {
             Template(template) => self.template(declarations, template),
             Mode(mode) => self.mode(declarations, mode),
             Output(output) => self.output(declarations, output),
+            // Global variables are collected up front and woven into main.
+            Variable(_) => Ok(()),
             _ => Err(error::Error::Unsupported(format!(
                 "Declaration not supported: {:?}",
                 declaration

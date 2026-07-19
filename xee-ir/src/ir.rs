@@ -24,6 +24,7 @@ pub type ExprS = Spanned<Expr>;
 pub enum Expr {
     Atom(AtomS),
     Let(Let),
+    SetGlobal(SetGlobal),
     If(If),
     Binary(Binary),
     Unary(Unary),
@@ -89,6 +90,16 @@ pub struct ContextNames {
 pub struct Let {
     pub name: Name,
     pub var_expr: Box<ExprS>,
+    pub return_expr: Box<ExprS>,
+}
+
+// A top-level xsl:variable: evaluate `value` once and store it in the global
+// slot `id`, then continue with `return_expr`. The main function evaluates these
+// before applying templates, so every rule and named template can read them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SetGlobal {
+    pub id: usize,
+    pub value: Box<ExprS>,
     pub return_expr: Box<ExprS>,
 }
 
@@ -375,6 +386,9 @@ pub struct Declarations {
     pub rules: Vec<Rule>,
     pub modes: HashMap<Option<xmlname::OwnedName>, Mode>,
     pub functions: Vec<FunctionBinding>,
+    // Global variable names in declaration order; the index is the global slot id
+    // used by SetGlobal and LoadGlobal.
+    pub global_variables: Vec<Name>,
     pub main: FunctionDefinition,
     pub serialization_params: SerializationParameters,
 }
@@ -385,6 +399,7 @@ impl Declarations {
             rules: Vec::new(),
             modes: HashMap::new(),
             functions: Vec::new(),
+            global_variables: Vec::new(),
             main,
             serialization_params: SerializationParameters::new(),
         }

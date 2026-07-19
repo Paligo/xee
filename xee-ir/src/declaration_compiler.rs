@@ -29,6 +29,7 @@ impl RuleBuilder {
 }
 
 pub type ModeIds = HashMap<ir::ApplyTemplatesModeValue, ModeId>;
+pub type GlobalIds = HashMap<ir::Name, usize>;
 
 pub struct DeclarationCompiler<'a> {
     program: &'a mut interpreter::Program,
@@ -36,6 +37,7 @@ pub struct DeclarationCompiler<'a> {
     rule_declaration_order: i64,
     rule_builders: HashMap<ir::ModeValue, Vec<RuleBuilder>>,
     mode_ids: ModeIds,
+    global_ids: GlobalIds,
 }
 
 impl<'a> DeclarationCompiler<'a> {
@@ -46,12 +48,18 @@ impl<'a> DeclarationCompiler<'a> {
             rule_declaration_order: 0,
             rule_builders: HashMap::new(),
             mode_ids: HashMap::new(),
+            global_ids: HashMap::new(),
         }
     }
 
     fn function_compiler(&mut self) -> FunctionCompiler<'_> {
         let function_builder = FunctionBuilder::new(self.program);
-        FunctionCompiler::new(function_builder, &mut self.scopes, &self.mode_ids)
+        FunctionCompiler::new(
+            function_builder,
+            &mut self.scopes,
+            &self.mode_ids,
+            &self.global_ids,
+        )
     }
 
     pub fn compile_declarations(
@@ -61,6 +69,12 @@ impl<'a> DeclarationCompiler<'a> {
         // first keep track of what modes exist, to create a ModeId for them. We do
         // this early so any mode reference within apply-templates will resolve.
         self.compile_modes(declarations);
+
+        // register a slot id per global variable so a reference anywhere, in main
+        // or in a rule, compiles to LoadGlobal.
+        for (id, name) in declarations.global_variables.iter().enumerate() {
+            self.global_ids.insert(name.clone(), id);
+        }
 
         for rule in &declarations.rules {
             self.compile_rule(rule)?;

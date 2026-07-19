@@ -78,6 +78,8 @@ pub enum Instruction {
     CopyShallow,
     CopyDeep,
     ApplyTemplates(u16),
+    LoadGlobal(u16),
+    SetGlobal(u16),
     PrintTop,
     PrintStack,
 }
@@ -157,6 +159,8 @@ pub(crate) enum EncodedInstruction {
     ApplyTemplates,
     CopyShallow,
     CopyDeep,
+    LoadGlobal,
+    SetGlobal,
     PrintTop,
     PrintStack,
 }
@@ -197,6 +201,14 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::ClosureVar => {
             let variable = u16::from_le_bytes([bytes[1], bytes[2]]);
             (Instruction::ClosureVar(variable), 3)
+        }
+        EncodedInstruction::LoadGlobal => {
+            let index = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::LoadGlobal(index), 3)
+        }
+        EncodedInstruction::SetGlobal => {
+            let index = u16::from_le_bytes([bytes[1], bytes[2]]);
+            (Instruction::SetGlobal(index), 3)
         }
         EncodedInstruction::Comma => (Instruction::Comma, 1),
         EncodedInstruction::CurlyArray => (Instruction::CurlyArray, 1),
@@ -339,6 +351,14 @@ pub fn encode_instruction(instruction: Instruction, bytes: &mut Vec<u8>) {
         Instruction::ClosureVar(variable) => {
             bytes.push(EncodedInstruction::ClosureVar.to_u8().unwrap());
             bytes.extend_from_slice(&variable.to_le_bytes());
+        }
+        Instruction::LoadGlobal(index) => {
+            bytes.push(EncodedInstruction::LoadGlobal.to_u8().unwrap());
+            bytes.extend_from_slice(&index.to_le_bytes());
+        }
+        Instruction::SetGlobal(index) => {
+            bytes.push(EncodedInstruction::SetGlobal.to_u8().unwrap());
+            bytes.extend_from_slice(&index.to_le_bytes());
         }
         Instruction::Comma => bytes.push(EncodedInstruction::Comma.to_u8().unwrap()),
         Instruction::CurlyArray => bytes.push(EncodedInstruction::CurlyArray.to_u8().unwrap()),
@@ -530,6 +550,7 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::ReturnConvert(_)
         | Instruction::JumpIfFalse(_) => 3,
         Instruction::ApplyTemplates(_) => 3,
+        Instruction::LoadGlobal(_) | Instruction::SetGlobal(_) => 3,
     }
 }
 

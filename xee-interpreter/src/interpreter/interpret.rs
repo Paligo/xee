@@ -176,6 +176,16 @@ impl<'a> Interpreter<'a> {
                     let index = self.read_u16();
                     self.state.push_closure_var(index as usize)?;
                 }
+                EncodedInstruction::LoadGlobal => {
+                    let index = self.read_u16();
+                    let value = self.state.get_global(index as usize);
+                    self.state.push_value(value);
+                }
+                EncodedInstruction::SetGlobal => {
+                    let index = self.read_u16();
+                    let value = self.state.pop_value();
+                    self.state.set_global(index as usize, value);
+                }
                 EncodedInstruction::Comma => {
                     let b = self.state.pop()?;
                     let a = self.state.pop()?;

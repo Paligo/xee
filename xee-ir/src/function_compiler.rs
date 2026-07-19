@@ -6,7 +6,7 @@ use xee_interpreter::interpreter::instruction::Instruction;
 use xee_interpreter::span::SourceSpan;
 use xee_interpreter::{error, function, sequence};
 
-use crate::declaration_compiler::ModeIds;
+use crate::declaration_compiler::{GlobalIds, ModeIds};
 use crate::ir;
 
 use super::builder::{BackwardJumpRef, ForwardJumpRef, FunctionBuilder, JumpCondition};
@@ -17,6 +17,7 @@ pub(crate) type Scopes = scope::Scopes<ir::Name>;
 pub struct FunctionCompiler<'a> {
     pub(crate) scopes: &'a mut Scopes,
     pub(crate) mode_ids: &'a ModeIds,
+    pub(crate) global_ids: &'a GlobalIds,
     pub(crate) builder: FunctionBuilder<'a>,
 }
 
@@ -25,11 +26,13 @@ impl<'a> FunctionCompiler<'a> {
         builder: FunctionBuilder<'a>,
         scopes: &'a mut Scopes,
         mode_ids: &'a ModeIds,
+        global_ids: &'a GlobalIds,
     ) -> Self {
         Self {
             builder,
             scopes,
             mode_ids,
+            global_ids,
         }
     }
 
@@ -38,6 +41,7 @@ impl<'a> FunctionCompiler<'a> {
         match &expr.value {
             ir::Expr::Atom(atom) => self.compile_atom(atom),
             ir::Expr::Let(let_) => self.compile_let(let_, span),
+            ir::Expr::SetGlobal(set_global) => self.compile_set_global(set_global, span),
             ir::Expr::Binary(binary) => self.compile_binary(binary, span),
             ir::Expr::Unary(unary) => self.compile_unary(unary, span),
             ir::Expr::FunctionDefinition(function_definition) => {
@@ -146,6 +150,15 @@ impl<'a> FunctionCompiler<'a> {
                 self.builder
                     .emit(Instruction::ClosureVar(index as u16), span);
                 Ok(())
+            } else if let Some(id) = self.global_ids.get(name) {
+                // Not a local or a closed-over name, so it must be a top-level
+                // xsl:variable; locals shadow globals as they are checked first.
+                let id = *id;
+                if id > u16::MAX as usize {
+                    return Err(Error::XPDY0130.with_span(span));
+                }
+                self.builder.emit(Instruction::LoadGlobal(id as u16), span);
+                Ok(())
             } else {
                 // TODO: this should be unreachable but
                 // the XSLT test suite for some reason triggers
@@ -179,6 +192,21 @@ impl<'a> FunctionCompiler<'a> {
         self.compile_expr(&let_.return_expr)?;
         self.builder.emit(Instruction::LetDone, span);
         self.scopes.pop_name();
+        Ok(())
+    }
+
+    fn compile_set_global(
+        &mut self,
+        set_global: &ir::SetGlobal,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        if set_global.id > u16::MAX as usize {
+            return Err(Error::XPDY0130.with_span(span));
+        }
+        self.compile_expr(&set_global.value)?;
+        self.builder
+            .emit(Instruction::SetGlobal(set_global.id as u16), span);
+        self.compile_expr(&set_global.return_expr)?;
         Ok(())
     }
 
@@ -342,6 +370,7 @@ impl<'a> FunctionCompiler<'a> {
             builder: nested_builder,
             scopes: self.scopes,
             mode_ids: self.mode_ids,
+            global_ids: self.global_ids,
         };
 
         for param in &function_definition.params {

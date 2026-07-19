@@ -1705,6 +1705,12 @@ impl From<Variable> for OverrideContent {
     }
 }
 
+impl From<Variable> for Declaration {
+    fn from(v: Variable) -> Self {
+        Declaration::Variable(Box::new(v))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct When {

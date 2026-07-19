@@ -40,6 +40,10 @@ pub struct State<'a> {
     stack: Vec<stack::Value>,
     build_stack: Vec<BuildStackEntry>,
     frames: ArrayVec<Frame, FRAMES_MAX>,
+    // Global variable values, indexed by their declaration order. They live for
+    // the whole run so every frame (main, rules, named templates) reads the same
+    // values through LoadGlobal.
+    globals: Vec<stack::Value>,
     regex_cache: RefCell<HashMap<RegexKey, Rc<regexml::Regex>>>,
     pub(crate) xot: &'a mut Xot,
 }
@@ -87,9 +91,24 @@ impl<'a> State<'a> {
             stack: vec![],
             build_stack: vec![],
             frames: ArrayVec::new(),
+            globals: vec![],
             regex_cache: RefCell::new(HashMap::new()),
             xot,
         }
+    }
+
+    pub(crate) fn set_global(&mut self, index: usize, value: stack::Value) {
+        if index >= self.globals.len() {
+            self.globals.resize(index + 1, stack::Value::Absent);
+        }
+        self.globals[index] = value;
+    }
+
+    pub(crate) fn get_global(&self, index: usize) -> stack::Value {
+        self.globals
+            .get(index)
+            .cloned()
+            .unwrap_or(stack::Value::Absent)
     }
 
     pub(crate) fn push<T>(&mut self, sequence: T)

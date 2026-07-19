@@ -1230,3 +1230,74 @@ fn test_basic_iterate_params() {
         "<o><baz>1</baz><baz>2</baz><baz>4</baz></o>"
     );
 }
+
+#[test]
+fn test_global_variable() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:variable name="greeting" select="'hello'"/>
+  <xsl:template match="/"><o><xsl:value-of select="$greeting"/></o></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o>hello</o>");
+}
+
+#[test]
+fn test_global_variable_from_source() {
+    // A global is evaluated with the source document as the context, so it can
+    // read from the input tree.
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:variable name="root-name" select="name(/*)"/>
+  <xsl:template match="/"><o><xsl:value-of select="$root-name"/></o></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o>doc</o>");
+}
+
+#[test]
+fn test_global_variable_references_earlier_global() {
+    // Globals evaluate in declaration order, so a later one can read an earlier.
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:variable name="a" select="'x'"/>
+  <xsl:variable name="b" select="concat($a, 'y')"/>
+  <xsl:template match="/"><o><xsl:value-of select="$b"/></o></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o>xy</o>");
+}
+
+#[test]
+fn test_local_variable_shadows_global() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:variable name="v" select="'global'"/>
+  <xsl:template match="/">
+    <xsl:variable name="v" select="'local'"/>
+    <o><xsl:value-of select="$v"/></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o>local</o>");
+}
