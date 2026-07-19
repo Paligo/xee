@@ -181,7 +181,24 @@ impl<'a> IrConverter<'a> {
             });
             Ok(())
         } else {
-            Err(error::Error::Unsupported("Named templates not supported".to_string()).into())
+            let name = template.name.clone().ok_or_else(|| {
+                error::Error::Unsupported(
+                    "A template must have a match pattern or a name".to_string(),
+                )
+            })?;
+            if !template.params.is_empty() {
+                return Err(error::Error::Unsupported(
+                    "Template parameters are not supported yet".to_string(),
+                )
+                .into());
+            }
+            let function_definition =
+                self.sequence_constructor_function(&template.sequence_constructor)?;
+            declarations.named_templates.push(ir::NamedTemplate {
+                name,
+                function_definition,
+            });
+            Ok(())
         }
     }
 
@@ -426,6 +443,7 @@ impl<'a> IrConverter<'a> {
             Namespace(namespace) => self.namespace(namespace),
             Comment(comment) => self.comment(comment),
             ProcessingInstruction(pi) => self.processing_instruction(pi),
+            CallTemplate(call_template) => self.call_template(call_template),
             // TODO: xsl:variable does not produce content and is handled
             // earlier already should be unreachable!() but at this point this
             // can be reached so return unsupported
@@ -556,6 +574,36 @@ impl<'a> IrConverter<'a> {
             ir::Expr::ApplyTemplates(ir::ApplyTemplates {
                 mode,
                 select: select_atom,
+            }),
+        ))
+    }
+
+    fn call_template(
+        &mut self,
+        call_template: &ast::CallTemplate,
+    ) -> error::SpannedResult<Bindings> {
+        if !call_template.with_params.is_empty() {
+            return Err(error::Error::Unsupported(
+                "Passing parameters with xsl:with-param is not supported yet".to_string(),
+            )
+            .into());
+        }
+        // A named template is a function taking the context (item, position,
+        // last); xsl:call-template keeps the caller's context, so forward it.
+        let context = self.variables.current_context_names().ok_or_else(|| {
+            error::Error::Unsupported("xsl:call-template outside a template context".to_string())
+        })?;
+        let args = vec![
+            Spanned::new(ir::Atom::Variable(context.item), (0..0).into()),
+            Spanned::new(ir::Atom::Variable(context.position), (0..0).into()),
+            Spanned::new(ir::Atom::Variable(context.last), (0..0).into()),
+        ];
+        let bindings = Bindings::empty();
+        Ok(bindings.bind_expr_no_span(
+            &mut self.variables,
+            ir::Expr::CallTemplate(ir::CallTemplate {
+                name: call_template.name.clone(),
+                args,
             }),
         ))
     }

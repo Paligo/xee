@@ -6,7 +6,7 @@ use xee_interpreter::interpreter::instruction::Instruction;
 use xee_interpreter::span::SourceSpan;
 use xee_interpreter::{error, function, sequence};
 
-use crate::declaration_compiler::ModeIds;
+use crate::declaration_compiler::{ModeIds, TemplateIds};
 use crate::ir;
 
 use super::builder::{BackwardJumpRef, ForwardJumpRef, FunctionBuilder, JumpCondition};
@@ -17,6 +17,7 @@ pub(crate) type Scopes = scope::Scopes<ir::Name>;
 pub struct FunctionCompiler<'a> {
     pub(crate) scopes: &'a mut Scopes,
     pub(crate) mode_ids: &'a ModeIds,
+    pub(crate) template_ids: &'a TemplateIds,
     pub(crate) builder: FunctionBuilder<'a>,
 }
 
@@ -25,11 +26,13 @@ impl<'a> FunctionCompiler<'a> {
         builder: FunctionBuilder<'a>,
         scopes: &'a mut Scopes,
         mode_ids: &'a ModeIds,
+        template_ids: &'a TemplateIds,
     ) -> Self {
         Self {
             builder,
             scopes,
             mode_ids,
+            template_ids,
         }
     }
 
@@ -89,6 +92,9 @@ impl<'a> FunctionCompiler<'a> {
             ir::Expr::XmlAppend(xml_append) => self.compile_xml_append(xml_append, span),
             ir::Expr::ApplyTemplates(apply_templates) => {
                 self.compile_apply_templates(apply_templates, span)
+            }
+            ir::Expr::CallTemplate(call_template) => {
+                self.compile_call_template(call_template, span)
             }
             ir::Expr::CopyShallow(copy_shallow) => self.compile_copy_shallow(copy_shallow, span),
             ir::Expr::CopyDeep(copy_deep) => self.compile_copy_deep(copy_deep, span),
@@ -342,6 +348,7 @@ impl<'a> FunctionCompiler<'a> {
             builder: nested_builder,
             scopes: self.scopes,
             mode_ids: self.mode_ids,
+            template_ids: self.template_ids,
         };
 
         for param in &function_definition.params {
@@ -435,6 +442,29 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.builder
             .emit(Instruction::Call(function_call.args.len() as u8), span);
+        Ok(())
+    }
+
+    fn compile_call_template(
+        &mut self,
+        call_template: &ir::CallTemplate,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        let function_id = self
+            .template_ids
+            .get(&call_template.name)
+            .copied()
+            .ok_or_else(|| {
+                Error::Unsupported(format!("No template named {:?}", call_template.name))
+                    .with_span(span)
+            })?;
+        self.builder
+            .emit(Instruction::Closure(function_id.as_u16()), span);
+        for arg in &call_template.args {
+            self.compile_atom(arg)?;
+        }
+        self.builder
+            .emit(Instruction::Call(call_template.args.len() as u8), span);
         Ok(())
     }
 

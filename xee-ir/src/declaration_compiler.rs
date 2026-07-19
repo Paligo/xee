@@ -29,6 +29,7 @@ impl RuleBuilder {
 }
 
 pub type ModeIds = HashMap<ir::ApplyTemplatesModeValue, ModeId>;
+pub type TemplateIds = HashMap<xot::xmlname::OwnedName, function::InlineFunctionId>;
 
 pub struct DeclarationCompiler<'a> {
     program: &'a mut interpreter::Program,
@@ -36,6 +37,7 @@ pub struct DeclarationCompiler<'a> {
     rule_declaration_order: i64,
     rule_builders: HashMap<ir::ModeValue, Vec<RuleBuilder>>,
     mode_ids: ModeIds,
+    template_ids: TemplateIds,
 }
 
 impl<'a> DeclarationCompiler<'a> {
@@ -46,12 +48,18 @@ impl<'a> DeclarationCompiler<'a> {
             rule_declaration_order: 0,
             rule_builders: HashMap::new(),
             mode_ids: HashMap::new(),
+            template_ids: HashMap::new(),
         }
     }
 
     fn function_compiler(&mut self) -> FunctionCompiler<'_> {
         let function_builder = FunctionBuilder::new(self.program);
-        FunctionCompiler::new(function_builder, &mut self.scopes, &self.mode_ids)
+        FunctionCompiler::new(
+            function_builder,
+            &mut self.scopes,
+            &self.mode_ids,
+            &self.template_ids,
+        )
     }
 
     pub fn compile_declarations(
@@ -61,6 +69,19 @@ impl<'a> DeclarationCompiler<'a> {
         // first keep track of what modes exist, to create a ModeId for them. We do
         // this early so any mode reference within apply-templates will resolve.
         self.compile_modes(declarations);
+
+        // Named templates compile to functions invoked by name through
+        // xsl:call-template. Register their ids before the rules and main, so a
+        // call resolves regardless of the caller's position.
+        for named_template in &declarations.named_templates {
+            let function_id = {
+                let mut function_compiler = self.function_compiler();
+                function_compiler
+                    .compile_function_id(&named_template.function_definition, (0..0).into())?
+            };
+            self.template_ids
+                .insert(named_template.name.clone(), function_id);
+        }
 
         for rule in &declarations.rules {
             self.compile_rule(rule)?;

@@ -56,6 +56,7 @@ pub enum Expr {
     XmlProcessingInstruction(XmlProcessingInstruction),
     XmlAppend(XmlAppend),
     ApplyTemplates(ApplyTemplates),
+    CallTemplate(CallTemplate),
     CopyShallow(CopyShallow),
     CopyDeep(CopyDeep),
 }
@@ -360,6 +361,19 @@ pub struct Rule {
     pub function_definition: FunctionDefinition,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallTemplate {
+    pub name: xmlname::OwnedName,
+    // The caller's context (item, position, last), forwarded to the template.
+    pub args: Vec<AtomS>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NamedTemplate {
+    pub name: xmlname::OwnedName,
+    pub function_definition: FunctionDefinition,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ModeValue {
     Named(xmlname::OwnedName),
@@ -373,6 +387,7 @@ pub struct Mode {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Declarations {
     pub rules: Vec<Rule>,
+    pub named_templates: Vec<NamedTemplate>,
     pub modes: HashMap<Option<xmlname::OwnedName>, Mode>,
     pub functions: Vec<FunctionBinding>,
     pub main: FunctionDefinition,
@@ -383,6 +398,7 @@ impl Declarations {
     pub fn new(main: FunctionDefinition) -> Self {
         Self {
             rules: Vec::new(),
+            named_templates: Vec::new(),
             modes: HashMap::new(),
             functions: Vec::new(),
             main,

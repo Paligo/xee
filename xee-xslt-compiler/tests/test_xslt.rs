@@ -1230,3 +1230,36 @@ fn test_basic_iterate_params() {
         "<o><baz>1</baz><baz>2</baz><baz>4</baz></o>"
     );
 }
+
+#[test]
+fn test_call_named_template() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/"><a><xsl:call-template name="greet"/></a></xsl:template>
+  <xsl:template name="greet">hello</xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<a>hello</a>");
+}
+
+#[test]
+fn test_call_template_keeps_caller_context() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/"><xsl:apply-templates/></xsl:template>
+  <xsl:template match="doc"><r><xsl:call-template name="show"/></r></xsl:template>
+  <xsl:template name="show"><xsl:value-of select="local-name()"/></xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<r>doc</r>");
+}
