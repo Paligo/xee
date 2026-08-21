@@ -91,8 +91,9 @@ fn test_generate_element() {
 
     assert_debug_snapshot!(decode_instructions(&program.functions[0].chunk));
 
+    let mut dummy_docs = xee_interpreter::xml::Documents::new();
     let dynamic_context_builder = program.dynamic_context_builder();
-    let context = dynamic_context_builder.build();
+    let context = dynamic_context_builder.build(xee_interpreter::context::DocumentsRef(std::cell::RefCell::new(&mut dummy_docs)));
 
     let mut xot = xot::Xot::new();
     let runnable = program.runnable(&context);

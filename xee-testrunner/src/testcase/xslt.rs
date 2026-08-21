@@ -136,12 +136,12 @@ impl Runnable<XsltLanguage> for XsltTestCase {
         if let Some(context_item) = context_item {
             builder.context_item(context_item);
         }
-        builder.documents(run_context.documents.documents().clone());
         // builder.variables(variables.clone());
         builder.current_datetime(chrono::offset::Utc::now().into());
-        let context = builder.build();
-        let runnable = program.runnable(&context);
-        let result = runnable.many(run_context.documents.xot_mut());
+        let result = run_context.documents.execute_program(&program, &builder);
+
+        let mut dummy_docs = xee_xpath::Documents::new();
+        let context = builder.build(dummy_docs.documents());
 
         self.test_case.result.assert_result(
             &context,

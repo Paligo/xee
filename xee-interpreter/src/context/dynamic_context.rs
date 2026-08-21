@@ -17,7 +17,7 @@ pub type Variables = AHashMap<xot::xmlname::OwnedName, sequence::Sequence>;
 
 // a dynamic context is created for each xpath evaluation
 #[derive(Debug)]
-pub struct DynamicContext<'a> {
+pub struct DynamicContext<'a, 'd> {
     // we keep a reference to the program
     program: &'a Program,
 
@@ -26,7 +26,7 @@ pub struct DynamicContext<'a> {
     // we want to mutate documents during evaluation, and this happens in
     // multiple spots. We use RefCell to manage that during runtime so we don't
     // need to make the whole thing immutable.
-    documents: DocumentsRef,
+    documents: DocumentsRef<'d>,
     variables: Variables,
     // TODO: we want to be able to control the creation of this outside,
     // as it needs to be the same for all evalutions of XSLT I believe
@@ -43,12 +43,12 @@ pub struct DynamicContext<'a> {
     environment_variables: HashMap<String, String>,
 }
 
-impl<'a> DynamicContext<'a> {
+impl<'a, 'd> DynamicContext<'a, 'd> {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         program: &'a Program,
         context_item: Option<sequence::Item>,
-        documents: DocumentsRef,
+        documents: DocumentsRef<'d>,
         variables: Variables,
         current_datetime: chrono::DateTime<chrono::offset::FixedOffset>,
         default_collection: Option<sequence::Sequence>,
@@ -82,8 +82,8 @@ impl<'a> DynamicContext<'a> {
     }
 
     /// The documents in this context.
-    pub fn documents(&self) -> DocumentsRef {
-        self.documents.clone()
+    pub fn documents(&self) -> &DocumentsRef<'d> {
+        &self.documents
     }
 
     /// The variables in this context.

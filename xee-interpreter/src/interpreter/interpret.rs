@@ -26,8 +26,8 @@ use super::instruction::{read_i16, read_instruction, read_u16, read_u8, EncodedI
 use super::runnable::Runnable;
 use super::state::State;
 
-pub struct Interpreter<'a> {
-    runnable: &'a Runnable<'a>,
+pub struct Interpreter<'a, 'd> {
+    runnable: &'a Runnable<'a, 'd>,
     pub(crate) state: State<'a>,
 }
 
@@ -47,8 +47,8 @@ impl From<sequence::Item> for ContextInfo {
     }
 }
 
-impl<'a> Interpreter<'a> {
-    pub fn new(runnable: &'a Runnable<'a>, xot: &'a mut Xot) -> Self {
+impl<'a, 'd> Interpreter<'a, 'd> {
+    pub fn new(runnable: &'a Runnable<'a, 'd>, xot: &'a mut Xot) -> Self {
         Interpreter {
             runnable,
             state: State::new(xot),
@@ -59,7 +59,7 @@ impl<'a> Interpreter<'a> {
         self.state
     }
 
-    pub(crate) fn runnable(&self) -> &Runnable<'_> {
+    pub(crate) fn runnable(&self) -> &'a Runnable<'a, 'd> {
         self.runnable
     }
 
@@ -283,7 +283,7 @@ impl<'a> Interpreter<'a> {
                         &b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(result);
@@ -299,7 +299,7 @@ impl<'a> Interpreter<'a> {
                         &b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(result);
@@ -311,7 +311,7 @@ impl<'a> Interpreter<'a> {
                         b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(combined);
@@ -323,7 +323,7 @@ impl<'a> Interpreter<'a> {
                         b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(combined);
@@ -335,7 +335,7 @@ impl<'a> Interpreter<'a> {
                         b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(combined);
@@ -370,7 +370,7 @@ impl<'a> Interpreter<'a> {
                     let value = value.deduplicate(
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(value);

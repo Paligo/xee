@@ -176,9 +176,8 @@ impl EnvironmentSpec {
                     continue;
                 }
             };
-            let dynamic_context_builder = query.dynamic_context_builder(&documents);
-            let dynamic_context = dynamic_context_builder.build();
-            let result = query.execute_with_context(&mut documents, &dynamic_context)?;
+            let dynamic_context_builder = query.dynamic_context_builder();
+            let result = query.execute_with_builder(&mut documents, &dynamic_context_builder)?;
             variables.insert(param.name.clone(), result);
         }
         Ok(variables)

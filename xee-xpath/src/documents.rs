@@ -1,7 +1,7 @@
 use iri_string::types::IriStr;
 use xee_interpreter::{
     context::DocumentsRef,
-    xml::{DocumentHandle, DocumentsError},
+    xml::{DocumentHandle, DocumentsError, Documents as XmlDocuments},
 };
 use xot::Xot;
 
@@ -25,10 +25,10 @@ use xot::Xot;
 pub struct Documents {
     // The Xot arena holding all nodes of the documents in the collection.
     pub(crate) xot: Xot,
-    // A reference to the underlaying collection of XML documents
-    // so they can be looked up by URI or handle. Each Document stores the
-    // URI and root node of the XML data.
-    pub(crate) documents: DocumentsRef,
+    // The underlaying collection of XML documents so they can be looked 
+    // up by URI or handle. Each Document stores the URI and root node
+    // of the XML data.
+    pub(crate) documents: XmlDocuments,
 }
 
 impl Documents {
@@ -36,7 +36,7 @@ impl Documents {
     pub fn new() -> Self {
         Self {
             xot: Xot::new(),
-            documents: DocumentsRef::new(),
+            documents: XmlDocuments::new(),
         }
     }
 
@@ -50,7 +50,6 @@ impl Documents {
         xml: &str,
     ) -> Result<DocumentHandle, DocumentsError> {
         self.documents
-            .borrow_mut()
             .add_string(&mut self.xot, Some(uri), xml)
     }
 
@@ -60,18 +59,30 @@ impl Documents {
     /// a [`xot::Error`].
     pub fn add_string_without_uri(&mut self, xml: &str) -> Result<DocumentHandle, DocumentsError> {
         self.documents
-            .borrow_mut()
             .add_string(&mut self.xot, None, xml)
+    }
+
+    /// Load a string as an XML document with an optional URI.
+    ///
+    /// Something may go wrong during processing of the XML document; this is
+    /// a [`xot::Error`].
+    pub fn add_string_with_optional_uri(
+        &mut self,
+        uri: Option<&IriStr>,
+        xml: &str,
+    ) -> Result<DocumentHandle, DocumentsError> {
+        self.documents
+            .add_string(&mut self.xot, uri, xml)
     }
 
     /// Given a handle give back the document node
     pub fn document_node(&self, handle: DocumentHandle) -> Option<xot::Node> {
-        self.documents.borrow().get_node_by_handle(handle)
+        self.documents.get_node_by_handle(handle)
     }
 
     /// Get a reference to the documents ([`xee_interpreter::xml::Documents`])
-    pub fn documents(&self) -> &DocumentsRef {
-        &self.documents
+    pub fn documents(&mut self) -> DocumentsRef<'_> {
+        DocumentsRef(std::cell::RefCell::new(&mut self.documents))
     }
 
     /// Get a reference to the Xot arena
@@ -82,6 +93,17 @@ impl Documents {
     /// Get a mutable reference to the Xot arena
     pub fn xot_mut(&mut self) -> &mut Xot {
         &mut self.xot
+    }
+
+    /// Execute a program with the given dynamic context builder.
+    pub fn execute_program(
+        &mut self,
+        program: &xee_interpreter::interpreter::Program,
+        builder: &xee_interpreter::context::DynamicContextBuilder,
+    ) -> Result<xee_interpreter::sequence::Sequence, xee_interpreter::error::SpannedError> {
+        let context = builder.build(DocumentsRef(std::cell::RefCell::new(&mut self.documents)));
+        let runnable = program.runnable(&context);
+        runnable.many(&mut self.xot)
     }
 }
 

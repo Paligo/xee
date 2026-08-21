@@ -121,7 +121,7 @@ impl Sequence {
 
     pub(crate) fn process_set_result(
         s: HashSet<xot::Node>,
-        annotations: xml::DocumentOrderAccess,
+        mut annotations: xml::DocumentOrderAccess,
     ) -> Self {
         // sort nodes by document order
         let mut nodes = s.into_iter().collect::<Vec<_>>();

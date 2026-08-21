@@ -11,17 +11,17 @@ pub struct PatternLookup<V: Clone> {
     pub(crate) patterns: Vec<(Pattern<function::InlineFunctionId>, V)>,
 }
 
-pub(crate) struct InterpreterPredicateMatcher<'a> {
-    interpreter: &'a mut Interpreter<'a>,
+pub(crate) struct InterpreterPredicateMatcher<'a, 'd> {
+    interpreter: &'a mut Interpreter<'a, 'd>,
 }
 
-impl<'a> InterpreterPredicateMatcher<'a> {
-    pub(crate) fn new(interpreter: &'a mut Interpreter<'a>) -> Self {
+impl<'a, 'd> InterpreterPredicateMatcher<'a, 'd> {
+    pub(crate) fn new(interpreter: &'a mut Interpreter<'a, 'd>) -> Self {
         Self { interpreter }
     }
 }
 
-impl PredicateMatcher for Interpreter<'_> {
+impl PredicateMatcher for Interpreter<'_, '_> {
     fn match_predicate(
         &mut self,
         inline_function_id: function::InlineFunctionId,
