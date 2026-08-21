@@ -283,7 +283,7 @@ impl<'a, 'd> Interpreter<'a, 'd> {
                         &b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(result);
@@ -299,7 +299,7 @@ impl<'a, 'd> Interpreter<'a, 'd> {
                         &b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(result);
@@ -311,7 +311,7 @@ impl<'a, 'd> Interpreter<'a, 'd> {
                         b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(combined);
@@ -323,7 +323,7 @@ impl<'a, 'd> Interpreter<'a, 'd> {
                         b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(combined);
@@ -335,7 +335,7 @@ impl<'a, 'd> Interpreter<'a, 'd> {
                         b,
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(combined);
@@ -370,7 +370,7 @@ impl<'a, 'd> Interpreter<'a, 'd> {
                     let value = value.deduplicate(
                         self.runnable
                             .documents()
-                            .borrow()
+                            .borrow_mut()
                             .document_order_access(self.xot()),
                     )?;
                     self.state.push(value);
