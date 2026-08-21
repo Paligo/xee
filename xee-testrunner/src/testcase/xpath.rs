@@ -141,7 +141,7 @@ impl Runnable<XPathLanguage> for XPathTestCase {
 
         // now construct the dynamic context. We want to have one here
         // explicitly so we can use it later in the assertions
-        let mut builder = query.dynamic_context_builder(run_context.documents);
+        let mut builder = query.dynamic_context_builder();
         if let Some(context_item) = context_item {
             builder.context_item(context_item);
         }
@@ -170,9 +170,10 @@ impl Runnable<XPathLanguage> for XPathTestCase {
             }
         }
 
-        let context = builder.build();
-        // now execute the query with the right dynamic context
-        let result = query.execute_with_context(run_context.documents, &context);
+        let result = query.execute_with_builder(run_context.documents, &builder);
+
+        let mut dummy_docs = xee_xpath::Documents::new();
+        let context = builder.build(dummy_docs.documents());
 
         self.test_case.result.assert_result(
             &context,
@@ -196,10 +197,10 @@ impl ContextLoadable<LoadContext> for XPathTestCase {
     fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let test_query = queries.one("test/string()", convert_string)?;
         let test_case_query = TestCase::load_with_context(queries, context)?;
-        let test_case_query = test_case_query.map(move |test_case, documents, context| {
+        let test_case_query = test_case_query.map(move |test_case, documents, builder| {
             Ok(XPathTestCase {
                 test_case,
-                test: test_query.execute_with_context(documents, context)?,
+                test: test_query.execute_with_builder(documents, builder)?,
             })
         });
         Ok(test_case_query)

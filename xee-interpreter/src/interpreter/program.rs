@@ -62,7 +62,7 @@ impl Program {
     }
 
     /// Obtain a runnable version of this program, with a particular dynamic context.
-    pub fn runnable<'a>(&'a self, dynamic_context: &'a context::DynamicContext) -> Runnable<'a> {
+    pub fn runnable<'a, 'd>(&'a self, dynamic_context: &'a context::DynamicContext<'a, 'd>) -> Runnable<'a, 'd> {
         Runnable::new(self, dynamic_context)
     }
 

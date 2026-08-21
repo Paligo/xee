@@ -110,13 +110,13 @@ impl RunContext {
                 return Ok(());
             }
         };
-        let mut context_builder = sequence_query.dynamic_context_builder(&self.documents);
+        let mut context_builder = sequence_query.dynamic_context_builder();
         if let Some(doc) = self.document_handle {
             context_builder.context_item(doc.to_item(&self.documents)?);
         }
-        let context = context_builder.build();
+        
 
-        let sequence = sequence_query.execute_with_context(&mut self.documents, &context);
+        let sequence = sequence_query.execute_with_builder(&mut self.documents, &context_builder);
         let sequence = match sequence {
             Ok(sequence) => sequence,
             Err(e) => {
@@ -124,6 +124,8 @@ impl RunContext {
                 return Ok(());
             }
         };
+        let mut dummy_docs = Documents::new();
+        let context = context_builder.build(dummy_docs.documents());
         println!(
             "{}",
             sequence.display_representation(self.documents.xot(), &context)

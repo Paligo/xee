@@ -18,8 +18,7 @@ pub fn evaluate_program(
     let root = documents.get_node_by_handle(handle).unwrap();
     let mut dynamic_context_builder = program.dynamic_context_builder();
     dynamic_context_builder.context_node(root);
-    dynamic_context_builder.documents(documents);
-    let context = dynamic_context_builder.build();
+    let context = dynamic_context_builder.build(xee_interpreter::context::DocumentsRef(std::cell::RefCell::new(&mut documents)));
     let runnable = program.runnable(&context);
     runnable.many(xot)
 }
