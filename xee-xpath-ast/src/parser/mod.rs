@@ -721,13 +721,13 @@ mod tests {
     #[test]
     fn test_leading_lone_slash_can_form_a_path_expression_error() {
         // See Constraint: leading-lone-slash
-        assert_ron_snapshot!(parse_xpath_simple("/ * 5"))
+        assert_ron_snapshot!(parse_xpath_simple("/ * 5"));
     }
 
     #[test]
     fn test_leading_lone_slash_disambiguate() {
         // See Constraint: leading-lone-slash
-        assert_ron_snapshot!(parse_xpath_simple("(/) * 5"))
+        assert_ron_snapshot!(parse_xpath_simple("(/) * 5"));
     }
 
     #[test]
@@ -739,22 +739,22 @@ mod tests {
 
     #[test]
     fn test_symbol_as_name_test() {
-        assert_ron_snapshot!(parse_xpath_simple("/if"))
+        assert_ron_snapshot!(parse_xpath_simple("/if"));
     }
 
     #[test]
     fn test_another_symbol_as_name_test() {
-        assert_ron_snapshot!(parse_xpath_simple("/else"))
+        assert_ron_snapshot!(parse_xpath_simple("/else"));
     }
 
     #[test]
     fn test_symbol_as_name_test_with_prefix() {
-        assert_ron_snapshot!(parse_xpath_simple("fn:if"))
+        assert_ron_snapshot!(parse_xpath_simple("fn:if"));
     }
 
     #[test]
     fn test_symbol_as_name_test_with_prefix_wildcard() {
-        assert_ron_snapshot!(parse_xpath_simple("*:if"))
+        assert_ron_snapshot!(parse_xpath_simple("*:if"));
     }
 
     #[test]
@@ -774,89 +774,89 @@ mod tests {
 
     #[test]
     fn test_map_constructor() {
-        assert_ron_snapshot!(parse_xpath_simple("map { 1: 2 }"))
+        assert_ron_snapshot!(parse_xpath_simple("map { 1: 2 }"));
     }
 
     #[test]
     fn test_curly_array_constructor() {
-        assert_ron_snapshot!(parse_xpath_simple("array { 1, 2}"))
+        assert_ron_snapshot!(parse_xpath_simple("array { 1, 2}"));
     }
 
     #[test]
     fn test_square_array_constructor() {
-        assert_ron_snapshot!(parse_xpath_simple("[1, 2]"))
+        assert_ron_snapshot!(parse_xpath_simple("[1, 2]"));
     }
 
     #[test]
     fn test_unary_lookup_name() {
-        assert_ron_snapshot!(parse_xpath_simple("?name"))
+        assert_ron_snapshot!(parse_xpath_simple("?name"));
     }
 
     #[test]
     fn test_unary_lookup_integer() {
-        assert_ron_snapshot!(parse_xpath_simple("?1"))
+        assert_ron_snapshot!(parse_xpath_simple("?1"));
     }
 
     #[test]
     fn test_unary_lookup_star() {
-        assert_ron_snapshot!(parse_xpath_simple("?*"))
+        assert_ron_snapshot!(parse_xpath_simple("?*"));
     }
 
     #[test]
     fn test_unary_lookup_expr() {
-        assert_ron_snapshot!(parse_xpath_simple("?(1 + 1)"))
+        assert_ron_snapshot!(parse_xpath_simple("?(1 + 1)"));
     }
 
     #[test]
     fn test_lookup_name() {
-        assert_ron_snapshot!(parse_xpath_simple("1?name"))
+        assert_ron_snapshot!(parse_xpath_simple("1?name"));
     }
 
     #[test]
     fn test_any_array() {
-        assert_ron_snapshot!(parse_xpath_simple("'foo' instance of array(*)"))
+        assert_ron_snapshot!(parse_xpath_simple("'foo' instance of array(*)"));
     }
 
     #[test]
     fn test_typed_array() {
-        assert_ron_snapshot!(parse_xpath_simple("'foo' instance of array(xs:integer)"))
+        assert_ron_snapshot!(parse_xpath_simple("'foo' instance of array(xs:integer)"));
     }
 
     #[test]
     fn test_any_map() {
-        assert_ron_snapshot!(parse_xpath_simple("'foo' instance of map(*)"))
+        assert_ron_snapshot!(parse_xpath_simple("'foo' instance of map(*)"));
     }
 
     #[test]
     fn test_parse_empty_array() {
-        assert_ron_snapshot!(parse_xpath_simple("[]"))
+        assert_ron_snapshot!(parse_xpath_simple("[]"));
     }
 
     #[test]
     fn test_arrow_function_static() {
-        assert_ron_snapshot!(parse_xpath_simple("'foo' => fn:concat('bar')"))
+        assert_ron_snapshot!(parse_xpath_simple("'foo' => fn:concat('bar')"));
     }
 
     #[test]
     fn test_arrow_function_static_with_placeholder() {
-        assert_ron_snapshot!(parse_xpath_simple("'$' => fn:concat(?)"))
+        assert_ron_snapshot!(parse_xpath_simple("'$' => fn:concat(?)"));
     }
 
     #[test]
     fn test_inline_function_with_empty_body() {
         assert_ron_snapshot!(parse_xpath_simple(
             "let $f := function($x) { (: there's nothing here :)} return $f(2)"
-        ))
+        ));
     }
 
     #[test]
     fn test_comment_before_expression() {
-        assert_ron_snapshot!(parse_xpath_simple("(: comment :)/foo"))
+        assert_ron_snapshot!(parse_xpath_simple("(: comment :)/foo"));
     }
 
     #[test]
     fn test_multiple_comments_before_expression() {
-        assert_ron_snapshot!(parse_xpath_simple(r#"(: a :)(: b :)foo"#))
+        assert_ron_snapshot!(parse_xpath_simple(r#"(: a :)(: b :)foo"#));
     }
     #[test]
     fn test_xpath_parse_value_template() {
