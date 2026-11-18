@@ -172,35 +172,35 @@ fn test_accumulator() {
 fn test_should_be_empty_not_empty() {
     assert_ron_snapshot!(parse_sequence_constructor_item(
         r#"<xsl:copy-of xmlns:xsl="http://www.w3.org/1999/XSL/Transform" select="true()">Illegal content</xsl:copy-of>"#
-    ))
+    ));
 }
 
 #[test]
 fn test_apply_templates_with_mixed_content() {
     assert_ron_snapshot!(parse_sequence_constructor_item(
         r#"<xsl:apply-templates xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:sort>Sort</xsl:sort><xsl:with-param name="a">With param</xsl:with-param></xsl:apply-templates>"#
-    ))
+    ));
 }
 
 #[test]
 fn test_for_each() {
     assert_ron_snapshot!(parse_sequence_constructor_item(
         r#"<xsl:for-each xmlns:xsl="http://www.w3.org/1999/XSL/Transform" select="true()"><xsl:sort>Sort 1</xsl:sort><xsl:sort>Sort 2</xsl:sort>Sequence constructor</xsl:for-each>"#
-    ))
+    ));
 }
 
 #[test]
 fn test_fork1() {
     assert_ron_snapshot!(parse_sequence_constructor_item(
         r#"<xsl:fork xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:sequence>Sequence 1</xsl:sequence><xsl:sequence>Sequence 2</xsl:sequence></xsl:fork>"#
-    ))
+    ));
 }
 
 #[test]
 fn test_fork2() {
     assert_ron_snapshot!(parse_sequence_constructor_item(
         r#"<xsl:fork xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:for-each-group select="true()">Content</xsl:for-each-group></xsl:fork>"#
-    ))
+    ));
 }
 
 #[test]

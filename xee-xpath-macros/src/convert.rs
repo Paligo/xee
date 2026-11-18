@@ -161,7 +161,7 @@ fn is_sequence_arg(fn_arg: &syn::FnArg) -> bool {
         syn::FnArg::Typed(type_) => match type_.ty.as_ref() {
             syn::Type::Reference(type_) => match type_.elem.as_ref() {
                 syn::Type::Path(type_) => {
-                    let segment = type_.path.segments.iter().last();
+                    let segment = type_.path.segments.last();
                     match segment {
                         Some(syn::PathSegment {
                             ident,
