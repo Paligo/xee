@@ -120,7 +120,7 @@ impl SequenceConstructorName {
 
             _ => Err(ElementError::Unsupported(format!(
                 "Unknown sequence constructor: {:?}",
-                &self
+                self
             ))),
         }
     }
@@ -144,7 +144,7 @@ impl DeclarationName {
             DeclarationName::Output => ast::Output::parse_declaration(attributes),
             _ => Err(ElementError::Unsupported(format!(
                 "Unsupported declaration: {:?}",
-                &self
+                self
             ))),
         }
     }
