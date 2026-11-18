@@ -1,4 +1,5 @@
 use xee_schema_type::Xs;
+use xee_xpath_ast::Pattern;
 use xee_xpath_type::ast::SequenceType;
 
 use crate::sequence;
@@ -6,6 +7,7 @@ use crate::span::SourceSpan;
 use crate::xml;
 
 use super::signature::Signature;
+use super::InlineFunctionId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CastType {
@@ -32,6 +34,7 @@ pub struct InlineFunction {
     pub cast_types: Vec<CastType>,
     pub sequence_types: Vec<SequenceType>,
     pub closure_names: Vec<Name>,
+    pub patterns: Vec<Pattern<InlineFunctionId>>,
     // the compiled code, and the spans of each instruction
     pub chunk: Vec<u8>,
     pub spans: Vec<SourceSpan>,

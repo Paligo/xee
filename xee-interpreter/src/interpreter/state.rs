@@ -140,6 +140,13 @@ impl<'a> State<'a> {
         Ok(())
     }
 
+    pub(crate) fn push_closure_recursive(&mut self) -> error::Result<()> {
+        let function = self.function()?;
+        let item: sequence::Item = function.into();
+        self.stack.push(stack::Value::Sequence(item.into()));
+        Ok(())
+    }
+
     pub(crate) fn set_var(&mut self, index: usize) {
         let base = self.frame().base;
         self.stack[base + index] = self.stack.pop().unwrap();

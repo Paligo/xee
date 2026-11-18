@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use ibig::{ibig, IBig};
 
 use xee_interpreter::error::Error;
@@ -5,6 +7,8 @@ use xee_interpreter::function::FunctionRule;
 use xee_interpreter::interpreter::instruction::Instruction;
 use xee_interpreter::span::SourceSpan;
 use xee_interpreter::{error, function, sequence};
+use xee_xpath_ast::pattern::transform_pattern;
+use xee_xpath_ast::Pattern;
 
 use crate::declaration_compiler::ModeIds;
 use crate::ir;
@@ -92,6 +96,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             ir::Expr::CopyShallow(copy_shallow) => self.compile_copy_shallow(copy_shallow, span),
             ir::Expr::CopyDeep(copy_deep) => self.compile_copy_deep(copy_deep, span),
+            ir::Expr::DefineTemplates(define_templates) => {
+                self.compile_define_templates(define_templates, span)
+            }
         }
     }
 
@@ -111,6 +118,9 @@ impl<'a> FunctionCompiler<'a> {
                     }
                     ir::Const::Decimal(d) => {
                         self.builder.emit_constant((*d).into(), span);
+                    }
+                    ir::Const::Name(n) => {
+                        self.builder.emit_constant((n.clone()).into(), span);
                     }
                     ir::Const::EmptySequence => self
                         .builder
@@ -330,9 +340,10 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    pub fn compile_function_id(
+    pub fn compile_function(
         &mut self,
-        function_definition: &ir::FunctionDefinition,
+        function_body: impl FnOnce(&mut FunctionCompiler) -> error::SpannedResult<()>,
+        signature: function::Signature,
         span: SourceSpan,
     ) -> error::SpannedResult<function::InlineFunctionId> {
         let nested_builder = self.builder.builder();
@@ -344,19 +355,13 @@ impl<'a> FunctionCompiler<'a> {
             mode_ids: self.mode_ids,
         };
 
-        for param in &function_definition.params {
-            compiler.scopes.push_name(&param.name);
-        }
-        compiler.compile_expr(&function_definition.body)?;
-        for _ in &function_definition.params {
-            compiler.scopes.pop_name();
-        }
+        function_body(&mut compiler)?;
 
         compiler.scopes.pop_scope();
 
         let function = compiler
             .builder
-            .finish("inline".to_string(), function_definition, span);
+            .finish("inline".to_string(), signature, span);
         // now place all captured names on stack, to ensure we have the
         // closure
         // in reverse order so we can pop them off in the right order
@@ -364,6 +369,27 @@ impl<'a> FunctionCompiler<'a> {
             self.compile_variable(name, span)?;
         }
         Ok(self.builder.add_function(function))
+    }
+
+    pub fn compile_function_id(
+        &mut self,
+        function_definition: &ir::FunctionDefinition,
+        span: SourceSpan,
+    ) -> error::SpannedResult<function::InlineFunctionId> {
+        self.compile_function(
+            |compiler| {
+                for param in &function_definition.params {
+                    compiler.scopes.push_name(&param.name);
+                }
+                compiler.compile_expr(&function_definition.body)?;
+                for _ in &function_definition.params {
+                    compiler.scopes.pop_name();
+                }
+                Ok(())
+            },
+            function_definition.signature(),
+            span,
+        )
     }
 
     pub(crate) fn compile_function_definition(
@@ -998,30 +1024,253 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn compile_define_templates(
+        &mut self,
+        define_templates: &ir::DefineTemplates,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        // HACK: Define types for mode_patterns instead of using tuples
+        // Also maybe move into mutliple functions like the old declaration_compiler
+        let mut mode_patterns = HashMap::<_, Vec<_>>::new();
+        for (declaration_order, rule) in define_templates.rules.iter().enumerate() {
+            let pattern = transform_pattern(&rule.pattern, |function_definition| {
+                self.compile_function_id(function_definition, span)
+            })?;
+            for mode in rule.modes.iter() {
+                let patterns = mode_patterns.entry(mode.clone()).or_default();
+                patterns.push((
+                    (-rule.priority, -(declaration_order as isize)),
+                    (pattern.clone(), &rule.function_definition, span),
+                ));
+            }
+        }
+
+        let all_mode_patterns = mode_patterns.remove(&ir::ModeValue::All);
+        if let Some(all_mode_patterns) = all_mode_patterns {
+            for patterns in mode_patterns.values_mut() {
+                patterns.extend(all_mode_patterns.iter().cloned());
+            }
+        }
+
+        let mut modes_num = 0;
+        for (mode, mut patterns) in mode_patterns.into_iter() {
+            patterns.sort_by_key(|(key, _)| *key);
+            let mode_key = match &mode {
+                ir::ModeValue::Named(x) => Some(x.clone()),
+                ir::ModeValue::Unnamed => None,
+                ir::ModeValue::All => unreachable!(),
+            };
+            let mode_config = define_templates.modes.get(&mode_key);
+            let mode_constant = match mode {
+                ir::ModeValue::Named(name) => {
+                    let name: sequence::Item = name.into();
+                    name.into()
+                }
+                ir::ModeValue::Unnamed => {
+                    let name: sequence::Item = 0.into();
+                    name.into()
+                }
+                ir::ModeValue::All => unreachable!(),
+            };
+            modes_num += 1;
+            self.builder.emit_constant(mode_constant, span);
+            self.compile_mode(mode_config, patterns.into_iter().map(|(_, val)| val), span)?;
+        }
+        self.builder.emit_constant(modes_num.into(), span);
+        self.builder.emit(Instruction::CurlyMap, span);
+        let modes_map = function::Name::new("modes_map".to_string());
+        self.scopes.push_name(&modes_map);
+
+        let mode_param = function::Name::new("mode".to_string());
+        //ir::ContextNames
+        let items_param = function::Name::new("items".to_string());
+        let context_names = ir::ContextNames {
+            item: function::Name::new("item".to_string()),
+            position: function::Name::new("pos".to_string()),
+            last: function::Name::new("len".to_string()),
+        };
+        let mode_var = function::Name::new("mode_var".to_string());
+        let apply_templates = function::Name::new("apply_templates".to_string());
+        let signature = function::Signature::new(vec![None, None], None);
+        let function_id = self.compile_function(
+            |compiler| {
+                compiler.scopes.push_name(&mode_param);
+                compiler.scopes.push_name(&items_param);
+                let items_atom = &ir::AtomS::new(ir::Atom::Variable(items_param), (0..0).into());
+                compiler
+                    .builder
+                    .emit(Instruction::ClosureRecursiveSelf, span);
+                compiler.scopes.push_name(&apply_templates);
+
+                compiler.builder.emit(Instruction::BuildNew, span);
+
+                // Fetch mode from map
+                compiler.compile_variable(&modes_map, span)?;
+                compiler.compile_variable(&mode_param, span)?;
+                compiler.builder.emit(Instruction::Call(1), span);
+                compiler.scopes.push_name(&mode_var);
+
+                // Iterate over items_param
+                let (loop_start, loop_end) =
+                    compiler.compile_sequence_loop_init(items_atom, &context_names, span)?;
+
+                // Get the item
+                compiler.compile_sequence_get_item(items_atom, &context_names, span)?;
+                compiler.scopes.push_name(&context_names.item);
+
+                // Call mode for each item
+                compiler.compile_variable(&mode_var, span)?;
+                compiler.compile_variable(&context_names.item, span)?;
+                compiler.compile_variable(&context_names.position, span)?;
+                compiler.compile_variable(&context_names.last, span)?;
+                compiler.compile_variable(&apply_templates, span)?;
+                compiler.compile_variable(&mode_param, span)?;
+                compiler.builder.emit(Instruction::Call(5), span);
+                compiler.builder.emit(Instruction::BuildPush, span);
+
+                // Remove the item - can be optimized by not using a variable
+                compiler.builder.emit(Instruction::Pop, span);
+                compiler.scopes.pop_name(); // context_names.item
+
+                // Finish loop
+                compiler.compile_sequence_loop_iterate(loop_start, &context_names, span)?;
+
+                compiler.builder.patch_jump(loop_end);
+                compiler.compile_sequence_loop_end(span);
+                compiler.scopes.pop_name(); // context_names.position
+                compiler.scopes.pop_name(); // context_names.last
+
+                // Finish building the result sequence
+                compiler.builder.emit(Instruction::BuildComplete, span);
+
+                compiler.scopes.pop_name(); // apply_templates
+                compiler.scopes.pop_name(); // item_param
+                compiler.scopes.pop_name(); // mode_param
+                Ok(())
+            },
+            signature,
+            span,
+        )?;
+        self.builder
+            .emit(Instruction::Closure(function_id.as_u16()), span);
+        self.scopes.push_name(&apply_templates);
+
+        self.compile_expr(&define_templates.body)?;
+
+        self.builder.emit(Instruction::LetDone, span);
+        self.scopes.pop_name(); // apply_templates
+        self.builder.emit(Instruction::LetDone, span);
+        self.scopes.pop_name(); // modes_map
+        Ok(())
+    }
+
+    fn compile_mode<'b>(
+        &mut self,
+        _mode: Option<&ir::Mode>,
+        rules: impl Iterator<
+            Item = (
+                Pattern<function::InlineFunctionId>,
+                &'b ir::FunctionDefinition,
+                SourceSpan,
+            ),
+        >,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        let item_param = function::Name::new("item".to_string());
+        let pos_param = function::Name::new("pos".to_string());
+        let len_param = function::Name::new("len".to_string());
+        let apply_templates_param = function::Name::new("apply_templates".to_string());
+        let current_mode_param = function::Name::new("current_mode".to_string());
+        let signature = function::Signature::new(vec![None, None, None, None, None], None);
+        let function_id = self.compile_function(
+            |compiler| {
+                compiler.scopes.push_name(&item_param);
+                compiler.scopes.push_name(&pos_param);
+                compiler.scopes.push_name(&len_param);
+                compiler.scopes.push_name(&apply_templates_param);
+                compiler.scopes.push_name(&current_mode_param);
+
+                let mut jumps_to_end = vec![];
+
+                compiler.compile_variable(&item_param, span)?; // Push item_param to the stack
+
+                for (pattern, definition, inner_span) in rules {
+                    let pattern_id = compiler.builder.add_pattern(pattern.clone());
+                    compiler
+                        .builder
+                        .emit(Instruction::MatchPattern(pattern_id as u16), span); // item_param remains on stack
+
+                    let failed_match = compiler
+                        .builder
+                        .emit_jump_forward(JumpCondition::False, span);
+
+                    compiler.builder.emit(Instruction::Pop, span); // Pop extra item_param
+
+                    compiler.compile_function_definition(definition, inner_span)?;
+                    compiler.compile_variable(&item_param, span)?;
+                    compiler.compile_variable(&pos_param, inner_span)?;
+                    compiler.compile_variable(&len_param, inner_span)?;
+                    compiler.builder.emit(Instruction::Call(3), inner_span);
+                    jumps_to_end.push(
+                        compiler
+                            .builder
+                            .emit_jump_forward(JumpCondition::Always, span),
+                    );
+
+                    compiler.builder.patch_jump(failed_match);
+                }
+
+                compiler.builder.emit(Instruction::Pop, span); // Pop extra item_param
+                                                               // All matches failed: empty sequence result
+                compiler
+                    .builder
+                    .emit_constant(sequence::Sequence::default(), span);
+
+                for jump in jumps_to_end {
+                    compiler.builder.patch_jump(jump);
+                }
+
+                compiler.scopes.pop_name(); // current_mode_param
+                compiler.scopes.pop_name(); // apply_templates_param
+                compiler.scopes.pop_name(); // len_param
+                compiler.scopes.pop_name(); // pos_param
+                compiler.scopes.pop_name(); // item_param
+                Ok(())
+            },
+            signature,
+            span,
+        )?;
+        self.builder
+            .emit(Instruction::Closure(function_id.as_u16()), span);
+        Ok(())
+    }
+
     fn compile_apply_templates(
         &mut self,
         apply_templates: &ir::ApplyTemplates,
         span: SourceSpan,
     ) -> error::SpannedResult<()> {
-        self.compile_atom(&apply_templates.select)?;
+        // TODO: Must match exactly the param names in compile_mode!
+        let apply_templates_closure_var = function::Name::new("apply_templates".to_string());
+        let current_mode_closure_var = function::Name::new("current_mode".to_string());
 
-        let mode_id = if matches!(
-            apply_templates.mode,
-            ir::ApplyTemplatesModeValue::Named(_) | ir::ApplyTemplatesModeValue::Unnamed
-        ) {
-            self.mode_ids.get(&apply_templates.mode)
-        } else {
-            todo!("#current mode not handled yet")
+        let apply_templates_atom = ir::AtomS::new(
+            ir::Atom::Variable(apply_templates_closure_var),
+            (0..0).into(),
+        );
+
+        let mode_key = match &apply_templates.mode {
+            ir::ApplyTemplatesModeValue::Named(name) => {
+                ir::Atom::Const(ir::Const::Name(name.clone()))
+            }
+            ir::ApplyTemplatesModeValue::Unnamed => ir::Atom::Const(ir::Const::Integer(0.into())),
+            ir::ApplyTemplatesModeValue::Current => ir::Atom::Variable(current_mode_closure_var),
         };
-        if let Some(mode_id) = mode_id {
-            self.builder
-                .emit(Instruction::ApplyTemplates(mode_id.get() as u16), span);
-        } else {
-            // the mode was never used by any templates, so compile the empty
-            // sequence
-            self.builder
-                .emit_constant(sequence::Sequence::default(), span);
-        }
+        self.compile_atom(&apply_templates_atom)?;
+        self.compile_atom(&ir::AtomS::new(mode_key, (0..0).into()))?;
+        self.compile_atom(&apply_templates.select)?;
+        self.builder.emit(Instruction::Call(2), span);
+
         Ok(())
     }
 
