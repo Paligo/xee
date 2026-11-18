@@ -1,6 +1,6 @@
 [package]
 name = "xee-xpath-macros"
-version = "0.1.4"
+version = "0.1.5"
 description = "Proc macros for xee-interpreter function library"
 authors = ["The Xee Project Developers"]
 edition = "2021"
@@ -15,7 +15,7 @@ homepage = "https://github.com/Paligo/xee"
 proc-macro = true
 
 [dependencies]
-xee-xpath-ast = { path = "../xee-xpath-ast", version = "0.1.4" }
+xee-xpath-ast = { path = "../xee-xpath-ast", version = "0.1.5" }
 xee-schema-type = { path = "../xee-schema-type", version = "0.1.4" }
 proc-macro2 = { version = "1", default-features = false }
 quote = "1"
