@@ -1,4 +1,5 @@
 mod common;
+mod completion;
 mod error;
 mod format;
 mod indent;
@@ -32,11 +33,16 @@ enum Commands {
     Repl(repl::Repl),
     /// Transform an XML document using an XSLT stylesheet.
     Xslt(xslt::Xslt),
+    /// Generate shell completion scripts.
+    Completion(completion::Completion),
 }
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
+        Commands::Completion(completion) => {
+            completion.run()?;
+        }
         Commands::Indent(indent) => {
             indent.run()?;
         }
