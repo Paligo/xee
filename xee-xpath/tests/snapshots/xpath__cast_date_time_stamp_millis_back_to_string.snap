@@ -1,5 +1,6 @@
 ---
-source: xee-xpath-compiler/tests/xpath.rs
+source: xee-xpath/tests/xpath.rs
+assertion_line: 1025
 expression: "run(\"('2019-01-03T15:14:30.123+01:00' cast as xs:dateTimeStamp) cast as xs:string\")"
 ---
 Ok(
@@ -8,7 +9,7 @@ Ok(
             item: Atomic(
                 String(
                     String,
-                    "2019-01-03T16:14:30.123+01:00",
+                    "2019-01-03T15:14:30.123+01:00",
                 ),
             ),
         },
