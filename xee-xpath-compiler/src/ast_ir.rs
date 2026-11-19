@@ -50,14 +50,26 @@ impl<'a> IrConverter<'a> {
             ir::Param {
                 name: context_names.item,
                 type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.position,
                 type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: context_names.last,
                 type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
             },
         ];
         // add any variables defined in static context as parameters
@@ -65,6 +77,10 @@ impl<'a> IrConverter<'a> {
             params.push(ir::Param {
                 name: ir_name,
                 type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
             });
         }
         let outer_function_expr = ir::Expr::FunctionDefinition(ir::FunctionDefinition {
@@ -476,9 +492,11 @@ impl<'a> IrConverter<'a> {
     }
 
     fn let_expr(&mut self, ast: &ast::LetExpr, span: Span) -> error::SpannedResult<Bindings> {
-        let name = self.variables.new_var_name(&ast.var_name.value);
         let var_bindings = self.expr_single(&ast.var_expr)?;
+        self.variables.push_scope();
+        let name = self.variables.declare_var_name(&ast.var_name.value);
         let return_bindings = self.expr_single(&ast.return_expr)?;
+        self.variables.pop_scope();
         let expr = ir::Expr::Let(ir::Let {
             name,
             var_expr: Box::new(var_bindings.expr()),
@@ -488,11 +506,13 @@ impl<'a> IrConverter<'a> {
     }
 
     fn for_expr(&mut self, ast: &ast::ForExpr, span: Span) -> error::SpannedResult<Bindings> {
-        let name = self.variables.new_var_name(&ast.var_name.value);
         let mut var_bindings = self.expr_single(&ast.var_expr)?;
         let var_atom = var_bindings.atom();
+        self.variables.push_scope();
+        let name = self.variables.declare_var_name(&ast.var_name.value);
         let context_names = self.variables.explicit_context_names(name);
         let return_bindings = self.expr_single(&ast.return_expr)?;
+        self.variables.pop_scope();
         let expr = ir::Expr::Map(ir::Map {
             context_names,
             var_atom,
@@ -508,12 +528,14 @@ impl<'a> IrConverter<'a> {
         ast: &ast::QuantifiedExpr,
         span: Span,
     ) -> error::SpannedResult<Bindings> {
-        let name = self.variables.new_var_name(&ast.var_name.value);
         let mut var_bindings = self.expr_single(&ast.var_expr)?;
         let var_atom = var_bindings.atom();
 
+        self.variables.push_scope();
+        let name = self.variables.declare_var_name(&ast.var_name.value);
         let context_names = self.variables.explicit_context_names(name);
         let satisfies_bindings = self.expr_single(&ast.satisfies_expr)?;
+        self.variables.pop_scope();
         let expr = ir::Expr::Quantified(ir::Quantified {
             quantifier: self.quantifier(&ast.quantifier),
             context_names,
@@ -537,6 +559,7 @@ impl<'a> IrConverter<'a> {
         inline_function: &ast::InlineFunction,
         span: Span,
     ) -> error::SpannedResult<Bindings> {
+        self.variables.push_scope();
         let params = inline_function
             .params
             .iter()
@@ -557,14 +580,19 @@ impl<'a> IrConverter<'a> {
             return_type: inline_function.return_type.clone(),
             body: Box::new(body_bindings.expr()),
         });
+        self.variables.pop_scope();
         let binding = self.variables.new_binding(expr, span);
         Ok(Bindings::new(binding))
     }
 
     fn param(&mut self, param: &ast::Param) -> ir::Param {
         ir::Param {
-            name: self.variables.new_var_name(&param.name),
+            name: self.variables.declare_var_name(&param.name),
             type_: param.type_.clone(),
+            default: None,
+            required: false,
+            original_name: None,
+            tunnel: false,
         }
     }
 

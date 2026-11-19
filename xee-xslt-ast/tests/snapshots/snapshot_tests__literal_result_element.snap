@@ -1,5 +1,5 @@
 ---
-source: xee-xslt-ast/src/instruction.rs
+source: xee-xslt-ast/tests/snapshot_tests.rs
 expression: "parse_sequence_constructor_item(r#\"<foo/>\"#)"
 ---
 Ok(Content(Element(ElementNode(
@@ -8,6 +8,7 @@ Ok(Content(Element(ElementNode(
     namespace_str: "",
     prefix_str: "",
   ),
+  namespaces: [],
   attributes: [],
   sequence_constructor: [],
   span: Span(

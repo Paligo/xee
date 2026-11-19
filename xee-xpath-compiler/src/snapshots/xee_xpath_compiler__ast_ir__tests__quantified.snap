@@ -7,7 +7,7 @@ Ok(
         value: Let(
             Let {
                 name: Name(
-                    "v3",
+                    "v2",
                 ),
                 var_expr: Spanned {
                     value: Binary(
@@ -39,7 +39,7 @@ Ok(
                             quantifier: Some,
                             context_names: ContextNames {
                                 item: Name(
-                                    "v0",
+                                    "v3",
                                 ),
                                 position: Name(
                                     "v4",
@@ -51,7 +51,7 @@ Ok(
                             var_atom: Spanned {
                                 value: Variable(
                                     Name(
-                                        "v3",
+                                        "v2",
                                     ),
                                 ),
                                 span: 11..16,
@@ -62,7 +62,7 @@ Ok(
                                         left: Spanned {
                                             value: Variable(
                                                 Name(
-                                                    "v0",
+                                                    "v3",
                                                 ),
                                             ),
                                             span: 28..30,

@@ -65,7 +65,32 @@ impl<'a> Content<'a> {
     }
 
     pub(crate) fn declarations(&self) -> Result<ast::Declarations, ElementError> {
-        DECLARATIONS_CONTENT.get_or_init(|| children(declarations()))(self)
+        let mut declarations = Vec::new();
+        let mut child = self.state.xot.first_child(self.node);
+
+        while let Some(node) = child {
+            child = self.state.xot.next_sibling(node);
+
+            let Some(element) = self.state.xot.element(node) else {
+                continue;
+            };
+
+            if self.state.names.declaration_name(element.name()).is_some() {
+                let content = self.with_node(node);
+                let declaration =
+                    content.parse_element(element, ast::Declaration::parse_declaration)?;
+                declarations.push(declaration);
+                continue;
+            }
+
+            if self.state.xot.namespace_for_name(element.name()) == self.state.names.xsl_ns {
+                return Err(ElementError::Unexpected {
+                    span: self.state.span(node).ok_or(ElementError::Internal)?,
+                });
+            }
+        }
+
+        Ok(declarations)
     }
 }
 

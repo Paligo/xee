@@ -13,12 +13,16 @@ pub struct CastType {
     pub empty_sequence_allowed: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Name(pub(crate) String);
 
 impl Name {
     pub fn new(name: String) -> Self {
         Name(name)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 

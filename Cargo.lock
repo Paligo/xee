@@ -2924,6 +2924,7 @@ dependencies = [
  "strum 0.27.1",
  "test-generator",
  "thiserror 2.0.12",
+ "url",
  "v_jsonescape",
  "xee-name",
  "xee-schema-type",

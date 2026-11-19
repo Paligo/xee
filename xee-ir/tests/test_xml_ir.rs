@@ -63,14 +63,26 @@ fn test_generate_element() {
             ir::Param {
                 name: ir::Name::new("item".to_string()),
                 type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: ir::Name::new("position".to_string()),
                 type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
             },
             ir::Param {
                 name: ir::Name::new("last".to_string()),
                 type_: None,
+                default: None,
+                required: false,
+                original_name: None,
+                tunnel: false,
             },
         ],
         return_type: None,
@@ -85,7 +97,17 @@ fn test_generate_element() {
     let function_builder = FunctionBuilder::new(&mut program);
     let mut scopes = Scopes::new();
     let empty_mode_ids = ModeIds::new();
-    let mut compiler = FunctionCompiler::new(function_builder, &mut scopes, &empty_mode_ids);
+    let empty_template_ids = ahash::HashMap::new();
+    let empty_template_params = ahash::HashMap::new();
+    let empty_global_variable_ids = ahash::HashMap::new();
+    let mut compiler = FunctionCompiler::new(
+        function_builder,
+        &mut scopes,
+        &empty_mode_ids,
+        &empty_template_ids,
+        &empty_template_params,
+        &empty_global_variable_ids,
+    );
 
     compiler.compile_expr(&outer_expr).unwrap();
 

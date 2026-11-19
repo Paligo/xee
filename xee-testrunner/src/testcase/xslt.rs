@@ -18,6 +18,7 @@ use crate::{
 };
 
 use super::{
+    assert::TestCaseResult,
     core::{Runnable, TestCase},
     outcome::TestOutcome,
 };
@@ -34,6 +35,8 @@ impl XsltTestCase {}
 pub(crate) struct XsltTest {
     pub(crate) base_dir: PathBuf,
     pub(crate) stylesheets: Vec<Stylesheet>,
+    pub(crate) initial_mode: Option<String>,
+    pub(crate) initial_template: Option<String>,
 }
 
 impl Runnable<XsltLanguage> for XsltTestCase {
@@ -76,16 +79,48 @@ impl Runnable<XsltLanguage> for XsltTestCase {
                 ))
             }
         };
-        let static_context_builder = StaticContextBuilder::default();
+        let stylesheet_uri = {
+            let url = match url::Url::from_file_path(&path) {
+                Ok(url) => url,
+                Err(()) => {
+                    return TestOutcome::EnvironmentError(format!(
+                        "Cannot convert stylesheet path to file URI: {}",
+                        path.display()
+                    ))
+                }
+            };
+            match IriAbsoluteString::try_from(url.to_string()) {
+                Ok(uri) => uri,
+                Err(error) => {
+                    return TestOutcome::EnvironmentError(format!(
+                        "Cannot convert stylesheet URI to IRI: {}",
+                        error
+                    ))
+                }
+            }
+        };
+        let mut static_context_builder = StaticContextBuilder::default();
+        static_context_builder.static_base_uri(Some(stylesheet_uri.clone()));
         let static_context = static_context_builder.build();
-        let program = xee_xslt_compiler::parse(static_context, &xslt);
+
+        // Get the directory of the stylesheet for resolving imports/includes
+        let stylesheet_dir = path.parent().map(|p| p.to_path_buf());
+        let program = xee_xslt_compiler::parse_with_base_dir_and_initial_mode(
+            static_context,
+            &xslt,
+            stylesheet_dir,
+            self.test.initial_mode.clone(),
+        );
         let program = match program {
             Ok(program) => program,
             Err(error) => {
-                return TestOutcome::EnvironmentError(format!(
-                    "Error parsing stylesheet: {}",
-                    error
-                ))
+                return match &self.test_case.result {
+                    TestCaseResult::AssertError(assert_error) => {
+                        assert_error.assert_error(&error.error)
+                    }
+                    TestCaseResult::AnyOf(any_of) => any_of.assert_error(&error.error),
+                    _ => TestOutcome::CompilationError(error.error),
+                }
             }
         };
 
@@ -121,12 +156,41 @@ impl Runnable<XsltLanguage> for XsltTestCase {
             Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
         }
 
+        {
+            let documents_ref = run_context.documents.documents().clone();
+            let already_loaded = documents_ref
+                .borrow()
+                .get_node_by_uri(stylesheet_uri.as_ref())
+                .is_some();
+            if !already_loaded {
+                let handle = documents_ref.borrow_mut().add_string(
+                    run_context.documents.xot_mut(),
+                    Some(stylesheet_uri.as_ref()),
+                    &xslt,
+                );
+                if let Err(error) = handle {
+                    return TestOutcome::EnvironmentError(format!(
+                        "Cannot register stylesheet document: {}",
+                        error
+                    ));
+                }
+            }
+        }
+
         // the context item is loaded
         let context_item =
             self.test_case
                 .context_item(run_context, catalog, test_set, static_base_uri.as_deref());
         let context_item = match context_item {
             Ok(context_item) => context_item,
+            Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
+        };
+
+        let variables =
+            self.test_case
+                .variables(run_context, catalog, test_set, static_base_uri.as_deref());
+        let variables = match variables {
+            Ok(variables) => variables,
             Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
         };
 
@@ -137,11 +201,15 @@ impl Runnable<XsltLanguage> for XsltTestCase {
             builder.context_item(context_item);
         }
         builder.documents(run_context.documents.documents().clone());
-        // builder.variables(variables.clone());
+        builder.variables(variables);
         builder.current_datetime(chrono::offset::Utc::now().into());
         let context = builder.build();
         let runnable = program.runnable(&context);
-        let result = runnable.many(run_context.documents.xot_mut());
+        let result = if let Some(initial_template) = &self.test.initial_template {
+            runnable.named_template(initial_template, run_context.documents.xot_mut())
+        } else {
+            runnable.many(run_context.documents.xot_mut())
+        };
 
         self.test_case.result.assert_result(
             &context,
@@ -164,6 +232,9 @@ impl ContextLoadable<LoadContext> for XsltTestCase {
 
     fn load_with_context(queries: &Queries, context: &LoadContext) -> Result<impl Query<Self>> {
         let file_query = queries.option("@file/string()", convert_string)?;
+        let initial_mode_query = queries.option("initial-mode/@name/string()", convert_string)?;
+        let initial_template_query =
+            queries.option("initial-template/@name/string()", convert_string)?;
         let stylesheets_query = queries.many("stylesheet", move |documents, item| {
             let file = file_query.execute(documents, item)?;
             Ok(Stylesheet { path: file })
@@ -175,9 +246,13 @@ impl ContextLoadable<LoadContext> for XsltTestCase {
             let base_dir = context.path.parent().unwrap();
 
             let stylesheets = stylesheets_query.execute(documents, item)?;
+            let initial_mode = initial_mode_query.execute(documents, item)?;
+            let initial_template = initial_template_query.execute(documents, item)?;
             Ok(XsltTest {
                 stylesheets,
                 base_dir: base_dir.to_path_buf(),
+                initial_mode,
+                initial_template,
             })
         })?;
         let test_case_query = TestCase::load_with_context(queries, context)?;

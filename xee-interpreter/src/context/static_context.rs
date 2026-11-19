@@ -1,3 +1,4 @@
+use ahash::HashSet;
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
@@ -28,6 +29,7 @@ static DEFAULT_COLLATION: LazyLock<IriAbsoluteString> = LazyLock::new(|| {
 pub struct StaticContext {
     parser_context: XPathParserContext,
     functions: &'static function::StaticFunctions,
+    disabled_functions: HashSet<xot::xmlname::OwnedName>,
     // TODO: try to make collations static
     collations: RefCell<Collations>,
     static_base_uri: Option<IriAbsoluteString>,
@@ -35,7 +37,12 @@ pub struct StaticContext {
 
 impl Default for StaticContext {
     fn default() -> Self {
-        Self::new(Namespaces::default(), VariableNames::default(), None)
+        Self::new(
+            Namespaces::default(),
+            VariableNames::default(),
+            HashSet::default(),
+            None,
+        )
     }
 }
 
@@ -44,6 +51,7 @@ impl From<XPathParserContext> for StaticContext {
         Self {
             parser_context,
             functions: &STATIC_FUNCTIONS,
+            disabled_functions: HashSet::default(),
             collations: RefCell::new(Collations::new()),
             static_base_uri: None,
         }
@@ -54,18 +62,25 @@ impl StaticContext {
     pub(crate) fn new(
         namespaces: Namespaces,
         variable_names: VariableNames,
+        disabled_functions: HashSet<xot::xmlname::OwnedName>,
         static_base_uri: Option<IriAbsoluteString>,
     ) -> Self {
         Self {
             parser_context: XPathParserContext::new(namespaces, variable_names),
             functions: &STATIC_FUNCTIONS,
+            disabled_functions,
             collations: RefCell::new(Collations::new()),
             static_base_uri,
         }
     }
 
     pub fn from_namespaces(namespaces: Namespaces) -> Self {
-        Self::new(namespaces, VariableNames::default(), None)
+        Self::new(
+            namespaces,
+            VariableNames::default(),
+            HashSet::default(),
+            None,
+        )
     }
 
     pub fn namespaces(&self) -> &Namespaces {
@@ -137,6 +152,9 @@ impl StaticContext {
         name: &xot::xmlname::OwnedName,
         arity: u8,
     ) -> Option<function::StaticFunctionId> {
+        if self.disabled_functions.contains(name) {
+            return None;
+        }
         self.functions.get_by_name(name, arity)
     }
 

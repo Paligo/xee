@@ -7,7 +7,7 @@ Ok(
         value: Let(
             Let {
                 name: Name(
-                    "v0",
+                    "v3",
                 ),
                 var_expr: Spanned {
                     value: Binary(
@@ -38,7 +38,7 @@ Ok(
                         Spanned {
                             value: Variable(
                                 Name(
-                                    "v0",
+                                    "v3",
                                 ),
                             ),
                             span: 25..27,

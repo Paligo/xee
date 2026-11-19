@@ -25,6 +25,7 @@ Ok(Instruction(ApplyTemplates(ApplyTemplates(
     namespace_str: "",
     prefix_str: "",
   )),
+  builtin_template_params_passthrough: true,
   content: [],
   span: Span(
     start: 1,

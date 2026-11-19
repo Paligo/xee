@@ -99,6 +99,11 @@ impl Runnable<XPathLanguage> for XPathTestCase {
             Err(error) => return TestOutcome::EnvironmentError(error.to_string()),
         };
         static_context_builder.namespaces(namespaces);
+        static_context_builder.disable_function(xot::xmlname::OwnedName::new(
+            "document".to_string(),
+            xee_name::Namespaces::FN_NAMESPACE.to_string(),
+            "fn".to_string(),
+        ));
 
         // now construct a query with that static context
         let static_context = static_context_builder.build();

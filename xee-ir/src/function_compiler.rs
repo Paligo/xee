@@ -2,12 +2,13 @@ use ibig::{ibig, IBig};
 
 use xee_interpreter::error::Error;
 use xee_interpreter::function::FunctionRule;
-use xee_interpreter::interpreter::instruction::Instruction;
+use xee_interpreter::interpreter::instruction::{Instruction, RaisedError};
 use xee_interpreter::span::SourceSpan;
-use xee_interpreter::{error, function, sequence};
+use xee_interpreter::{atomic, error, function, sequence};
 
-use crate::declaration_compiler::ModeIds;
+use crate::declaration_compiler::{ModeIds, TemplateIds, TemplateParams};
 use crate::ir;
+use xee_xpath_ast::span::Spanned;
 
 use super::builder::{BackwardJumpRef, ForwardJumpRef, FunctionBuilder, JumpCondition};
 use super::scope;
@@ -17,6 +18,9 @@ pub(crate) type Scopes = scope::Scopes<ir::Name>;
 pub struct FunctionCompiler<'a> {
     pub(crate) scopes: &'a mut Scopes,
     pub(crate) mode_ids: &'a ModeIds,
+    pub(crate) template_ids: &'a TemplateIds,
+    pub(crate) template_params: &'a TemplateParams,
+    pub(crate) global_variable_ids: &'a ahash::HashMap<ir::Name, u16>,
     pub(crate) builder: FunctionBuilder<'a>,
 }
 
@@ -25,11 +29,17 @@ impl<'a> FunctionCompiler<'a> {
         builder: FunctionBuilder<'a>,
         scopes: &'a mut Scopes,
         mode_ids: &'a ModeIds,
+        template_ids: &'a TemplateIds,
+        template_params: &'a TemplateParams,
+        global_variable_ids: &'a ahash::HashMap<ir::Name, u16>,
     ) -> Self {
         Self {
             builder,
             scopes,
             mode_ids,
+            template_ids,
+            template_params,
+            global_variable_ids,
         }
     }
 
@@ -70,6 +80,9 @@ impl<'a> FunctionCompiler<'a> {
             ir::Expr::Castable(castable) => self.compile_castable(castable, span),
             ir::Expr::InstanceOf(instance_of) => self.compile_instance_of(instance_of, span),
             ir::Expr::Treat(treat) => self.compile_treat(treat, span),
+            ir::Expr::ConvertSequence(convert_sequence) => {
+                self.compile_convert_sequence(convert_sequence, span)
+            }
             ir::Expr::MapConstructor(map_constructor) => {
                 self.compile_map_constructor(map_constructor, span)
             }
@@ -89,6 +102,12 @@ impl<'a> FunctionCompiler<'a> {
             ir::Expr::XmlAppend(xml_append) => self.compile_xml_append(xml_append, span),
             ir::Expr::ApplyTemplates(apply_templates) => {
                 self.compile_apply_templates(apply_templates, span)
+            }
+            ir::Expr::ContinueTemplate(continue_template) => {
+                self.compile_continue_template(continue_template, span)
+            }
+            ir::Expr::CallTemplate(call_template) => {
+                self.compile_call_template(call_template, span)
             }
             ir::Expr::CopyShallow(copy_shallow) => self.compile_copy_shallow(copy_shallow, span),
             ir::Expr::CopyDeep(copy_deep) => self.compile_copy_deep(copy_deep, span),
@@ -147,12 +166,16 @@ impl<'a> FunctionCompiler<'a> {
                     .emit(Instruction::ClosureVar(index as u16), span);
                 Ok(())
             } else {
-                // TODO: this should be unreachable but
-                // the XSLT test suite for some reason triggers
-                // this condition, so for now we've hacked our way
-                // around it
-                Err(Error::Unsupported(String::from("Internal bug: variable not found?")).into())
-                // unreachable!("variable not found: {:?}", name);
+                if let Some(index) = self.global_variable_ids.get(name) {
+                    self.builder.emit(Instruction::GlobalVar(*index), span);
+                    Ok(())
+                } else {
+                    Err(Error::Unsupported(format!(
+                        "Internal bug: variable not found: {}",
+                        name.as_str()
+                    ))
+                    .into())
+                }
             }
         }
     }
@@ -174,6 +197,10 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn compile_let(&mut self, let_: &ir::Let, span: SourceSpan) -> error::SpannedResult<()> {
+        if !expr_uses_name(&let_.return_expr, &let_.name) && expr_is_effect_free(&let_.var_expr) {
+            return self.compile_expr(&let_.return_expr);
+        }
+
         self.compile_expr(&let_.var_expr)?;
         self.scopes.push_name(&let_.name);
         self.compile_expr(&let_.return_expr)?;
@@ -342,10 +369,53 @@ impl<'a> FunctionCompiler<'a> {
             builder: nested_builder,
             scopes: self.scopes,
             mode_ids: self.mode_ids,
+            template_ids: self.template_ids,
+            template_params: self.template_params,
+            global_variable_ids: self.global_variable_ids,
         };
 
         for param in &function_definition.params {
             compiler.scopes.push_name(&param.name);
+        }
+        for (index, param) in function_definition.params.iter().enumerate() {
+            if index > u16::MAX as usize {
+                return Err(Error::XPDY0130.with_span(span));
+            }
+            if let Some(default) = &param.default {
+                compiler
+                    .builder
+                    .emit(Instruction::VarIsAbsent(index as u16), span);
+                let skip_default = compiler
+                    .builder
+                    .emit_jump_forward(JumpCondition::False, span);
+                let default_expr = Spanned::new((**default).clone(), (0..0).into());
+                compiler.compile_expr(&default_expr)?;
+                compiler.compile_variable_set(&param.name, span)?;
+                compiler.builder.patch_jump(skip_default);
+            } else if param.required {
+                compiler
+                    .builder
+                    .emit(Instruction::VarIsAbsent(index as u16), span);
+                let skip_error = compiler
+                    .builder
+                    .emit_jump_forward(JumpCondition::False, span);
+                compiler
+                    .builder
+                    .emit(Instruction::RaiseError(RaisedError::XTDE0700), span);
+                compiler.builder.patch_jump(skip_error);
+            } else if param.original_name.is_some() {
+                compiler
+                    .builder
+                    .emit(Instruction::VarIsAbsent(index as u16), span);
+                let skip_default = compiler
+                    .builder
+                    .emit_jump_forward(JumpCondition::False, span);
+                compiler
+                    .builder
+                    .emit_constant(sequence::Sequence::default(), span);
+                compiler.compile_variable_set(&param.name, span)?;
+                compiler.builder.patch_jump(skip_default);
+            }
         }
         compiler.compile_expr(&function_definition.body)?;
         for _ in &function_definition.params {
@@ -517,6 +587,22 @@ impl<'a> FunctionCompiler<'a> {
         let sequence_type_id = self.builder.add_sequence_type(treat.sequence_type.clone());
         self.builder
             .emit(Instruction::Treat(sequence_type_id as u16), span);
+        Ok(())
+    }
+
+    fn compile_convert_sequence(
+        &mut self,
+        convert_sequence: &ir::ConvertSequence,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        self.compile_atom(&convert_sequence.atom)?;
+        let sequence_type_id = self
+            .builder
+            .add_sequence_type(convert_sequence.sequence_type.clone());
+        self.builder.emit(
+            Instruction::ConvertSequence(sequence_type_id as u16, convert_sequence.error),
+            span,
+        );
         Ok(())
     }
 
@@ -1004,24 +1090,160 @@ impl<'a> FunctionCompiler<'a> {
         span: SourceSpan,
     ) -> error::SpannedResult<()> {
         self.compile_atom(&apply_templates.select)?;
+        self.compile_with_param_map(
+            apply_templates
+                .params
+                .iter()
+                .filter(|with_param| !with_param.tunnel),
+            span,
+        )?;
+        self.compile_with_param_map(
+            apply_templates
+                .params
+                .iter()
+                .filter(|with_param| with_param.tunnel),
+            span,
+        )?;
 
-        let mode_id = if matches!(
-            apply_templates.mode,
-            ir::ApplyTemplatesModeValue::Named(_) | ir::ApplyTemplatesModeValue::Unnamed
-        ) {
-            self.mode_ids.get(&apply_templates.mode)
-        } else {
-            todo!("#current mode not handled yet")
-        };
-        if let Some(mode_id) = mode_id {
-            self.builder
-                .emit(Instruction::ApplyTemplates(mode_id.get() as u16), span);
-        } else {
-            // the mode was never used by any templates, so compile the empty
-            // sequence
-            self.builder
-                .emit_constant(sequence::Sequence::default(), span);
+        match &apply_templates.mode {
+            ir::ApplyTemplatesModeValue::Current => {
+                let fallback_mode_id = self
+                    .mode_ids
+                    .get(&ir::ApplyTemplatesModeValue::Unnamed)
+                    .expect("Unnamed mode should have been registered");
+                self.builder.emit(
+                    Instruction::ApplyTemplatesCurrent(
+                        fallback_mode_id.get() as u16,
+                        apply_templates.builtin_template_params_passthrough,
+                    ),
+                    span,
+                );
+            }
+            ir::ApplyTemplatesModeValue::Named(_) | ir::ApplyTemplatesModeValue::Unnamed => {
+                if let Some(mode_id) = self.mode_ids.get(&apply_templates.mode) {
+                    self.builder.emit(
+                        Instruction::ApplyTemplates(
+                            mode_id.get() as u16,
+                            apply_templates.builtin_template_params_passthrough,
+                        ),
+                        span,
+                    );
+                } else {
+                    // the mode was never used by any templates, so compile the empty
+                    // sequence
+                    self.builder
+                        .emit_constant(sequence::Sequence::default(), span);
+                }
+            }
         }
+        Ok(())
+    }
+
+    fn compile_call_template(
+        &mut self,
+        call_template: &ir::CallTemplate,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        // Look up the named template by name
+        let template_name_key = call_template.name.as_str().to_string();
+
+        if let Some(&template_id) = self.template_ids.get(&template_name_key) {
+            self.builder
+                .emit(Instruction::NamedTemplate(template_id), span);
+
+            if let Some(context_names) = &call_template.context {
+                self.compile_variable(&context_names.item, span)?;
+                self.compile_variable(&context_names.position, span)?;
+                self.compile_variable(&context_names.last, span)?;
+            } else {
+                self.builder.emit(Instruction::Absent, span);
+                self.builder.emit(Instruction::Absent, span);
+                self.builder.emit(Instruction::Absent, span);
+            }
+
+            // Look up the template's expected parameters
+            let template_params = self
+                .template_params
+                .get(&template_name_key)
+                .cloned()
+                .unwrap_or_default();
+
+            // Build a map of non-tunnel with-param names for static validation.
+            let mut with_param_map: std::collections::HashMap<String, &ir::WithParam> =
+                std::collections::HashMap::new();
+            for with_param in &call_template.params {
+                if with_param.tunnel {
+                    continue;
+                }
+                let param_key = with_param.name.as_str().to_string();
+                with_param_map.insert(param_key, with_param);
+            }
+
+            let valid_param_names: std::collections::HashSet<String> = template_params
+                .iter()
+                .filter(|param| !param.tunnel)
+                .map(|param| {
+                    param
+                        .original_name
+                        .clone()
+                        .unwrap_or_else(|| param.name.as_str().to_string())
+                })
+                .collect();
+            if !call_template.backwards_compatible
+                && with_param_map
+                    .keys()
+                    .any(|param_name| !valid_param_names.contains(param_name))
+            {
+                return Err(error::Error::XTSE0680.into());
+            }
+
+            self.compile_with_param_map(
+                call_template
+                    .params
+                    .iter()
+                    .filter(|with_param| !with_param.tunnel),
+                span,
+            )?;
+            self.compile_with_param_map(
+                call_template
+                    .params
+                    .iter()
+                    .filter(|with_param| with_param.tunnel),
+                span,
+            )?;
+
+            self.builder.emit(Instruction::CallTemplate, span);
+            Ok(())
+        } else {
+            Err(error::Error::Unsupported(format!(
+                "Named template not found: {:?}",
+                &call_template.name
+            ))
+            .into())
+        }
+    }
+
+    fn compile_continue_template(
+        &mut self,
+        continue_template: &ir::ContinueTemplate,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        self.compile_with_param_map(
+            continue_template
+                .params
+                .iter()
+                .filter(|with_param| !with_param.tunnel),
+            span,
+        )?;
+        self.compile_with_param_map(
+            continue_template
+                .params
+                .iter()
+                .filter(|with_param| with_param.tunnel),
+            span,
+        )?;
+
+        self.builder.emit(Instruction::ContinueTemplate, span);
         Ok(())
     }
 
@@ -1045,6 +1267,31 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn compile_with_param_map<'b>(
+        &mut self,
+        with_params: impl DoubleEndedIterator<Item = &'b ir::WithParam>,
+        span: SourceSpan,
+    ) -> error::SpannedResult<()> {
+        let with_params = with_params.collect::<Vec<_>>();
+        for with_param in with_params.iter().rev() {
+            let key: sequence::Sequence = atomic::Atomic::from(with_param.name.as_str()).into();
+            self.builder.emit_constant(key, span);
+            if let Some(atom) = &with_param.select {
+                self.compile_atom(atom)?;
+            } else if let Some(expr) = &with_param.sequence_constructor {
+                self.compile_expr(expr)?;
+            } else {
+                self.builder
+                    .emit_constant(sequence::Sequence::default(), span);
+            }
+        }
+        let len: IBig = with_params.len().into();
+        self.builder
+            .emit_constant(sequence::Sequence::from(len), span);
+        self.builder.emit(Instruction::CurlyMap, span);
+        Ok(())
+    }
+
     fn compile_pattern_predicate(
         &mut self,
         predicate: &ir::PatternPredicate,
@@ -1065,4 +1312,230 @@ impl<'a> FunctionCompiler<'a> {
         self.builder.patch_jump(is_not_numeric);
         Ok(())
     }
+}
+
+fn expr_uses_name(expr: &ir::ExprS, name: &ir::Name) -> bool {
+    expr_value_uses_name(&expr.value, name)
+}
+
+fn expr_is_effect_free(expr: &ir::ExprS) -> bool {
+    expr_value_is_effect_free(&expr.value)
+}
+
+fn expr_value_uses_name(expr: &ir::Expr, name: &ir::Name) -> bool {
+    match expr {
+        ir::Expr::Atom(atom) => atom_uses_name(atom, name),
+        ir::Expr::Let(let_) => {
+            expr_uses_name(&let_.var_expr, name) || expr_uses_name(&let_.return_expr, name)
+        }
+        ir::Expr::If(if_) => {
+            atom_uses_name(&if_.condition, name)
+                || expr_uses_name(&if_.then, name)
+                || expr_uses_name(&if_.else_, name)
+        }
+        ir::Expr::Binary(binary) => {
+            atom_uses_name(&binary.left, name) || atom_uses_name(&binary.right, name)
+        }
+        ir::Expr::Unary(unary) => atom_uses_name(&unary.atom, name),
+        ir::Expr::FunctionDefinition(function_definition) => {
+            function_definition_uses_name(function_definition, name)
+        }
+        ir::Expr::FunctionCall(function_call) => {
+            atom_uses_name(&function_call.atom, name)
+                || function_call
+                    .args
+                    .iter()
+                    .any(|arg| atom_uses_name(arg, name))
+        }
+        ir::Expr::Lookup(lookup) => {
+            atom_uses_name(&lookup.atom, name) || atom_uses_name(&lookup.arg_atom, name)
+        }
+        ir::Expr::WildcardLookup(wildcard_lookup) => atom_uses_name(&wildcard_lookup.atom, name),
+        ir::Expr::Step(step) => atom_uses_name(&step.context, name),
+        ir::Expr::Deduplicate(expr) => expr_uses_name(expr, name),
+        ir::Expr::Map(map) => {
+            atom_uses_name(&map.var_atom, name) || expr_uses_name(&map.return_expr, name)
+        }
+        ir::Expr::Filter(filter) => {
+            atom_uses_name(&filter.var_atom, name) || expr_uses_name(&filter.return_expr, name)
+        }
+        ir::Expr::Iterate(iterate) => {
+            atom_uses_name(&iterate.var_atom, name)
+                || iterate
+                    .params
+                    .iter()
+                    .any(|param| expr_uses_name(&param.value, name))
+                || expr_uses_name(&iterate.expr, name)
+                || iterate
+                    .on_complete
+                    .as_ref()
+                    .is_some_and(|expr| expr_uses_name(expr, name))
+        }
+        ir::Expr::IterateBreak(iterate_break) => expr_uses_name(&iterate_break.return_expr, name),
+        ir::Expr::IterateLetNext(iterate_let_next) => {
+            iterate_let_next
+                .params
+                .iter()
+                .any(|param| expr_uses_name(&param.value, name))
+                || expr_uses_name(&iterate_let_next.return_expr, name)
+        }
+        ir::Expr::PatternPredicate(pattern_predicate) => {
+            atom_uses_name(&pattern_predicate.var_atom, name)
+                || expr_uses_name(&pattern_predicate.expr, name)
+        }
+        ir::Expr::Quantified(quantified) => {
+            atom_uses_name(&quantified.var_atom, name)
+                || expr_uses_name(&quantified.satisifies_expr, name)
+        }
+        ir::Expr::Cast(cast) => atom_uses_name(&cast.atom, name),
+        ir::Expr::Castable(castable) => atom_uses_name(&castable.atom, name),
+        ir::Expr::InstanceOf(instance_of) => atom_uses_name(&instance_of.atom, name),
+        ir::Expr::Treat(treat) => atom_uses_name(&treat.atom, name),
+        ir::Expr::ConvertSequence(convert_sequence) => atom_uses_name(&convert_sequence.atom, name),
+        ir::Expr::MapConstructor(map_constructor) => map_constructor
+            .members
+            .iter()
+            .any(|(key, value)| atom_uses_name(key, name) || atom_uses_name(value, name)),
+        ir::Expr::ArrayConstructor(array_constructor) => match array_constructor {
+            ir::ArrayConstructor::Square(atoms) => {
+                atoms.iter().any(|atom| atom_uses_name(atom, name))
+            }
+            ir::ArrayConstructor::Curly(atom) => atom_uses_name(atom, name),
+        },
+        ir::Expr::XmlName(xml_name) => {
+            atom_uses_name(&xml_name.local_name, name) || atom_uses_name(&xml_name.namespace, name)
+        }
+        ir::Expr::XmlDocument(_) => false,
+        ir::Expr::XmlElement(element) => atom_uses_name(&element.name, name),
+        ir::Expr::XmlAttribute(attribute) => {
+            atom_uses_name(&attribute.name, name) || atom_uses_name(&attribute.value, name)
+        }
+        ir::Expr::XmlNamespace(namespace) => {
+            atom_uses_name(&namespace.prefix, name) || atom_uses_name(&namespace.namespace, name)
+        }
+        ir::Expr::XmlText(text) => atom_uses_name(&text.value, name),
+        ir::Expr::XmlComment(comment) => atom_uses_name(&comment.value, name),
+        ir::Expr::XmlProcessingInstruction(processing_instruction) => {
+            atom_uses_name(&processing_instruction.target, name)
+                || atom_uses_name(&processing_instruction.content, name)
+        }
+        ir::Expr::XmlAppend(xml_append) => {
+            atom_uses_name(&xml_append.parent, name) || atom_uses_name(&xml_append.child, name)
+        }
+        ir::Expr::ApplyTemplates(apply_templates) => {
+            atom_uses_name(&apply_templates.select, name)
+                || apply_templates
+                    .params
+                    .iter()
+                    .any(|param| with_param_uses_name(param, name))
+        }
+        ir::Expr::ContinueTemplate(continue_template) => continue_template
+            .params
+            .iter()
+            .any(|param| with_param_uses_name(param, name)),
+        ir::Expr::CallTemplate(call_template) => call_template
+            .params
+            .iter()
+            .any(|param| with_param_uses_name(param, name)),
+        ir::Expr::CopyShallow(copy_shallow) => atom_uses_name(&copy_shallow.select, name),
+        ir::Expr::CopyDeep(copy_deep) => atom_uses_name(&copy_deep.select, name),
+    }
+}
+
+fn expr_value_is_effect_free(expr: &ir::Expr) -> bool {
+    match expr {
+        ir::Expr::Atom(_) => true,
+        ir::Expr::Let(let_) => {
+            expr_is_effect_free(&let_.var_expr) && expr_is_effect_free(&let_.return_expr)
+        }
+        ir::Expr::If(if_) => expr_is_effect_free(&if_.then) && expr_is_effect_free(&if_.else_),
+        ir::Expr::Binary(_) => true,
+        ir::Expr::Unary(_) => true,
+        ir::Expr::FunctionDefinition(function_definition) => {
+            function_definition.params.iter().all(|param| {
+                param
+                    .default
+                    .as_ref()
+                    .is_none_or(|expr| expr_value_is_effect_free(expr))
+            }) && expr_is_effect_free(&function_definition.body)
+        }
+        ir::Expr::FunctionCall(_) => true,
+        ir::Expr::Lookup(_) => true,
+        ir::Expr::WildcardLookup(_) => true,
+        ir::Expr::Step(_) => true,
+        ir::Expr::Deduplicate(expr) => expr_is_effect_free(expr),
+        ir::Expr::Map(map) => expr_is_effect_free(&map.return_expr),
+        ir::Expr::Filter(filter) => expr_is_effect_free(&filter.return_expr),
+        ir::Expr::Iterate(iterate) => {
+            iterate
+                .params
+                .iter()
+                .all(|param| expr_is_effect_free(&param.value))
+                && expr_is_effect_free(&iterate.expr)
+                && iterate
+                    .on_complete
+                    .as_ref()
+                    .is_none_or(|expr| expr_is_effect_free(expr))
+        }
+        ir::Expr::IterateBreak(iterate_break) => expr_is_effect_free(&iterate_break.return_expr),
+        ir::Expr::IterateLetNext(iterate_let_next) => {
+            iterate_let_next
+                .params
+                .iter()
+                .all(|param| expr_is_effect_free(&param.value))
+                && expr_is_effect_free(&iterate_let_next.return_expr)
+        }
+        ir::Expr::PatternPredicate(pattern_predicate) => {
+            expr_is_effect_free(&pattern_predicate.expr)
+        }
+        ir::Expr::Quantified(quantified) => expr_is_effect_free(&quantified.satisifies_expr),
+        ir::Expr::Cast(_) => true,
+        ir::Expr::Castable(_) => true,
+        ir::Expr::InstanceOf(_) => true,
+        ir::Expr::Treat(_) => true,
+        ir::Expr::ConvertSequence(_) => true,
+        ir::Expr::MapConstructor(_) => true,
+        ir::Expr::ArrayConstructor(_) => true,
+        ir::Expr::XmlName(_) => true,
+        ir::Expr::XmlDocument(_) => false,
+        ir::Expr::XmlElement(_) => false,
+        ir::Expr::XmlAttribute(_) => false,
+        ir::Expr::XmlNamespace(_) => false,
+        ir::Expr::XmlText(_) => false,
+        ir::Expr::XmlComment(_) => false,
+        ir::Expr::XmlProcessingInstruction(_) => false,
+        ir::Expr::XmlAppend(_) => false,
+        ir::Expr::ApplyTemplates(_) => false,
+        ir::Expr::ContinueTemplate(_) => false,
+        ir::Expr::CallTemplate(_) => false,
+        ir::Expr::CopyShallow(_) => false,
+        ir::Expr::CopyDeep(_) => false,
+    }
+}
+
+fn atom_uses_name(atom: &ir::AtomS, name: &ir::Name) -> bool {
+    matches!(&atom.value, ir::Atom::Variable(variable_name) if variable_name == name)
+}
+
+fn function_definition_uses_name(
+    function_definition: &ir::FunctionDefinition,
+    name: &ir::Name,
+) -> bool {
+    function_definition.params.iter().any(|param| {
+        param
+            .default
+            .as_ref()
+            .is_some_and(|expr| expr_value_uses_name(expr, name))
+    }) || expr_uses_name(&function_definition.body, name)
+}
+
+fn with_param_uses_name(with_param: &ir::WithParam, name: &ir::Name) -> bool {
+    with_param
+        .select
+        .as_ref()
+        .is_some_and(|select| atom_uses_name(select, name))
+        || with_param
+            .sequence_constructor
+            .as_ref()
+            .is_some_and(|expr| expr_uses_name(expr, name))
 }

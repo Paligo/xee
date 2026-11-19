@@ -1,4 +1,4 @@
-use ahash::HashMap;
+use ahash::{HashMap, HashSet};
 use iri_string::types::IriAbsoluteString;
 use xee_name::Namespaces;
 use xot::xmlname::OwnedName;
@@ -9,6 +9,7 @@ use crate::context;
 pub struct StaticContextBuilder<'a> {
     variable_names: Vec<OwnedName>,
     namespaces: HashMap<&'a str, &'a str>,
+    disabled_functions: HashSet<OwnedName>,
     default_element_namespace: &'a str,
     default_function_namespace: &'a str,
     static_base_uri: Option<IriAbsoluteString>,
@@ -75,6 +76,12 @@ impl<'a> StaticContextBuilder<'a> {
         self
     }
 
+    /// Disable a function name in this static context.
+    pub fn disable_function(&mut self, name: OwnedName) -> &mut Self {
+        self.disabled_functions.insert(name);
+        self
+    }
+
     /// Build the static context.
     ///
     /// This will always include the default known namespaces for
@@ -96,7 +103,12 @@ impl<'a> StaticContextBuilder<'a> {
             default_function_namespace.to_string(),
         );
         let variable_names = self.variable_names.clone().into_iter().collect();
-        context::StaticContext::new(namespaces, variable_names, self.static_base_uri.clone())
+        context::StaticContext::new(
+            namespaces,
+            variable_names,
+            self.disabled_functions.clone(),
+            self.static_base_uri.clone(),
+        )
     }
 }
 

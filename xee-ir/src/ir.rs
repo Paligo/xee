@@ -9,6 +9,7 @@ use rust_decimal::Decimal;
 
 pub use xee_interpreter::function::Name;
 use xee_interpreter::function::{CastType, Signature, StaticFunctionId};
+use xee_interpreter::interpreter::instruction::RaisedError;
 use xee_interpreter::sequence::SerializationParameters;
 use xee_interpreter::xml;
 use xee_schema_type::Xs;
@@ -44,6 +45,7 @@ pub enum Expr {
     Castable(Castable),
     InstanceOf(InstanceOf),
     Treat(Treat),
+    ConvertSequence(ConvertSequence),
     MapConstructor(MapConstructor),
     ArrayConstructor(ArrayConstructor),
     XmlName(XmlName),
@@ -56,6 +58,8 @@ pub enum Expr {
     XmlProcessingInstruction(XmlProcessingInstruction),
     XmlAppend(XmlAppend),
     ApplyTemplates(ApplyTemplates),
+    ContinueTemplate(ContinueTemplate),
+    CallTemplate(CallTemplate),
     CopyShallow(CopyShallow),
     CopyDeep(CopyDeep),
 }
@@ -135,6 +139,10 @@ impl FunctionDefinition {
 pub struct Param {
     pub name: Name,
     pub type_: Option<SequenceType>,
+    pub default: Option<Box<Expr>>,
+    pub required: bool,
+    pub original_name: Option<String>, // For template parameters - tracks the original xsl:param name for matching with xsl:with-param
+    pub tunnel: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -269,6 +277,13 @@ pub struct Treat {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConvertSequence {
+    pub atom: AtomS,
+    pub sequence_type: SequenceType,
+    pub error: RaisedError,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapConstructor {
     pub members: Vec<(AtomS, AtomS)>,
 }
@@ -333,6 +348,13 @@ pub struct XmlAppend {
 pub struct ApplyTemplates {
     pub mode: ApplyTemplatesModeValue,
     pub select: AtomS,
+    pub builtin_template_params_passthrough: bool,
+    pub params: Vec<WithParam>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ContinueTemplate {
+    pub params: Vec<WithParam>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -340,6 +362,22 @@ pub enum ApplyTemplatesModeValue {
     Named(xmlname::OwnedName),
     Unnamed,
     Current,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallTemplate {
+    pub name: Name,
+    pub context: Option<ContextNames>,
+    pub backwards_compatible: bool,
+    pub params: Vec<WithParam>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WithParam {
+    pub name: Name,
+    pub select: Option<AtomS>,
+    pub sequence_constructor: Option<Box<ExprS>>,
+    pub tunnel: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -368,13 +406,45 @@ pub enum ModeValue {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Mode {}
+pub struct Mode {
+    pub on_no_match: ModeOnNoMatch,
+    pub warning_on_no_match: bool,
+    pub typed: ModeTyped,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModeOnNoMatch {
+    DeepCopy,
+    ShallowCopy,
+    DeepSkip,
+    ShallowSkip,
+    TextOnlyCopy,
+    Fail,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModeTyped {
+    Yes,
+    No,
+    Strict,
+    Lax,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GlobalVariable {
+    pub name: Name,
+    pub original_name: Option<xmlname::OwnedName>,
+    pub required: bool,
+    pub params: Vec<Param>,
+    pub expr: ExprS,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Declarations {
     pub rules: Vec<Rule>,
     pub modes: HashMap<Option<xmlname::OwnedName>, Mode>,
     pub functions: Vec<FunctionBinding>,
+    pub global_variables: Vec<GlobalVariable>,
     pub main: FunctionDefinition,
     pub serialization_params: SerializationParameters,
 }
@@ -385,6 +455,7 @@ impl Declarations {
             rules: Vec::new(),
             modes: HashMap::new(),
             functions: Vec::new(),
+            global_variables: Vec::new(),
             main,
             serialization_params: SerializationParameters::new(),
         }
