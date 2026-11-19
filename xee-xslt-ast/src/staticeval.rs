@@ -232,7 +232,8 @@ impl StaticEvaluator {
         // TODO doing the clone here of the global variables isn't ideal
         dynamic_context_builder.variables(self.static_global_variables.clone());
 
-        let dynamic_context = dynamic_context_builder.build();
+        let mut docs = xee_xpath_compiler::xml::Documents::new();
+        let dynamic_context = dynamic_context_builder.build(xee_xpath_compiler::context::DocumentsRef(std::cell::RefCell::new(&mut docs)));
         let runnable = program.runnable(&dynamic_context);
 
         runnable.many(xot)

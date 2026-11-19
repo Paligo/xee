@@ -22,8 +22,7 @@ impl Itemable for xot::Node {
 impl Itemable for DocumentHandle {
     fn to_item(&self, documents: &Documents) -> Result<Item> {
         // TODO: This unwrap is not great; we should turn this into an error
-        let documents_ref = documents.documents.borrow();
-        let document = documents_ref.get_by_handle(*self).unwrap();
+        let document = documents.documents.get_by_handle(*self).unwrap();
         Ok(Item::Node(document.root()))
     }
 }

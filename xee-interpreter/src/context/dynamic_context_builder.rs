@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+use std::{cell::RefCell, ops::Deref};
 
 use ahash::{HashMap, HashMapExt};
 use iri_string::types::{IriStr, IriString};
@@ -18,7 +18,6 @@ use super::{DynamicContext, Variables};
 pub struct DynamicContextBuilder<'a> {
     program: &'a interpreter::Program,
     context_item: Option<sequence::Item>,
-    documents: DocumentsRef,
     variables: Variables,
     current_datetime: chrono::DateTime<chrono::offset::FixedOffset>,
     default_collection: Option<sequence::Sequence>,
@@ -30,32 +29,14 @@ pub struct DynamicContextBuilder<'a> {
 
 /// A shallow wrapper around a collection of XML documents
 /// [`xml::Documents`]
-#[derive(Debug, Clone)]
-pub struct DocumentsRef(Rc<RefCell<xml::Documents>>);
+#[derive(Debug)]
+pub struct DocumentsRef<'a>(pub RefCell<&'a mut xml::Documents>);
 
-impl Deref for DocumentsRef {
-    type Target = RefCell<xml::Documents>;
+impl<'a> Deref for DocumentsRef<'a> {
+    type Target = RefCell<&'a mut xml::Documents>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl From<xml::Documents> for DocumentsRef {
-    fn from(documents: xml::Documents) -> Self {
-        Self(Rc::new(RefCell::new(documents)))
-    }
-}
-
-impl DocumentsRef {
-    pub fn new() -> Self {
-        Self(Rc::new(RefCell::new(xml::Documents::new())))
-    }
-}
-
-impl Default for DocumentsRef {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -65,7 +46,6 @@ impl<'a> DynamicContextBuilder<'a> {
         Self {
             program,
             context_item: None,
-            documents: DocumentsRef::new(),
             variables: Variables::new(),
             current_datetime: chrono::offset::Local::now().into(),
             default_collection: None,
@@ -87,14 +67,6 @@ impl<'a> DynamicContextBuilder<'a> {
     /// Set a node as the context item of the [`DynamicContext`].
     pub fn context_node(&mut self, node: xot::Node) -> &mut Self {
         self.context_item(sequence::Item::Node(node));
-        self
-    }
-
-    /// Set the documents of the [`DynamicContext`].
-    ///
-    /// You can give it either owned documents or a [`DocumentsRef`].
-    pub fn documents(&mut self, documents: impl Into<DocumentsRef>) -> &mut Self {
-        self.documents = documents.into();
         self
     }
 
@@ -170,11 +142,11 @@ impl<'a> DynamicContextBuilder<'a> {
     }
 
     /// Build the `DynamicContext`.
-    pub fn build(&self) -> DynamicContext<'_> {
+    pub fn build<'d>(&self, documents: DocumentsRef<'d>) -> DynamicContext<'a, 'd> {
         DynamicContext::new(
             self.program,
             self.context_item.clone(),
-            self.documents.clone(),
+            documents,
             self.variables.clone(),
             self.current_datetime,
             self.default_collection.clone(),

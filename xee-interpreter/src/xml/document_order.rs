@@ -16,8 +16,6 @@
 // annotated node. From this we can determine the document id as well as the
 // preorder count of this node.
 
-use std::cell::RefCell;
-
 use ahash::{HashMap, HashMapExt};
 use xot::Xot;
 
@@ -34,15 +32,15 @@ impl DocumentOrder {
 
 pub(crate) struct DocumentOrderAccess<'a> {
     pub(crate) xot: &'a Xot,
-    pub(crate) annotations: &'a DocumentOrderAnnotations,
+    pub(crate) annotations: &'a mut DocumentOrderAnnotations,
 }
 
 impl<'a> DocumentOrderAccess<'a> {
-    pub(crate) fn new(xot: &'a Xot, annotations: &'a DocumentOrderAnnotations) -> Self {
+    pub(crate) fn new(xot: &'a Xot, annotations: &'a mut DocumentOrderAnnotations) -> Self {
         Self { xot, annotations }
     }
 
-    pub(crate) fn get(&self, node: xot::Node) -> DocumentOrder {
+    pub(crate) fn get(&mut self, node: xot::Node) -> DocumentOrder {
         self.annotations.get(node, self.xot)
     }
 }
@@ -50,32 +48,32 @@ impl<'a> DocumentOrderAccess<'a> {
 #[derive(Debug, Clone)]
 pub(crate) struct DocumentOrderAnnotations {
     // each document has a different id, so track this
-    document_id: RefCell<usize>,
-    map: RefCell<HashMap<xot::Node, DocumentOrder>>,
+    document_id: usize,
+    map: HashMap<xot::Node, DocumentOrder>,
 }
 
 impl DocumentOrderAnnotations {
     pub(crate) fn new() -> Self {
         Self {
-            map: RefCell::new(HashMap::new()),
-            document_id: RefCell::new(0),
+            map: HashMap::new(),
+            document_id: 0,
         }
     }
 
-    pub(crate) fn access<'a>(&'a self, xot: &'a Xot) -> DocumentOrderAccess<'a> {
+    pub(crate) fn access<'a>(&'a mut self, xot: &'a Xot) -> DocumentOrderAccess<'a> {
         DocumentOrderAccess::new(xot, self)
     }
 
-    pub(crate) fn get(&self, node: xot::Node, xot: &xot::Xot) -> DocumentOrder {
-        let document_order = self.map.borrow().get(&node).cloned();
+    pub(crate) fn get(&mut self, node: xot::Node, xot: &xot::Xot) -> DocumentOrder {
+        let document_order = self.map.get(&node).cloned();
         if let Some(document_order) = document_order {
             document_order
         } else {
             let (document_order, found_node) =
-                find_node_with_document_order(&self.map.borrow(), node, xot);
+                find_node_with_document_order(&self.map, node, xot);
             if let Some(document_order) = document_order {
                 annotation_with_document_order(
-                    &mut self.map.borrow_mut(),
+                    &mut self.map,
                     document_order,
                     found_node,
                     node,
@@ -84,14 +82,13 @@ impl DocumentOrderAnnotations {
             } else {
                 // if we increment document id, we should end up at
                 // a new one for this new fragment/document
-                *self.document_id.borrow_mut() += 1;
+                self.document_id += 1;
 
-                let document_order = DocumentOrder(*self.document_id.borrow(), 0);
+                let document_order = DocumentOrder(self.document_id, 0);
 
-                let mut map = self.map.borrow_mut();
-                map.insert(found_node, document_order);
+                self.map.insert(found_node, document_order);
                 // now create annotations for everything up to node
-                annotation_with_document_order(&mut map, document_order, found_node, node, xot)
+                annotation_with_document_order(&mut self.map, document_order, found_node, node, xot)
             }
         }
     }

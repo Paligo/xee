@@ -19,17 +19,17 @@ use super::Interpreter;
 use super::Program;
 
 #[derive(Debug)]
-pub struct Runnable<'a> {
+pub struct Runnable<'a, 'd> {
     program: &'a Program,
     // TODO: this should be private, but is needed right now
     // to implement call_static without lifetime issues.
     // We could possibly obtain context from the interpreter directly,
     // but this leads to lifetime issues right now.
-    pub(crate) dynamic_context: &'a DynamicContext<'a>,
+    pub(crate) dynamic_context: &'a DynamicContext<'a, 'd>,
 }
 
-impl<'a> Runnable<'a> {
-    pub(crate) fn new(program: &'a Program, dynamic_context: &'a DynamicContext) -> Self {
+impl<'a, 'd> Runnable<'a, 'd> {
+    pub(crate) fn new(program: &'a Program, dynamic_context: &'a DynamicContext<'a, 'd>) -> Self {
         Self {
             program,
             dynamic_context,
@@ -106,11 +106,11 @@ impl<'a> Runnable<'a> {
         self.program
     }
 
-    pub fn dynamic_context(&self) -> &'a DynamicContext<'_> {
+    pub fn dynamic_context(&self) -> &'a DynamicContext<'a, 'd> {
         self.dynamic_context
     }
 
-    pub fn documents(&self) -> DocumentsRef {
+    pub fn documents(&self) -> &DocumentsRef<'d> {
         self.dynamic_context.documents()
     }
 

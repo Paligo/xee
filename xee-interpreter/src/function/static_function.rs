@@ -52,8 +52,8 @@ impl FunctionKind {
     }
 }
 
-pub(crate) type StaticFunctionType = fn(
-    context: &DynamicContext,
+pub(crate) type StaticFunctionType = for<'a, 'd> fn(
+    context: &DynamicContext<'a, 'd>,
     interpreter: &mut interpreter::Interpreter,
     arguments: &[sequence::Sequence],
 ) -> error::Result<sequence::Sequence>;
@@ -193,7 +193,7 @@ impl StaticFunction {
 
     pub(crate) fn invoke(
         &self,
-        context: &DynamicContext,
+        context: &DynamicContext<'_, '_>,
         interpreter: &mut interpreter::Interpreter,
         arguments: Vec<sequence::Sequence>,
         closure_values: &[stack::Value],

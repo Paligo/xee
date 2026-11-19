@@ -212,7 +212,7 @@ impl Documents {
         &self.annotations
     }
 
-    pub(crate) fn document_order_access<'a>(&'a self, xot: &'a Xot) -> DocumentOrderAccess<'a> {
+    pub(crate) fn document_order_access<'a>(&'a mut self, xot: &'a Xot) -> DocumentOrderAccess<'a> {
         self.annotations.access(xot)
     }
 }

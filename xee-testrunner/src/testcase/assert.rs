@@ -20,7 +20,7 @@ type XPathExpr = String;
 pub(crate) trait Assertable {
     fn assert_result(
         &self,
-        context: &DynamicContext<'_>,
+        context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         result: &error::ValueResult<Sequence>,
     ) -> TestOutcome {
@@ -32,7 +32,7 @@ pub(crate) trait Assertable {
 
     fn assert_value(
         &self,
-        context: &DynamicContext<'_>,
+        context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome;
@@ -67,7 +67,7 @@ impl AssertAnyOf {
 impl Assertable for AssertAnyOf {
     fn assert_result(
         &self,
-        context: &DynamicContext<'_>,
+        context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         result: &error::ValueResult<Sequence>,
     ) -> TestOutcome {
@@ -87,7 +87,7 @@ impl Assertable for AssertAnyOf {
 
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         _documents: &mut Documents,
         _sequence: &Sequence,
     ) -> TestOutcome {
@@ -107,7 +107,7 @@ impl AssertAllOf {
 impl Assertable for AssertAllOf {
     fn assert_result(
         &self,
-        context: &DynamicContext<'_>,
+        context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         result: &error::ValueResult<Sequence>,
     ) -> TestOutcome {
@@ -123,7 +123,7 @@ impl Assertable for AssertAllOf {
 
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         _documents: &mut Documents,
         _sequence: &Sequence,
     ) -> TestOutcome {
@@ -143,7 +143,7 @@ impl AssertNot {
 impl Assertable for AssertNot {
     fn assert_result(
         &self,
-        context: &DynamicContext<'_>,
+        context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         result: &error::ValueResult<Sequence>,
     ) -> TestOutcome {
@@ -159,7 +159,7 @@ impl Assertable for AssertNot {
 
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         _documents: &mut Documents,
         _sequence: &Sequence,
     ) -> TestOutcome {
@@ -185,7 +185,7 @@ impl Assert {
 impl Assertable for Assert {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -219,7 +219,7 @@ impl AssertEq {
 impl Assertable for AssertEq {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -258,7 +258,7 @@ impl AssertDeepEq {
 impl Assertable for AssertDeepEq {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -297,7 +297,7 @@ impl AssertCount {
 impl Assertable for AssertCount {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         _documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -322,7 +322,7 @@ impl AssertPermutation {
 impl Assertable for AssertPermutation {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -388,7 +388,7 @@ impl AssertXml {
 impl Assertable for AssertXml {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -462,7 +462,7 @@ impl AssertEmpty {
 impl Assertable for AssertEmpty {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         _documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -492,7 +492,7 @@ impl AssertType {
 impl Assertable for AssertType {
     fn assert_value(
         &self,
-        context: &DynamicContext<'_>,
+        context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -528,7 +528,7 @@ impl AssertTrue {
 impl Assertable for AssertTrue {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         _documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -558,7 +558,7 @@ impl AssertFalse {
 impl Assertable for AssertFalse {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         _documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -588,7 +588,7 @@ impl AssertStringValue {
 impl Assertable for AssertStringValue {
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         sequence: &Sequence,
     ) -> TestOutcome {
@@ -656,7 +656,7 @@ impl AssertError {
 impl Assertable for AssertError {
     fn assert_result(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         _documents: &mut Documents,
         result: &error::ValueResult<Sequence>,
     ) -> TestOutcome {
@@ -668,7 +668,7 @@ impl Assertable for AssertError {
 
     fn assert_value(
         &self,
-        _context: &DynamicContext<'_>,
+        _context: &DynamicContext<'_, '_>,
         _documents: &mut Documents,
         _sequence: &Sequence,
     ) -> TestOutcome {
@@ -755,7 +755,7 @@ pub(crate) enum TestCaseResult {
 impl TestCaseResult {
     pub(crate) fn assert_result(
         &self,
-        context: &DynamicContext<'_>,
+        context: &DynamicContext<'_, '_>,
         documents: &mut Documents,
         result: &error::ValueResult<Sequence>,
     ) -> TestOutcome {

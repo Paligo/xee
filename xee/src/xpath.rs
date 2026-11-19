@@ -56,13 +56,13 @@ pub(crate) fn execute_query(
             return Ok(());
         }
     };
-    let mut context_builder = sequence_query.dynamic_context_builder(documents);
+    let mut context_builder = sequence_query.dynamic_context_builder();
     if let Some(doc) = doc {
         context_builder.context_item(doc.to_item(documents)?);
     }
-    let context = context_builder.build();
+    
 
-    let sequence = sequence_query.execute_with_context(documents, &context);
+    let sequence = sequence_query.execute_with_builder(documents, &context_builder);
     let sequence = match sequence {
         Ok(sequence) => sequence,
         Err(e) => {
@@ -70,6 +70,8 @@ pub(crate) fn execute_query(
             return Ok(());
         }
     };
+    let mut dummy_docs = xee_xpath::Documents::new();
+    let context = context_builder.build(dummy_docs.documents());
     println!(
         "{}",
         sequence.display_representation(documents.xot(), &context)

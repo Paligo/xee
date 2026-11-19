@@ -24,7 +24,7 @@ fn id(
         interpreter.xot(),
         context
             .documents()
-            .borrow()
+            .borrow_mut()
             .document_order_access(interpreter.xot()),
     )
 }
@@ -47,7 +47,7 @@ fn element_with_id(
         interpreter.xot(),
         context
             .documents()
-            .borrow()
+            .borrow_mut()
             .document_order_access(interpreter.xot()),
     )
 }
@@ -56,7 +56,7 @@ fn ids_helper(
     arg: impl Iterator<Item = Result<String, Error>>,
     node: Node,
     xot: &Xot,
-    annotations: xml::DocumentOrderAccess,
+    mut annotations: xml::DocumentOrderAccess,
 ) -> Result<Vec<Node>, Error> {
     let document_node = xot.root(node);
     let mut result: Vec<Node> = Vec::new();
@@ -89,8 +89,8 @@ fn generate_id(
 ) -> String {
     if let Some(arg) = arg {
         let documents = context.documents();
-        let documents = documents.borrow();
-        let annotations = documents.document_order_access(interpreter.xot());
+        let mut documents = documents.borrow_mut();
+        let mut annotations = documents.document_order_access(interpreter.xot());
         let annotation = annotations.get(arg);
         annotation.generate_id()
     } else {

@@ -75,18 +75,9 @@ impl Source {
                 // down the line earlier and resolve earlier.
                 let full_path = base_dir.join(path);
                 // try to get the cached version of the document
-                {
-                    // scope borrowed_documents so we drop it afterward
-                    let borrowed_documents = documents.documents().borrow();
-
-                    // when we load something from a path, we first check if we
-                    // happen to know it under a URI already
-                    if let Some(uri) = &uri {
-                        // if we know it, we try to look it up
-                        let root = borrowed_documents.get_node_by_uri(uri);
-                        if let Some(root) = root {
-                            return Ok(root);
-                        }
+                if let Some(uri) = &uri {
+                    if let Some(root) = documents.documents().borrow().get_node_by_uri(uri) {
+                        return Ok(root);
                     }
                 }
 
@@ -96,34 +87,16 @@ impl Source {
                 let mut xml = String::new();
                 buf_reader.read_to_string(&mut xml)?;
 
-                let documents_ref = documents.documents().clone();
-                let handle = documents_ref.borrow_mut().add_string(
-                    documents.xot_mut(),
-                    uri.as_deref(),
-                    &xml,
-                )?;
-                Ok(documents
-                    .documents()
-                    .borrow()
-                    .get_node_by_handle(handle)
-                    .unwrap())
+                let handle = documents.add_string_with_optional_uri(uri.as_deref(), &xml)?;
+                Ok(documents.document_node(handle).unwrap())
             }
             SourceContent::Content(value) => {
                 // we don't try to get a cached version of the document, as
                 // that would be different each time. we just add it to documents
                 // and return it
                 // TODO: is this right?
-                let documents_ref = documents.documents().clone();
-                let handle = documents_ref.borrow_mut().add_string(
-                    documents.xot_mut(),
-                    uri.as_deref(),
-                    value,
-                )?;
-                Ok(documents
-                    .documents()
-                    .borrow()
-                    .get_node_by_handle(handle)
-                    .unwrap())
+                let handle = documents.add_string_with_optional_uri(uri.as_deref(), value)?;
+                Ok(documents.document_node(handle).unwrap())
             }
             SourceContent::ContentAndSelect(_value, _select) => {
                 todo!("Don't know yet how to execute xpath here")

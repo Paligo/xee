@@ -199,7 +199,7 @@ where
     fn precedes<J>(
         &'a self,
         other: &'a impl SequenceOrder<'a, J>,
-        annotations: xml::DocumentOrderAccess,
+        mut annotations: xml::DocumentOrderAccess,
     ) -> error::Result<bool>
     where
         J: Iterator<Item = Item> + 'a,
@@ -214,7 +214,7 @@ where
     fn follows<J>(
         &'a self,
         other: &'a impl SequenceOrder<'a, J>,
-        annotations: xml::DocumentOrderAccess,
+        mut annotations: xml::DocumentOrderAccess,
     ) -> error::Result<bool>
     where
         J: Iterator<Item = Item> + 'a,
