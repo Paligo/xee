@@ -3,6 +3,7 @@
 
 use proc_macro2::TokenStream;
 use quote::quote;
+use syn::spanned::Spanned;
 
 use xee_schema_type::Xs;
 use xee_xpath_ast::ast;
@@ -28,7 +29,7 @@ fn convert_item(
     name: TokenStream,
     arg: TokenStream,
 ) -> syn::Result<TokenStream> {
-    let (iterator, borrow) = convert_item_type(&item.item_type, arg.clone())?;
+    let (iterator, borrow) = convert_item_type(&item.item_type, fn_arg, arg.clone())?;
 
     Ok(match &item.occurrence {
         ast::Occurrence::One => {
@@ -93,42 +94,65 @@ fn convert_item(
             //     let #name = #name_temp.as_slice();
             // )
         }
-        ast::Occurrence::NonEmpty => todo!("NonEmpty not yet supported"),
+        ast::Occurrence::NonEmpty => bail_spanned!(
+            fn_arg.span() =>
+            "one-or-more occurrence (`+`) is not yet supported in #[xpath_fn] signatures"
+        ),
     })
 }
 
-fn convert_item_type(item: &ast::ItemType, arg: TokenStream) -> syn::Result<(TokenStream, bool)> {
+fn convert_item_type(
+    item: &ast::ItemType,
+    fn_arg: &syn::FnArg,
+    arg: TokenStream,
+) -> syn::Result<(TokenStream, bool)> {
     match item {
         ast::ItemType::Item => Ok((quote!(#arg.iter().map(Ok)), false)),
         ast::ItemType::AtomicOrUnionType(xs) => {
-            let (token_stream, borrow) = convert_atomic_or_union_type(*xs, arg)?;
+            let (token_stream, borrow) = convert_atomic_or_union_type(*xs, fn_arg, arg)?;
             Ok((token_stream, borrow))
         }
-        ast::ItemType::KindTest(kind_test) => Ok((convert_kind_test(kind_test, arg)?, false)),
+        ast::ItemType::KindTest(kind_test) => {
+            Ok((convert_kind_test(kind_test, fn_arg, arg)?, false))
+        }
         // we don't do anything special for higher order functions at this point;
         // the implementation is supposed to manually unpack the items
         ast::ItemType::FunctionTest(_) => Ok((quote!(#arg.iter().map(Ok)), false)),
         ast::ItemType::ArrayTest(array_test) => match array_test {
             ast::ArrayTest::AnyArrayTest => Ok((quote!(#arg.array_iter()), false)),
-            _ => todo!("Unsupported item type: typed array test"),
+            _ => bail_spanned!(
+                fn_arg.span() =>
+                "typed array tests (e.g. `array(xs:integer)`) are not yet supported in #[xpath_fn] signatures — use `array(*)`"
+            ),
         },
         ast::ItemType::MapTest(map_test) => match map_test {
             ast::MapTest::AnyMapTest => Ok((quote!(#arg.map_iter()), false)),
-            _ => todo!("Unsupported item type: typed map test"),
+            _ => bail_spanned!(
+                fn_arg.span() =>
+                "typed map tests (e.g. `map(xs:string, xs:integer)`) are not yet supported in #[xpath_fn] signatures — use `map(*)`"
+            ),
         },
     }
 }
 
-fn convert_atomic_or_union_type(xs: Xs, arg: TokenStream) -> syn::Result<(TokenStream, bool)> {
+fn convert_atomic_or_union_type(
+    xs: Xs,
+    fn_arg: &syn::FnArg,
+    arg: TokenStream,
+) -> syn::Result<(TokenStream, bool)> {
     if xs == Xs::AnyAtomicType || xs == Xs::Numeric {
         return Ok((quote!(#arg.atomized(interpreter.xot())), false));
     }
 
-    // TODO: another unwrap that should really be "we cannot create a rust wrapper
-    // for this type" error
-    let rust_info = xs
-        .rust_info()
-        .expect("Rust wrapper for this type not found");
+    let Some(rust_info) = xs.rust_info() else {
+        bail_spanned!(
+            fn_arg.span() =>
+            format!(
+                "XPath atomic type `{xs:?}` has no Rust wrapper — cannot bridge it through #[xpath_fn]. \
+                 If this type should be supported, register it in xee_schema_type::Xs::rust_info"
+            )
+        );
+    };
     let type_name = rust_info.rust_name();
     let type_name = syn::parse_str::<syn::Type>(type_name)?;
     let convert = quote!(std::convert::TryInto::<#type_name>::try_into(atomic));
@@ -140,18 +164,27 @@ fn convert_atomic_or_union_type(xs: Xs, arg: TokenStream) -> syn::Result<(TokenS
     ))
 }
 
-fn convert_kind_test(kind_test: &ast::KindTest, arg: TokenStream) -> syn::Result<TokenStream> {
+fn convert_kind_test(
+    kind_test: &ast::KindTest,
+    fn_arg: &syn::FnArg,
+    arg: TokenStream,
+) -> syn::Result<TokenStream> {
     match kind_test {
         ast::KindTest::Any => Ok(quote!(#arg.nodes())),
         ast::KindTest::Element(element_test) => {
             if element_test.is_some() {
-                unreachable!("Unsupported element test")
+                bail_spanned!(
+                    fn_arg.span() =>
+                    "constrained element tests (e.g. `element(foo)`, `element(*, xs:string)`) \
+                     are not yet supported in #[xpath_fn] signatures — use `element()`"
+                );
             }
             Ok(quote!(#arg.elements(interpreter.xot())?))
         }
-        _ => {
-            todo!("Unsupported kind test")
-        }
+        _ => bail_spanned!(
+            fn_arg.span() =>
+            "this kind test is not yet supported in #[xpath_fn] signatures — only `node()`, `element()`, and `item()` work today"
+        ),
     }
 }
 
@@ -261,5 +294,57 @@ mod tests {
     #[test]
     fn test_convert_array() {
         assert_debug_snapshot!(convert("array(*)"));
+    }
+
+    fn convert_err(s: &str) -> String {
+        let fn_arg: syn::FnArg = syn::parse_str("a: &str").unwrap();
+        let namespaces = Namespaces::default();
+        let sequence_type = parse_sequence_type(s, &namespaces).unwrap();
+        let name = quote!(a);
+        let arg = quote!(arguments[0]);
+
+        convert_sequence_type(&sequence_type, &fn_arg, name, arg)
+            .expect_err("expected a syn::Error from convert_sequence_type")
+            .to_string()
+    }
+
+    #[test]
+    fn test_convert_nonempty_occurrence_errors() {
+        assert_debug_snapshot!(convert_err("xs:integer+"));
+    }
+
+    #[test]
+    fn test_convert_named_element_test_errors() {
+        // element(foo) — name-constrained element tests aren't supported yet
+        assert_debug_snapshot!(convert_err("element(foo)"));
+    }
+
+    #[test]
+    fn test_convert_typed_wildcard_element_test_errors() {
+        // element(*, xs:string) — wildcard name + type constraint,
+        // which is still Element(Some(_)) in the AST. The error
+        // message must not mislead the user into thinking only
+        // *named* element tests are rejected.
+        assert_debug_snapshot!(convert_err("element(*, xs:string)"));
+    }
+
+    #[test]
+    fn test_convert_attribute_kind_test_errors() {
+        assert_debug_snapshot!(convert_err("attribute()"));
+    }
+
+    #[test]
+    fn test_convert_text_kind_test_errors() {
+        assert_debug_snapshot!(convert_err("text()"));
+    }
+
+    #[test]
+    fn test_convert_typed_array_errors() {
+        assert_debug_snapshot!(convert_err("array(xs:integer)"));
+    }
+
+    #[test]
+    fn test_convert_typed_map_errors() {
+        assert_debug_snapshot!(convert_err("map(xs:string, xs:integer)"));
     }
 }

@@ -1,0 +1,5 @@
+---
+source: xee-xpath-macros/src/wrapper.rs
+expression: "xpath_fn_wrapper(&ast, &options).unwrap_err().to_string()"
+---
+"#[xpath_fn] arity mismatch: signature declares 2 XPath parameter(s), but the Rust function takes 1"
