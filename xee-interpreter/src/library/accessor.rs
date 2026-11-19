@@ -4,6 +4,7 @@ use xee_xpath_macros::xpath_fn;
 
 use crate::atomic;
 use crate::context;
+use crate::context::BorrowWith;
 use crate::error;
 use crate::function::StaticFunctionDescription;
 use crate::interpreter::Interpreter;

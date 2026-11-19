@@ -2,7 +2,7 @@ use ahash::{HashSet, HashSetExt};
 use xee_xpath_macros::xpath_fn;
 use xot::{Node, Xot};
 
-use crate::context::DynamicContext;
+use crate::context::{DynamicContext, BorrowWith};
 use crate::error::Error;
 use crate::function::StaticFunctionDescription;
 use crate::interpreter::Interpreter;

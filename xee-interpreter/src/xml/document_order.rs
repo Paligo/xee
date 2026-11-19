@@ -17,9 +17,13 @@
 // preorder count of this node.
 
 use std::cell::RefCell;
+#[cfg(feature = "sync")]
+use std::sync::{Arc, RwLock};
 
 use ahash::{HashMap, HashMapExt};
 use xot::Xot;
+
+use crate::context::BorrowWith;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub(crate) struct DocumentOrder(usize, usize);
@@ -47,6 +51,7 @@ impl<'a> DocumentOrderAccess<'a> {
     }
 }
 
+#[cfg(not(feature = "sync"))]
 #[derive(Debug, Clone)]
 pub(crate) struct DocumentOrderAnnotations {
     // each document has a different id, so track this
@@ -54,11 +59,30 @@ pub(crate) struct DocumentOrderAnnotations {
     map: RefCell<HashMap<xot::Node, DocumentOrder>>,
 }
 
+#[cfg(feature = "sync")]
+#[derive(Debug, Clone)]
+pub(crate) struct DocumentOrderAnnotations {
+    // each document has a different id, so track this
+    document_id: Arc<RwLock<usize>>,
+    map: Arc<RwLock<HashMap<xot::Node, DocumentOrder>>>,
+}
+
 impl DocumentOrderAnnotations {
+    #[cfg(not(feature = "sync"))]
     pub(crate) fn new() -> Self {
+        use num::zero;
+
         Self {
             map: RefCell::new(HashMap::new()),
             document_id: RefCell::new(0),
+        }
+    }
+
+    #[cfg(feature = "sync")]
+    pub(crate) fn new() -> Self {
+        Self {
+            map: Arc::new(RwLock::new(HashMap::new())),
+            document_id: Arc::new(RwLock::new(0)),
         }
     }
 

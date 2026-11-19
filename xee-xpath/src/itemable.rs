@@ -1,4 +1,4 @@
-use xee_interpreter::sequence::Item;
+use xee_interpreter::{context::BorrowWith, sequence::Item};
 
 use crate::{error::Result, DocumentHandle, Documents};
 

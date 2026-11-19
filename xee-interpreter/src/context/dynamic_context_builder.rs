@@ -1,8 +1,13 @@
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+#[cfg(not(feature = "sync"))]
+use std::cell::RefMut;
+#[cfg(feature = "sync")]
+use std::sync::{RwLockReadGuard, RwLockWriteGuard};
+use std::{cell::{Ref, RefCell}, ops::Deref, rc::Rc, sync::{Arc, RwLock}};
 
 use ahash::{HashMap, HashMapExt};
 use iri_string::types::{IriStr, IriString};
 
+use crate::context::BorrowWith;
 use crate::{interpreter, sequence, xml};
 
 use super::{DynamicContext, Variables};
@@ -30,11 +35,20 @@ pub struct DynamicContextBuilder<'a> {
 
 /// A shallow wrapper around a collection of XML documents
 /// [`xml::Documents`]
+#[cfg(not(feature = "sync"))]
 #[derive(Debug, Clone)]
 pub struct DocumentsRef(Rc<RefCell<xml::Documents>>);
 
+#[cfg(feature = "sync")]
+#[derive(Debug, Clone)]
+pub struct DocumentsRef(Arc<RwLock<xml::Documents>>);
+
 impl Deref for DocumentsRef {
+    #[cfg(not(feature = "sync"))]
     type Target = RefCell<xml::Documents>;
+
+    #[cfg(feature = "sync")]
+    type Target = RwLock<xml::Documents>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -42,14 +56,54 @@ impl Deref for DocumentsRef {
 }
 
 impl From<xml::Documents> for DocumentsRef {
+    #[cfg(not(feature = "sync"))]
     fn from(documents: xml::Documents) -> Self {
         Self(Rc::new(RefCell::new(documents)))
+    }
+    
+    #[cfg(feature = "sync")]
+    fn from(documents: xml::Documents) -> Self {
+
+        Self(Arc::new(RwLock::new(documents)))
     }
 }
 
 impl DocumentsRef {
+    #[cfg(not(feature = "sync"))]
     pub fn new() -> Self {
         Self(Rc::new(RefCell::new(xml::Documents::new())))
+    }
+
+    #[cfg(feature = "sync")]
+    pub fn new() -> Self {
+        Self(Arc::new(RwLock::new(xml::Documents::new())))
+    }
+}
+#[cfg(not(feature = "sync"))]
+impl<'a> BorrowWith<'a> for DocumentsRef {
+    type Read = Ref<'a, xml::Documents>;
+    type Write = RefMut<'a, xml::Documents>;
+
+    fn borrow(&'a self) -> Self::Read {
+        self.0.borrow()
+    }
+
+    fn borrow_mut(&'a self) -> Self::Write {
+        self.0.borrow_mut()
+    }
+}
+
+#[cfg(feature = "sync")]
+impl<'a> BorrowWith<'a> for DocumentsRef {
+    type Read = RwLockReadGuard<'a, xml::Documents>;
+    type Write = RwLockWriteGuard<'a, xml::Documents>;
+
+    fn borrow(&'a self) -> Self::Read {
+        self.0.read().unwrap()
+    }
+    
+    fn borrow_mut(&'a self) -> Self::Write {
+        self.0.write().unwrap()
     }
 }
 

@@ -23,6 +23,7 @@ serde = [
     "chumsky/serde",
     "xot/serde",
 ]
+sync = []
 
 [dependencies]
 xee-xpath-ast = { path = "../xee-xpath-ast", version = "0.1.4" }

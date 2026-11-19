@@ -2,7 +2,7 @@ use iri_string::types::{IriReferenceStr, IriString};
 use xee_xpath_macros::xpath_fn;
 
 use crate::{
-    context::DynamicContext, error, function::StaticFunctionDescription, sequence::Sequence,
+    context::{DynamicContext, BorrowWith}, error, function::StaticFunctionDescription, sequence::Sequence,
     wrap_xpath_fn,
 };
 
