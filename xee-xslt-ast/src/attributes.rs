@@ -31,11 +31,13 @@ impl<'a> Attributes<'a> {
 
     pub(crate) fn with_standard(self) -> Result<Self, AttributeError> {
         // create a new content has a context including standard attributes
-        let content = self.content.with_context(
-            self.content
-                .context
-                .with_standard(self.content.xot_namespaces(), self.standard()?),
-        );
+        let content = self
+            .content
+            .with_context(self.content.context.with_standard(
+                self.content.state,
+                self.content.xot_namespaces(),
+                self.standard()?,
+            ));
         // we now create a new attributes object that has the new content
         Ok(Self { content, ..self })
     }

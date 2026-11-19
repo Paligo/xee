@@ -22,9 +22,13 @@ pub(crate) struct Context {
     pub(crate) expand_text: bool,
     version: Decimal,
     xpath_default_namespace: ast::Uri,
-    // cumulative
-    exclude_result_prefixes: ast::ExcludeResultPrefixes,
+    // cumulative; the namespaces designated by exclude-result-prefixes and
+    // extension-element-prefixes, resolved against the in-scope bindings of
+    // the element bearing the attribute
+    excluded_namespaces: HashSet<xot::NamespaceId>,
     extension_element_prefixes: Vec<ast::Prefix>,
+    // the in-scope prefixes of the nearest enclosing literal result element
+    literal_result_element_prefixes: xot::Prefixes,
 }
 
 impl Context {
@@ -46,8 +50,9 @@ impl Context {
             expand_text: false,
             version: Decimal::from_str("3.0").unwrap(),
             xpath_default_namespace: "".to_string(),
-            exclude_result_prefixes: ast::ExcludeResultPrefixes::Prefixes(vec![]),
+            excluded_namespaces: HashSet::new(),
             extension_element_prefixes: vec![],
+            literal_result_element_prefixes: xot::Prefixes::new(),
         }
     }
 
@@ -96,6 +101,7 @@ impl Context {
 
     pub(crate) fn with_standard(
         &self,
+        state: &State,
         namespaces: xot::Namespaces,
         standard: ast::Standard,
     ) -> Self {
@@ -137,13 +143,42 @@ impl Context {
             } else {
                 self.xpath_default_namespace.clone()
             };
-        let exclude_result_prefixes =
-            if let Some(exclude_result_prefixes) = standard.exclude_result_prefixes {
-                self.exclude_result_prefixes
-                    .combine(exclude_result_prefixes)
-            } else {
-                self.exclude_result_prefixes.clone()
-            };
+        // exclude-result-prefixes and extension-element-prefixes designate
+        // namespaces by resolving each prefix against the bindings in scope
+        // at the element bearing the attribute
+        let mut excluded_namespaces = self.excluded_namespaces.clone();
+        let exclude_prefix = |wanted: &str, excluded: &mut HashSet<xot::NamespaceId>| {
+            // TODO: a prefix without a binding is a static error (XTSE0808)
+            for (prefix_id, namespace_id) in &expanded_prefixes {
+                if state.xot.prefix_str(*prefix_id) == wanted {
+                    excluded.insert(*namespace_id);
+                }
+            }
+        };
+        if let Some(exclude_result_prefixes) = standard.exclude_result_prefixes {
+            match exclude_result_prefixes {
+                ast::ExcludeResultPrefixes::All => {
+                    excluded_namespaces.extend(expanded_prefixes.values().copied());
+                }
+                ast::ExcludeResultPrefixes::Prefixes(prefixes) => {
+                    for prefix in prefixes {
+                        match prefix {
+                            ast::ExcludeResultPrefix::Default => {
+                                exclude_prefix("", &mut excluded_namespaces)
+                            }
+                            ast::ExcludeResultPrefix::Prefix(prefix) => {
+                                exclude_prefix(&prefix, &mut excluded_namespaces)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(extension_element_prefixes) = &standard.extension_element_prefixes {
+            for prefix in extension_element_prefixes {
+                exclude_prefix(prefix, &mut excluded_namespaces);
+            }
+        }
         let extension_element_prefixes =
             if let Some(extension_element_prefixes) = standard.extension_element_prefixes {
                 // TODO for now just add all prefixes. This isn't right.
@@ -164,10 +199,60 @@ impl Context {
             expand_text,
             version,
             xpath_default_namespace,
-            exclude_result_prefixes,
+            excluded_namespaces,
             extension_element_prefixes,
             ..self.clone()
         }
+    }
+
+    /// A context for the children of a literal result element, which
+    /// remembers the in-scope prefixes the element declares in the result.
+    pub(crate) fn with_literal_result_element(&self) -> Self {
+        Self {
+            literal_result_element_prefixes: self.prefixes.clone(),
+            ..self.clone()
+        }
+    }
+
+    /// A context for content that constructs a separate tree (such as
+    /// xsl:variable): its elements cannot rely on an enclosing literal
+    /// result element to declare their namespaces.
+    pub(crate) fn without_literal_result_element(&self) -> Self {
+        Self {
+            literal_result_element_prefixes: xot::Prefixes::new(),
+            ..self.clone()
+        }
+    }
+
+    /// The namespaces a literal result element declares in the result: its
+    /// in-scope namespaces, except the XSLT namespace, excluded namespaces
+    /// (exclude-result-prefixes and extension element prefixes), and
+    /// namespaces already declared in the result by the nearest enclosing
+    /// literal result element. See XSLT 3.0 section 11.1.3.
+    pub(crate) fn literal_result_element_namespaces(&self, state: &State) -> Vec<(String, String)> {
+        let mut namespaces = Vec::new();
+        for (prefix_id, namespace_id) in &self.prefixes {
+            if self.literal_result_element_prefixes.get(prefix_id) == Some(namespace_id) {
+                continue;
+            }
+            if *namespace_id == state.names.xsl_ns
+                || self.excluded_namespaces.contains(namespace_id)
+            {
+                continue;
+            }
+            let namespace = state.xot.namespace_str(*namespace_id);
+            // an xmlns="" undeclaration is not a namespace
+            if namespace.is_empty() {
+                continue;
+            }
+            namespaces.push((
+                state.xot.prefix_str(*prefix_id).to_string(),
+                namespace.to_string(),
+            ));
+        }
+        // sort for a stable declaration order
+        namespaces.sort();
+        namespaces
     }
 
     pub(crate) fn namespaces<'a>(&'a self, state: &'a State) -> Namespaces {

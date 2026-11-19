@@ -483,6 +483,22 @@ impl<'a> IrConverter<'a> {
         let (element_atom, mut bindings) = bindings
             .bind_expr_no_span(&mut self.variables, name_expr)
             .atom_bindings();
+        for (prefix, namespace) in &element_node.namespaces {
+            let namespace_expr = ir::Expr::XmlNamespace(ir::XmlNamespace {
+                prefix: self.constant_string(prefix),
+                namespace: self.constant_string(namespace),
+            });
+            let (namespace_atom, namespace_bindings) = Bindings::empty()
+                .bind_expr_no_span(&mut self.variables, namespace_expr)
+                .atom_bindings();
+            let append_expr = ir::Expr::XmlAppend(ir::XmlAppend {
+                parent: element_atom.clone(),
+                child: namespace_atom,
+            });
+            let append_bindings =
+                namespace_bindings.bind_expr_no_span(&mut self.variables, append_expr);
+            bindings = bindings.concat(append_bindings);
+        }
         for (name, value) in &element_node.attributes {
             let (value_atom, value_bindings) =
                 self.attribute_value_template(value)?.atom_bindings();
@@ -714,8 +730,12 @@ impl<'a> IrConverter<'a> {
     }
 
     fn empty_string(&self) -> ir::AtomS {
+        self.constant_string("")
+    }
+
+    fn constant_string(&self, value: &str) -> ir::AtomS {
         Spanned::new(
-            ir::Atom::Const(ir::Const::String("".to_string())),
+            ir::Atom::Const(ir::Const::String(value.to_string())),
             (0..0).into(),
         )
     }
@@ -943,7 +963,10 @@ impl<'a> IrConverter<'a> {
             ir::Atom::Const(ir::Const::String(name.local_name().to_string())),
             (0..0).into(),
         );
-        let namespace = self.empty_string();
+        let namespace = Spanned::new(
+            ir::Atom::Const(ir::Const::String(name.namespace().to_string())),
+            (0..0).into(),
+        );
 
         let binding = self
             .variables

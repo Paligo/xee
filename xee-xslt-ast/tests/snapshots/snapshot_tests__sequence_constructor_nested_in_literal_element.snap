@@ -1,5 +1,6 @@
 ---
-source: xee-xslt-ast/src/instruction.rs
+source: xee-xslt-ast/tests/snapshot_tests.rs
+assertion_line: 251
 expression: "parse_sequence_constructor_item(r#\"<xsl:if xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" test=\"true()\"><p><xsl:if test=\"true()\">foo</xsl:if></p></xsl:if>\"#)"
 ---
 Ok(Instruction(If(If(
@@ -30,6 +31,7 @@ Ok(Instruction(If(If(
         namespace_str: "",
         prefix_str: "",
       ),
+      namespaces: [],
       attributes: [],
       sequence_constructor: [
         Instruction(If(If(

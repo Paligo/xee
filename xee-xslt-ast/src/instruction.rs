@@ -138,8 +138,14 @@ impl InstructionParser for ast::ElementNode {
             .state
             .xot
             .name_ref(attributes.element.name(), content.node)?;
+        let namespaces = content
+            .context
+            .literal_result_element_namespaces(content.state);
+        // children only declare namespaces this element doesn't already
+        let content = content.with_context(content.context.with_literal_result_element());
         Ok(ast::ElementNode {
             name: name.to_owned(),
+            namespaces,
             attributes: element_attributes,
             span: content.span()?,
             sequence_constructor: content.sequence_constructor()?,
@@ -1092,7 +1098,12 @@ impl InstructionParser for ast::Message {
 
             span: content.span()?,
 
-            sequence_constructor: content.sequence_constructor()?,
+            // this content constructs a separate tree; its elements
+            // cannot rely on an enclosing literal result element for
+            // their namespace declarations
+            sequence_constructor: content
+                .with_context(content.context.without_literal_result_element())
+                .sequence_constructor()?,
         })
     }
 }
@@ -1411,7 +1422,12 @@ impl InstructionParser for ast::Param {
 
             span: content.span()?,
 
-            sequence_constructor: content.sequence_constructor()?,
+            // this content constructs a separate tree; its elements
+            // cannot rely on an enclosing literal result element for
+            // their namespace declarations
+            sequence_constructor: content
+                .with_context(content.context.without_literal_result_element())
+                .sequence_constructor()?,
         })
     }
 }
@@ -1684,7 +1700,12 @@ impl InstructionParser for ast::Variable {
 
             span: content.span()?,
 
-            sequence_constructor: content.sequence_constructor()?,
+            // this content constructs a separate tree; its elements
+            // cannot rely on an enclosing literal result element for
+            // their namespace declarations
+            sequence_constructor: content
+                .with_context(content.context.without_literal_result_element())
+                .sequence_constructor()?,
         })
     }
 
@@ -1736,7 +1757,12 @@ impl InstructionParser for ast::WithParam {
 
             span: content.span()?,
 
-            sequence_constructor: content.sequence_constructor()?,
+            // this content constructs a separate tree; its elements
+            // cannot rely on an enclosing literal result element for
+            // their namespace declarations
+            sequence_constructor: content
+                .with_context(content.context.without_literal_result_element())
+                .sequence_constructor()?,
         })
     }
 }
